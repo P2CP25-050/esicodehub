@@ -33,8 +33,8 @@ ESIcodeHub is a comprehensive platform designed to facilitate code sharing, peer
 - **State Management**: Zustand
 
 ### Backend
-- **Framework**: Django 5.0 + Django REST Framework
-- **Language**: Python 3.11+
+- **Framework**: Django 6.0 + Django REST Framework
+- **Language**: Python 3.12+
 - **Database**: PostgreSQL 15+
 - **Task Queue**: Celery + Redis
 - **Authentication**: JWT (djangorestframework-simplejwt)
@@ -87,7 +87,7 @@ ESIcodeHub is a comprehensive platform designed to facilitate code sharing, peer
    cd backend
    python -m venv venv
    source venv/bin/activate  # On Windows: venv\Scripts\activate
-   pip install -r requirements/development.txt
+   pip install -r requirements/dev.txt
    python manage.py migrate
    python manage.py createsuperuser
    python manage.py runserver
@@ -135,11 +135,11 @@ ESIcodeHub is a comprehensive platform designed to facilitate code sharing, peer
 See [CONTRIBUTING.md](docs/CONTRIBUTING.md) for detailed workflow.
 
 **Quick Summary:**
-1. Create feature branch from `develop`
+1. Create feature branch from `dev`
 2. Work on your feature
 3. Submit Pull Request
 4. Get 1 approval
-5. Merge to `develop`
+5. Merge to `dev`
 
 ## 🧪 Testing
 ```bash
