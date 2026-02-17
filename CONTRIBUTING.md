@@ -468,7 +468,7 @@ npm test
 If you have questions:
 1. Check existing documentation in `/docs`
 2. Ask in team Discord/Slack channel
-3. Tag `@team-leads` for urgent issues
+3. Tag `@project-leads` for urgent issues
 
 ## 🎉 Thank You!
 
