@@ -57,7 +57,7 @@ ESIcodeHub is a comprehensive platform designed to facilitate code sharing, peer
 
 1. **Clone the repository**
 ```bash
-   git clone https://github.com/YourTeam/esicodehub.git
+   git clone https://github.com/P2CP25-050/esicodehub.git
    cd esicodehub
 ```
 
@@ -117,14 +117,14 @@ ESIcodeHub is a comprehensive platform designed to facilitate code sharing, peer
 
 ## 👥 Team
 
-| Name              | Role                    | Responsibilities                           |
-|-------------------|-------------------------|--------------------------------------------|
-| Dhia Eddine HOUAM | Team Lead + Backend Dev | Architecture, Plagiarism Detection, DevOps |
-| Backend Dev 2     | Backend Developer       | //                                         |
-| Backend Dev 3     | Backend Developer       | //                                         |
-| Frontend Dev 1    | Frontend Developer      | //                                         |
-| Frontend Dev 2    | Frontend Developer      | //                                         |
-| Frontend Dev 3    | Frontend Developer      | //                                         |
+| Name                        | Role                    | Responsibilities                           |
+|-----------------------------|-------------------------|--------------------------------------------|
+| Dhia Eddine HOUAM           | Team Lead + Backend Dev | Architecture, Plagiarism Detection, DevOps |
+| Mohamed Nour KESSAB         | Backend Developer       | //                                         |
+| Abderrahmane Tayeb BOUDJEMA | Backend Developer       | //                                         |
+| Nasr Allah RAHLI            | Frontend Developer      | //                                         |
+| Houssam DJAIDJA             | Frontend Developer      | //                                         |
+| Anes BENDJELLOUL            | Frontend Developer      | //                                         |
 
 ## 📅 Project Timeline
 
