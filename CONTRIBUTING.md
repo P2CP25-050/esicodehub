@@ -50,9 +50,9 @@ main (production-ready code)
 
 4. **Keep your branch updated**
 ```bash
-   git checkout dev
+   git switch dev
    git pull origin dev
-   git checkout backend/auth-system
+   git switch backend/auth-system
    git rebase dev
 ```
 
@@ -186,10 +186,10 @@ docs(readme): update installation instructions
 
 3. **Rebase on latest `dev`**
 ```bash
-   git checkout develop
-   git pull origin develop
-   git checkout your-branch
-   git rebase develop
+   git switch dev
+   git pull origin dev
+   git switch your-branch
+   git rebase dev
 ```
 
 ### Creating the PR
