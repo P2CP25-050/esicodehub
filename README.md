@@ -68,11 +68,17 @@ ESIcodeHub is a comprehensive platform designed to facilitate code sharing, peer
    
    # Frontend
    cp frontend/.env.example frontend/.env.local
+
+   # Root
+   cp .env.example .env
+
+   # Generate a secret key and replace the generated value in both .env and backend/.env
+    python -c "from django.core.management.utils import get_random_secret_key; print(get_random_secret_key())"
 ```
 
 3. **Start with Docker Compose (Easiest)**
 ```bash
-   docker-compose up -d
+   docker compose up
 ```
    
    Access:
