@@ -8,11 +8,10 @@ RUN npm install
 
 COPY . .
 
-RUN npm run build
-
 EXPOSE 3000
 
 CMD ["npm", "run", "dev"]
 
-#Production mode
-#CMD ["npm", "start"]
+# Production mode
+# RUN npm run build
+# CMD ["npm", "start"]

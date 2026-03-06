@@ -54,7 +54,7 @@ services:
 
     volumes:
       - ./backend:/app/backend
-      - ./static:/app/backend/static
+      - ./static:/app/backend/staticfiles
 
     depends_on:
       - db

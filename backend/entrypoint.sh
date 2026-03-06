@@ -1,6 +1,6 @@
 #!/bin/sh
 
-/wait-for-postgres.sh postgresdb
+/wait-for-postgres.sh
 
 python manage.py migrate
 
