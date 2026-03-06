@@ -9,10 +9,8 @@ COPY requirements/base.txt .
 COPY requirements/dev.txt .
 
 RUN apk update && \
-    apk add --no-cache --virtual .build-deps gcc musl-dev postgresql-dev python3-dev && \
-    apk add --no-cache geos gdal proj binutils postgresql-client && \
-    pip install --no-cache-dir -r dev.txt && \
-    apk del .build-deps
+    apk add --no-cache gcc musl-dev postgresql-dev python3-dev postgresql-client && \
+    pip install --no-cache-dir -r dev.txt
 
 COPY . .
 
