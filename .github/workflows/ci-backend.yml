@@ -34,7 +34,7 @@ jobs:
       - name: Run flake8
         run: |
           cd backend
-          flake8 apps/ config/ --max-line-length=100 --exclude=migrations
+          flake8 apps/ --max-line-length=100 --exclude=migrations
 
   test:
     name: Tests (Django)
@@ -61,7 +61,7 @@ jobs:
       POSTGRES_DB: esicodehub_test
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
-      POSTGRES_HOST: localhost
+      DATABASE_HOST: localhost
       DJANGO_SETTINGS_MODULE: config.settings.development
 
     steps:
