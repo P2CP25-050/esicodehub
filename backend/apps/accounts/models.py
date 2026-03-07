@@ -1,5 +1,5 @@
+from django.contrib.auth.models import AbstractUser, BaseUserManager
 from django.db import models
-from django.contrib.auth.models import AbstractBaseUser, BaseUserManager
 
 
 class UserManager(BaseUserManager):
@@ -12,30 +12,31 @@ class UserManager(BaseUserManager):
         user.save(using=self._db)
         return user
 
+    def create_superuser(self, email, password=None, **extra_fields):
+        extra_fields.setdefault('is_staff', True)
+        extra_fields.setdefault('is_superuser', True)
+        return self.create_user(email, password, **extra_fields)
 
-class User(AbstractBaseUser):
+
+class User(AbstractUser):
 
     class Role(models.TextChoices):
-        STUDENT = 'student', 'Student'
-        TEACHER = 'teacher', 'Teacher'
+        STUDENT   = 'student',   'Student'
+        PROFESSOR = 'professor', 'Professor'
 
-    class Status(models.TextChoices):
-        ACTIVE   = 'active',   'Active'
-        INACTIVE = 'inactive', 'Inactive'
-        BANNED   = 'banned',   'Banned'
-
-    first_name = models.CharField(max_length=150)
-    last_name  = models.CharField(max_length=150)
-    email      = models.EmailField(unique=True)
-    role       = models.CharField(max_length=20, choices=Role.choices, default=Role.STUDENT)
-    status     = models.CharField(max_length=20, choices=Status.choices, default=Status.ACTIVE)
-    created_at = models.DateTimeField(auto_now_add=True)
-    is_active  = models.BooleanField(default=True)
+    username    = None
+    email       = models.EmailField(unique=True)
+    first_name  = models.CharField(max_length=150)
+    last_name   = models.CharField(max_length=150)
+    role        = models.CharField(max_length=20, choices=Role.choices, default=Role.STUDENT)
+    school_id   = models.CharField(max_length=20)
+    is_verified = models.BooleanField(default=False)
+    created_at  = models.DateTimeField(auto_now_add=True)
 
     objects = UserManager()
 
     USERNAME_FIELD  = 'email'
-    REQUIRED_FIELDS = ['first_name', 'last_name']
+    REQUIRED_FIELDS = []
 
     def __str__(self):
         return f"{self.first_name} {self.last_name} ({self.email})"
@@ -48,8 +49,8 @@ class Student(models.Model):
         return f"Student: {self.user.email}"
 
 
-class Teacher(models.Model):
-    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='teacher_profile')
+class Professor(models.Model):
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='professor_profile')
 
     def __str__(self):
-        return f"Teacher: {self.user.email}"
+        return f"Professor: {self.user.email}"
