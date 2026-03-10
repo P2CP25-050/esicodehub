@@ -33,7 +33,7 @@ class User(AbstractUser):
     first_name  = models.CharField(max_length=150)
     last_name   = models.CharField(max_length=150)
     role        = models.CharField(max_length=20, choices=Role.choices, default=Role.STUDENT)
-    school_id   = models.CharField(max_length=20)
+    school_id   = models.CharField(max_length=7)
     is_verified = models.BooleanField(default=False)
     created_at  = models.DateTimeField(auto_now_add=True)
 
