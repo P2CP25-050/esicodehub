@@ -7,7 +7,7 @@ class EsiStudent(models.Model):
     first_name = models.CharField(max_length=150)
     last_name = models.CharField(max_length=150)
     email = models.EmailField(unique=True)
-    section = models.CharField(max_length=1)
+    section = models.CharField(max_length=4) # Same as the specialty for 2CS and 3CS
     group = models.IntegerField()
 
     class StudyYear(models.TextChoices):
@@ -25,14 +25,6 @@ class EsiStudent(models.Model):
         ALUMNI = 'alumni', 'Alumni'
 
     status = models.CharField(max_length=20, choices=Status.choices, default=Status.INSCRIT)
-
-    class Specialty(models.TextChoices):
-        SIQ = 'SIQ', 'Systèmes Informatiques'
-        SIT = 'SIT', 'Systèmes d\'Information et Technologies'
-        SIL = 'SIL', 'Systèmes Informatiques et Logiciels'
-        SID = 'SID', 'Systèmes Intelligents et Données'
-
-    specialty = models.CharField(max_length=3, choices=Specialty.choices, null=True, blank=True)
 
     def clean(self):
         specialty_years = ['2CS', '3CS']
