@@ -1,0 +1,102 @@
+[
+  {
+    "model": "esi_db.esistudent",
+    "pk": "24/0188",
+    "fields": {
+      "first_name": "HOUSSAMEDDINE",
+      "last_name": "DJAIDJA",
+      "email": "oh_djaidja@esi.dz",
+      "section": "B",
+      "group": 7,
+      "study_year": "1CP",
+      "status": "inscrit"
+    }
+  },
+  {
+    "model": "esi_db.esistudent",
+    "pk": "24/0198",
+    "fields": {
+      "first_name": "ANES",
+      "last_name": "BENDJELLOUL",
+      "email": "oa_bendjelloul@esi.dz",
+      "section": "B",
+      "group": 5,
+      "study_year": "2CP",
+      "status": "inscrit"
+    }
+  },
+  {
+    "model": "esi_db.esistudent",
+    "pk": "23/0259",
+    "fields": {
+      "first_name": "ABDELLAH",
+      "last_name": "ABDI",
+      "email": "na_abdi@esi.dz",
+      "section": "A",
+      "group": 1,
+      "study_year": "1CS",
+      "status": "inscrit"
+    }
+  },
+  {
+    "model": "esi_db.esistudent",
+    "pk": "24/0060",
+    "fields": {
+      "first_name": "NASR ALLAH",
+      "last_name": "RAHLI",
+      "email": "on_rahli@esi.dz",
+      "section": "SIQA",
+      "group": 2,
+      "study_year": "2CS",
+      "status": "inscrit"
+    }
+  },
+  {
+    "model": "esi_db.esistudent",
+    "pk": "20/0020",
+    "fields": {
+      "first_name": "ABDELMOUMENE",
+      "last_name": "SAOUD",
+      "email": "oa_saoud@esi.dz",
+      "section": "SIL",
+      "group": 1,
+      "study_year": "3CS",
+      "status": "inscrit"
+    }
+  },
+  {
+    "model": "esi_db.esistudent",
+    "pk": "24/0189",
+    "fields": {
+      "first_name": "MOHAMED NOUR",
+      "last_name": "KESSAB",
+      "email": "om_kessab@esi.dz",
+      "section": null,
+      "group": null,
+      "study_year": null,
+      "status": "alumni"
+    }
+  },
+  {
+    "model": "esi_db.esiprofessor",
+    "pk": "2400212",
+    "fields": {
+      "first_name": "DHIA EDDINE",
+      "last_name": "HOUAM",
+      "email": "od_houam@esi.dz",
+      "grade": "PR",
+      "status": "permanent"
+    }
+  },
+  {
+    "model": "esi_db.esiprofessor",
+    "pk": "2300342",
+    "fields": {
+      "first_name": "ABDERRAHMANE",
+      "last_name": "TAYEB BOUDJEMA",
+      "email": "nt_boudjemaa@esi.dz",
+      "grade": "MAB",
+      "status": "adjunct"
+    }
+  }
+]
