@@ -83,7 +83,8 @@ class EmailVerification(models.Model):
     def __str__(self):
         valid, _ = self.is_valid()
         return f"Code for {self.user.email} (valid: {valid})"
-    
+
+
 class Subject(models.Model):
     name = models.CharField(max_length=255)
     code = models.CharField(max_length=50, unique=True)
