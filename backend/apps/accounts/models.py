@@ -1,11 +1,10 @@
 import secrets
 from datetime import timedelta
-
+from django.db.models.signals import post_save
+from django.dispatch import receiver
 from django.conf import settings
 from django.contrib.auth.models import AbstractUser, BaseUserManager
 from django.db import models
-from django.db.models.signals import post_save
-from django.dispatch import receiver
 from django.utils import timezone
 
 
@@ -86,7 +85,6 @@ class EmailVerification(models.Model):
         return f"Code for {self.user.email} (valid: {valid})"
     
 class Subject(models.Model):
-    id = models.AutoField(primary_key=True)
     name = models.CharField(max_length=255)
     code = models.CharField(max_length=50, unique=True)
 
@@ -98,13 +96,6 @@ class Subject(models.Model):
 
 
 class Profile(models.Model):
-    class ProfessorGrade(models.TextChoices):
-        ASSISTANT = 'assistant', 'Assistant'
-        MAA = 'MAA', 'Maître Assistant A'
-        MAB = 'MAB', 'Maître Assistant B'
-        MCF = 'MCF', 'Maître de Conférences'
-        PROFESSOR = 'professor', 'Professeur'
-
     user = models.OneToOneField(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
@@ -116,15 +107,6 @@ class Profile(models.Model):
         blank=True,
     )
     bio = models.TextField(blank=True)
-    section = models.CharField(max_length=10, null=True, blank=True)
-    group = models.IntegerField(null=True, blank=True)
-    study_year = models.IntegerField(null=True, blank=True)
-    grade = models.CharField(
-        max_length=20,
-        choices=ProfessorGrade.choices,
-        null=True,
-        blank=True,
-    )
     subjects = models.ManyToManyField(
         Subject,
         blank=True,
@@ -143,8 +125,3 @@ class Profile(models.Model):
 def create_user_profile(sender, instance, created, **kwargs):
     if created:
         Profile.objects.create(user=instance)
-
-
-@receiver(post_save, sender=settings.AUTH_USER_MODEL)
-def save_user_profile(sender, instance, **kwargs):
-    instance.profile.save()
