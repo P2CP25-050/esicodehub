@@ -1,7 +1,8 @@
 import secrets
 from datetime import timedelta
+from django.db.models.signals import post_save
+from django.dispatch import receiver
 from django.conf import settings
-from django.utils import timezone
 from django.contrib.auth.models import AbstractUser, BaseUserManager
 from django.db import models
 from django.utils import timezone
@@ -82,3 +83,46 @@ class EmailVerification(models.Model):
     def __str__(self):
         valid, _ = self.is_valid()
         return f"Code for {self.user.email} (valid: {valid})"
+
+
+class Subject(models.Model):
+    name = models.CharField(max_length=255)
+    code = models.CharField(max_length=50, unique=True)
+
+    def __str__(self):
+        return f"{self.code} - {self.name}"
+
+    class Meta:
+        ordering = ['code']
+
+
+class Profile(models.Model):
+    user = models.OneToOneField(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='profile',
+    )
+    avatar = models.ImageField(
+        upload_to='avatars/',
+        null=True,
+        blank=True,
+    )
+    bio = models.TextField(blank=True)
+    subjects = models.ManyToManyField(
+        Subject,
+        blank=True,
+        related_name='professors',
+    )
+
+    def __str__(self):
+        return f"Profile of {self.user}"
+
+    class Meta:
+        verbose_name = 'Profile'
+        verbose_name_plural = 'Profiles'
+
+
+@receiver(post_save, sender=settings.AUTH_USER_MODEL)
+def create_user_profile(sender, instance, created, **kwargs):
+    if created:
+        Profile.objects.create(user=instance)
