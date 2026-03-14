@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { login, saveTokens, getAccessToken, clearTokens } from '@/services/auth';
+import { login } from '@/services/auth';
+import {  saveTokens, getAccessToken, clearTokens } from '@/lib/tokens';
 import { AxiosError } from "axios";
 export default function TestAuth() {
   const [loading, setLoading] = useState(false);
@@ -13,7 +14,7 @@ export default function TestAuth() {
         password: 'password123',
       });
       saveTokens(response.data);
-      setResult(`✅ Login successful!\nToken: ${getAccessToken()?.slice(0, 20)}...`);
+      setResult(` Login successful!\nToken: ${getAccessToken()?.slice(0, 20)}...`);
     } catch (error: unknown) {
   let errorMsg = "Unknown error";
   let url = "Unknown URL";
@@ -28,7 +29,7 @@ export default function TestAuth() {
     errorMsg = error.message;
   }
 
-  setResult(`❌ Login failed!\nURL: ${url}\nError: ${errorMsg}`);
+  setResult(` Login failed!\nURL: ${url}\nError: ${errorMsg}`);
 }
     setLoading(false);
   };
@@ -37,12 +38,12 @@ export default function TestAuth() {
     setLoading(true);
     try {
       const response = await import('@/lib/axios').then(m => m.default.get('/auth/me/'));
-      setResult(`✅ API call successful!\nResponse: ${JSON.stringify(response.data)}`);
+      setResult(` API call successful!\nResponse: ${JSON.stringify(response.data)}`);
     }  catch (error: unknown) {
        if (error instanceof Error) {
-       setResult(`❌ API call failed: ${error.message}`);
+       setResult(` API call failed: ${error.message}`);
        } else {
-      setResult("❌ API call failed: Unknown error");
+      setResult(" API call failed: Unknown error");
   }
 }
     setLoading(false);
@@ -50,7 +51,7 @@ export default function TestAuth() {
 
   const testLogout = () => {
     clearTokens();
-    setResult('✅ Tokens cleared!');
+    setResult(' Tokens cleared!');
   };
 
   return (

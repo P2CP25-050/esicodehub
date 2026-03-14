@@ -1,5 +1,7 @@
 import apiClient from '@/lib/axios';
 
+
+
 //interfaces
 export interface RegisterRequest {
   email: string;
@@ -61,70 +63,6 @@ export const refreshToken = (refresh: string) =>
   apiClient.post<AuthTokens>('/auth/token/refresh/', { refresh });
 
 
-// Store tokens in memory only — never localStorage
-let accessToken: string | null = null;
-let storedRefreshToken: string | null = null;
 
-export const saveTokens = (tokens: AuthTokens) => {
-  accessToken = tokens.access;
-  storedRefreshToken = tokens.refresh;
-};
 
-export const getAccessToken = () => accessToken;
-export const getRefreshToken = () => storedRefreshToken;
 
-export const clearTokens = () => {
-  accessToken = null;
-  storedRefreshToken = null;
-};
-
-//request interceptor to add access token to headers
-apiClient.interceptors.request.use((config) => {
-  const token = getAccessToken();
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
-  }
-  return config;
-});
-
-//response interceptor to handle 401 errors and attempt token refresh
-apiClient.interceptors.response.use(
-  (response) => response,
-  async (error) => {
-    const originalRequest = error.config;
-
-    // If 401 and we have a refresh token, try to refresh
-    // Prevent infinite loops by checking if this is already a refresh attempt
-    if (
-      error.response?.status === 401 &&
-      getRefreshToken() &&
-      !originalRequest._retry
-    ) {
-      originalRequest._retry = true;
-
-      try {
-        const storedRefresh = getRefreshToken();
-        if (!storedRefresh) {
-          clearTokens();
-          return Promise.reject(error);
-        }
-
-        const response = await apiClient.post<AuthTokens>(
-          '/auth/token/refresh/',
-          { refresh: storedRefresh }
-        );
-        saveTokens(response.data);
-
-        // Retry original request with new token
-        originalRequest.headers.Authorization = `Bearer ${getAccessToken()}`;
-        return apiClient(originalRequest);
-      } catch (refreshError) {
-        // Refresh failed, clear tokens and let request fail
-        clearTokens();
-        return Promise.reject(refreshError);
-      }
-    }
-
-    return Promise.reject(error);
-  }
-);
