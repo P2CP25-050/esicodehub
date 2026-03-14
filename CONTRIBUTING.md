@@ -53,7 +53,15 @@ main (production-ready code)
    git switch dev
    git pull origin dev
    git switch backend/auth-system
-   git rebase dev
+   git merge dev
+```
+    You might get conflicts, don't panic and try resolving them one by one.
+    a. Open the conflicting files — look for <<<<<<< markers
+    b. Fix the conflicts manually
+    c. Then:
+```bash
+    git add .
+    git commit -m "chore: merge dev into branch"
 ```
 
 5. **Push your branch**
