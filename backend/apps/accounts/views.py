@@ -4,13 +4,13 @@ from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import RefreshToken
 
-from apps.accounts.models import User, EmailVerification
-from apps.accounts.serializers import (
+from accounts.models import User, EmailVerification
+from accounts.serializers import (
     RegisterSerializer,
     VerifyEmailSerializer,
     ResendVerificationSerializer,
 )
-from apps.esi_db.models import EsiStudent, EsiProfessor
+from esi_db.models import EsiStudent, EsiProfessor
 
 
 def _lookup_esi_person(email):
@@ -82,7 +82,6 @@ def register(request):
         school_id=person.school_id,
         role=role,
         is_verified=False,
-        is_active=True,
     )
 
     _create_and_send_verification(user)
@@ -130,6 +129,12 @@ def verify_email(request):
             'message': 'Email verified successfully',
             'access': str(refresh.access_token),
             'refresh': str(refresh),
+            'user': {
+                    'email': user.email,
+                    'first_name': user.first_name,
+                    'last_name': user.last_name,
+                    'role': user.role,
+            }
         },
         status=status.HTTP_200_OK,
     )
