@@ -1,4 +1,5 @@
 import apiClient from '@/lib/axios';
+import axios from 'axios';
 
 
 
@@ -60,9 +61,7 @@ export const login = (data: LoginRequest) =>
   apiClient.post<LoginResponse>('/auth/login/', data);
 //refresh access token using refresh token
 export const refreshToken = (refresh: string) =>
-  apiClient.post<AuthTokens>('/auth/token/refresh/', { refresh });
-
-
-
-
-
+  axios.post<AuthTokens>(
+	  '${process.env.NEXT_PUBLIC_API_URL}/auth/token/refresh/',
+	  { refresh }
+  );
