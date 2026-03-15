@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react';
 import apiClient from '../lib/axios';
 
 export default function Home() {
-  const [message, setMessage] = useState('Loading...');
+  const [message, setMessage] = useState('Loading......');
 
   useEffect(() => {
     apiClient.get('/health/')
@@ -12,7 +12,7 @@ export default function Home() {
       })
       .catch(error => {
         console.error(error);
-        setMessage('Failed to connect to backend');
+        setMessage('Failed to connect to backend.');
       });
   }, []);
 
