@@ -11,7 +11,7 @@ class EsiStudent(models.Model):
             max_length=4,
             null=True,
             blank=True,
-            help_text="A/B/C.. for 1CP-1CS, SIQA/SIQB/SITA/SITB... for 2CS and 3CS, null for alumni",
+            help_text="A/B... for 1CP-1CS, SIQA/SIQB/SITA... for 2CS and 3CS, null for alumni",
         )
     group = models.IntegerField(null=True, blank=True)
 
