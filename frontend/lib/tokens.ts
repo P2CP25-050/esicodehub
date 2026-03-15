@@ -1,21 +1,21 @@
 
 
 let accessToken: string | null = null;
-let refreshToken: string | null = null;
+let storedRefreshToken: string | null = null;
 
 export const saveTokens = (tokens: {
   access: string;
   refresh: string;
 }) => {
   accessToken = tokens.access;
-  refreshToken = tokens.refresh;
+  storedRefreshToken = tokens.refresh;
 };
 
 export const getAccessToken = () => accessToken;
 
-export const getRefreshToken = () => refreshToken;
+export const getRefreshToken = () => storedRefreshToken;
 
 export const clearTokens = () => {
   accessToken = null;
-  refreshToken = null;
+  storedRefreshToken = null;
 };
