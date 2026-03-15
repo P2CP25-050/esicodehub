@@ -1,9 +1,11 @@
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/router';
+import { refreshToken } from '@/services/auth';
 import {
-  refreshToken,
-} from '@/services/auth';
-import {getAccessToken,getRefreshToken,clearTokens,saveTokens} from '@/lib/tokens';
+  getAccessToken,
+  getRefreshToken,
+  clearTokens,
+  saveTokens,
+} from '@/lib/tokens';
 
 //types
 
@@ -20,42 +22,41 @@ interface UseAuthReturn {
   isAuthenticated: boolean;
 }
 
-//hook
-
+//hooks
 export const useAuth = (): UseAuthReturn => {
-  const [user, setUser]       = useState<AuthUser | null>(null);
+  const [user /*,setUser*/]           = useState<AuthUser | null>(null);   // we will need it in the future inchallah
   const [isLoading, setIsLoading] = useState(true);
-  const router = useRouter();
 
   useEffect(() => {
     const token = getRefreshToken();
 
-    // there is no rexfresh token meanss  user is not logged in
-    if (!token) {
-      setIsLoading(false);
-      return;
-    }
+    // we used async function inside useEffect because the refreshToken call is async and we want to await it.
+    const checkSession = async () => {
+      if (!token) {
+        setIsLoading(false);
+        return;
+      }
 
-    // Refresh token exists so we verify it and get user info (if valid) or log out (if invalid/expired)
-    refreshToken(token)
-      .then((res) => {
+      try {
+        const res = await refreshToken(token);
         saveTokens(res.data);
-
-        // Optionally decode user from access token or fetch profile
-        // For now we just confirm the session is valid
-        setIsLoading(false);
-      })
-      .catch(() => {
-        // Refresh token is expired or invalid => clear everything
+        // const profile = await getProfile();
+        // setUser(profile.data);
+        //those we will be using tjhem later
+      } catch {
         clearTokens();
+      } finally {
+        // always runs  whether success or fail
         setIsLoading(false);
-      });
+      }
+    };
+
+    checkSession();
   }, []);
 
   return {
     user,
     isLoading,
-    // Derived from whether an access token exists in memory
     isAuthenticated: !!getAccessToken(),
   };
 };
