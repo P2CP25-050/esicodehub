@@ -52,6 +52,7 @@ INSTALLED_APPS = [
 ]
 
 AUTH_USER_MODEL = 'accounts.User'
+AUTHENTICATION_BACKENDS = ['apps.accounts.backends.EmailBackend']
 
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",
