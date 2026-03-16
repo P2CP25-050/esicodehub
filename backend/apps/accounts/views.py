@@ -193,6 +193,13 @@ def login(request):
             status=status.HTTP_403_FORBIDDEN,
         )
 
+    # Block banned/deactivated users from logging in
+    if not user.is_active:
+        return Response(
+            {'error': 'Account is disabled'},
+            status=status.HTTP_403_FORBIDDEN,
+        )
+
     # Verify the password using the custom EmailBackend
     authenticated_user = authenticate(request, email=email, password=password)
     if not authenticated_user:

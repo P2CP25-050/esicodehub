@@ -1,5 +1,8 @@
 from django.contrib.auth.backends import ModelBackend
-from accounts.models import User
+from django.contrib.auth import get_user_model
+
+
+User = get_user_model()
 
 
 class EmailBackend(ModelBackend):
@@ -15,5 +18,5 @@ class EmailBackend(ModelBackend):
         if user.check_password(password):
             # Password matches
             return user
-         # Password is wrong
+        # Password is wrong
         return None
