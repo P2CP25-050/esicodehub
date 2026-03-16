@@ -1,4 +1,5 @@
 from django.core.mail import send_mail
+from django.contrib.auth import authenticate
 from rest_framework import status
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
@@ -9,6 +10,7 @@ from accounts.serializers import (
     RegisterSerializer,
     VerifyEmailSerializer,
     ResendVerificationSerializer,
+    LoginSerializer
 )
 from esi_db.models import EsiStudent, EsiProfessor
 
@@ -164,3 +166,60 @@ def resend_verification(request):
     user.email_verifications.filter(is_used=False).update(is_used=True)
     _create_and_send_verification(user)
     return Response({'message': 'Verification code sent'}, status=status.HTTP_200_OK)
+
+
+@api_view(['POST'])
+def login(request):
+    """Authenticates a verified user using email and password.
+    Returns JWT access and refresh tokens along with basic user info."""
+    serializer = LoginSerializer(data=request.data)
+    serializer.is_valid(raise_exception=True)
+
+    email = serializer.validated_data['email']
+    password = serializer.validated_data['password']
+
+    # Check user exists
+    user = User.objects.filter(email=email).first()
+    if not user:
+        return Response(
+            {'error': 'Invalid credentials'},
+            status=status.HTTP_401_UNAUTHORIZED,
+        )
+
+    # Check email is verified
+    if not user.is_verified:
+        return Response(
+            {'error': 'Email not verified'},
+            status=status.HTTP_403_FORBIDDEN,
+        )
+
+    # Block banned/deactivated users from logging in
+    if not user.is_active:
+        return Response(
+            {'error': 'Account is disabled'},
+            status=status.HTTP_403_FORBIDDEN,
+        )
+
+    # Verify the password using the custom EmailBackend
+    authenticated_user = authenticate(request, email=email, password=password)
+    if not authenticated_user:
+        return Response(
+            {'error': 'Invalid credentials'},
+            status=status.HTTP_401_UNAUTHORIZED,
+        )
+
+    # Return tokens + user object
+    refresh = RefreshToken.for_user(authenticated_user)
+    return Response(
+        {
+            'access': str(refresh.access_token),
+            'refresh': str(refresh),
+            'user': {
+                'email': authenticated_user.email,
+                'first_name': authenticated_user.first_name,
+                'last_name': authenticated_user.last_name,
+                'role': authenticated_user.role,
+            }
+        },
+        status=status.HTTP_200_OK,
+    )
