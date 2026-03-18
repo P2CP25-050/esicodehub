@@ -30,3 +30,12 @@ class ResendVerificationSerializer(serializers.Serializer):
 
     def validate_email(self, value):
         return value.lower()
+
+
+class LoginSerializer(serializers.Serializer):
+    email = serializers.EmailField()
+    password = serializers.CharField(write_only=True)
+
+    def validate_email(self, value):
+        """convert email to lowercase."""
+        return value.lower()
