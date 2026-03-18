@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { useRouter } from 'next/router';
 import { useAuth } from '@/hooks/useAuth';
+import { LoadingSpinner } from './LoadingSpinner';
 
 //this component is used to wrap the login 
 //and register pages, preventing authenticated 
@@ -29,44 +30,14 @@ export const PublicRoute = ({ children }: PublicRouteProps) => {
     if (isAuthenticated) {
       router.replace(
         user?.role === 'professor'
-          ? '/dashboard/teacher'
+          ? '/dashboard/professor'
           : '/dashboard/student'
       );
     }
   }, [isLoading, isAuthenticated, user, router]);
 
   // Still verifying session
-  if (isLoading) {
-    return (
-      <div style={{
-        minHeight: '100vh',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        background: '#050c1a',
-        flexDirection: 'column',
-        gap: 16,
-      }}>
-        <div style={{
-          width: 40,
-          height: 40,
-          borderRadius: '50%',
-          border: '3px solid rgba(59,130,246,.15)',
-          borderTopColor: '#3b82f6',
-          animation: 'spin 0.8s linear infinite',
-        }}/>
-        <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
-        <span style={{
-          color: '#475569',
-          fontFamily: "'JetBrains Mono', monospace",
-          fontSize: '.75rem',
-          letterSpacing: '.1em',
-        }}>
-          Checking session...
-        </span>
-      </div>
-    );
-  }
+  if (isLoading) return <LoadingSpinner message="checking session...." />;
 
   // Authenticated — null while redirect happens
   if (isAuthenticated) return null;
