@@ -1,11 +1,18 @@
 "use client";
 
 import { useState, useRef, useEffect, useCallback } from "react";
+import { useRouter } from "next/router";
+import Image from "next/image";
 
-// ─── Types ────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────
+// TYPES
+// ─────────────────────────────────────────────────────────
 type Page = "register" | "verify" | "success";
+type Role = "student" | "professor";
 
-// ─── useWindowWidth ───────────────────────────────────────
+// ─────────────────────────────────────────────────────────
+// HOOK — window width for responsive breakpoints
+// ─────────────────────────────────────────────────────────
 function useWindowWidth() {
   const [width, setWidth] = useState<number>(
     typeof window !== "undefined" ? window.innerWidth : 768
@@ -18,39 +25,67 @@ function useWindowWidth() {
   return width;
 }
 
-// ─── Logo ─────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────
+// LOGO
+// ─────────────────────────────────────────────────────────
 function Logo({ size = 80 }: { size?: number }) {
   return (
-    <div style={{ display: "flex", justifyContent: "center", marginBottom: "clamp(12px, 2.5vw, 20px)", animation: "fadeUp 0.5s 0.1s both" }}>
-      <img
-        src="/ESIcodehub3 2.png"
+    <div
+      style={{
+        display: "flex",
+        justifyContent: "center",
+        marginBottom: "clamp(12px, 2.5vw, 20px)",
+        animation: "fadeUp 0.5s 0.1s both",
+      }}
+    >
+      <Image
+        src="/esicodehub-logo.png"
         alt="ESIcodeHub Logo"
-        style={{ width: size, height: "auto", objectFit: "contain", maxWidth: "100%" }}
+        width={size}
+        height={size}
+        style={{ objectFit: "contain" }}
+        priority
       />
     </div>
   );
 }
 
-// ─── Particles ────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────
+// PARTICLES — animated background dots
+// ─────────────────────────────────────────────────────────
 function Particles() {
   return (
-    <div style={{ position: "fixed", inset: 0, pointerEvents: "none", overflow: "hidden", zIndex: 0 }}>
+    <div
+      style={{
+        position: "fixed",
+        inset: 0,
+        pointerEvents: "none",
+        overflow: "hidden",
+        zIndex: 0,
+      }}
+    >
       {Array.from({ length: 18 }).map((_, i) => (
-        <span key={i} style={{
-          position: "absolute",
-          width: 2 + (i % 3), height: 2 + (i % 3),
-          borderRadius: "50%",
-          background: i % 4 === 0 ? "#2563eb" : "rgba(59,130,246,0.45)",
-          left: `${(i * 347) % 100}%`,
-          animation: `particleRise ${7 + (i % 6)}s ${(i * 0.7) % 5}s linear infinite`,
-          opacity: 0,
-        }} />
+        <span
+          key={i}
+          style={{
+            position: "absolute",
+            width: 2 + (i % 3),
+            height: 2 + (i % 3),
+            borderRadius: "50%",
+            background: i % 4 === 0 ? "#2563eb" : "rgba(59,130,246,0.45)",
+            left: `${(i * 347) % 100}%`,
+            animation: `particleRise ${7 + (i % 6)}s ${(i * 0.7) % 5}s linear infinite`,
+            opacity: 0,
+          }}
+        />
       ))}
     </div>
   );
 }
 
-// ─── Eye icons ────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────
+// EYE ICONS
+// ─────────────────────────────────────────────────────────
 function EyeOff({ color = "#555" }: { color?: string }) {
   return (
     <svg viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.8" width={16} height={16}>
@@ -60,6 +95,7 @@ function EyeOff({ color = "#555" }: { color?: string }) {
     </svg>
   );
 }
+
 function EyeOn({ color = "#3b82f6" }: { color?: string }) {
   return (
     <svg viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.8" width={16} height={16}>
@@ -69,12 +105,14 @@ function EyeOn({ color = "#3b82f6" }: { color?: string }) {
   );
 }
 
-// ─── Input Row ────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────
+// INPUT ROW — with inline error + eye toggle
+// ─────────────────────────────────────────────────────────
 interface InputRowProps {
   id: string;
   placeholder: string;
   type?: string;
-  icon: React.ReactNode;
+  icon?: React.ReactNode;
   toggleable?: boolean;
   delay?: number;
   value: string;
@@ -84,7 +122,19 @@ interface InputRowProps {
   fontSize?: number;
 }
 
-function InputRow({ id, placeholder, type = "text", icon, toggleable = false, delay = 0, value, onChange, shake = false, error, fontSize = 15 }: InputRowProps) {
+function InputRow({
+  id,
+  placeholder,
+  type = "text",
+  icon,
+  toggleable = false,
+  delay = 0,
+  value,
+  onChange,
+  shake = false,
+  error,
+  fontSize = 15,
+}: InputRowProps) {
   const [focused, setFocused] = useState(false);
   const [visible, setVisible] = useState(false);
   const inputType = toggleable ? (visible ? "text" : "password") : type;
@@ -92,16 +142,22 @@ function InputRow({ id, placeholder, type = "text", icon, toggleable = false, de
 
   return (
     <div style={{ marginBottom: error ? 6 : 10, animation: `slideInLeft 0.45s ${delay}s both` }}>
-      <div style={{
-        background: "#1a1a1a",
-        borderRadius: 10,
-        display: "flex",
-        alignItems: "center",
-        padding: "0 14px",
-        border: `1.5px solid ${hasError ? "#ef4444" : focused ? "#2563eb" : "transparent"}`,
-        boxShadow: focused ? "0 0 0 3px rgba(37,99,235,0.14)" : hasError ? "0 0 0 3px rgba(239,68,68,0.14)" : "none",
-        transition: "border-color 0.25s, box-shadow 0.25s",
-      }}>
+      <div
+        style={{
+          background: "#1a1a1a",
+          borderRadius: 10,
+          display: "flex",
+          alignItems: "center",
+          padding: "0 14px",
+          border: `1.5px solid ${hasError ? "#ef4444" : focused ? "#2563eb" : "transparent"}`,
+          boxShadow: focused
+            ? "0 0 0 3px rgba(37,99,235,0.14)"
+            : hasError
+            ? "0 0 0 3px rgba(239,68,68,0.14)"
+            : "none",
+          transition: "border-color 0.25s, box-shadow 0.25s",
+        }}
+      >
         <input
           id={id}
           type={inputType}
@@ -112,29 +168,50 @@ function InputRow({ id, placeholder, type = "text", icon, toggleable = false, de
           onBlur={() => setFocused(false)}
           autoComplete="off"
           style={{
-            flex: 1, background: "transparent", border: "none", outline: "none",
-            color: "#ddd", fontFamily: "'Rajdhani', sans-serif",
-            fontSize, fontWeight: 500, padding: "13px 0", minWidth: 0,
+            flex: 1,
+            background: "transparent",
+            border: "none",
+            outline: "none",
+            color: "#ddd",
+            fontFamily: "'Rajdhani', sans-serif",
+            fontSize,
+            fontWeight: 500,
+            padding: "13px 0",
+            minWidth: 0,
           }}
         />
         <button
           type="button"
           onClick={() => toggleable && setVisible((v) => !v)}
           style={{
-            background: "none", border: "none",
+            background: "none",
+            border: "none",
             cursor: toggleable ? "pointer" : "default",
-            display: "flex", alignItems: "center", padding: 0, flexShrink: 0,
-            color: focused ? "#3b82f6" : "#555", transition: "color 0.2s",
+            display: "flex",
+            alignItems: "center",
+            padding: 0,
+            flexShrink: 0,
+            color: focused ? "#3b82f6" : "#555",
+            transition: "color 0.2s",
           }}
         >
-          {toggleable ? (visible ? <EyeOn /> : <EyeOff color={focused ? "#3b82f6" : "#555"} />) : icon}
+          {toggleable
+            ? visible
+              ? <EyeOn />
+              : <EyeOff color={focused ? "#3b82f6" : "#555"} />
+            : icon}
         </button>
       </div>
+
       {/* Inline error message */}
       {error && (
         <p style={{
-          color: "#ef4444", fontSize: 11, fontFamily: "'Rajdhani', sans-serif",
-          fontWeight: 600, marginTop: 4, paddingLeft: 4,
+          color: "#ef4444",
+          fontSize: 11,
+          fontFamily: "'Rajdhani', sans-serif",
+          fontWeight: 600,
+          marginTop: 4,
+          paddingLeft: 4,
           animation: "fadeUp 0.3s both",
         }}>
           {error}
@@ -144,76 +221,11 @@ function InputRow({ id, placeholder, type = "text", icon, toggleable = false, de
   );
 }
 
-// ─── Radio Item ───────────────────────────────────────────
-// ─── Pill Button ──────────────────────────────────────────
-function PillButton({ children, onClick, delay = 0, fontSize = 16, padding = "13px" }: {
-  children: React.ReactNode; onClick: () => void;
-  delay?: number; fontSize?: number; padding?: string;
-}) {
-  const [hovered, setHovered] = useState(false);
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
-      style={{
-        width: "100%", padding, borderRadius: 28, border: "none",
-        background: "#fff", color: "#000",
-        fontFamily: "'Rajdhani', sans-serif", fontSize, fontWeight: 700,
-        letterSpacing: "0.5px", cursor: "pointer",
-        display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
-        position: "relative", overflow: "hidden",
-        transform: hovered ? "translateY(-2px)" : "translateY(0)",
-        boxShadow: hovered ? "0 8px 28px rgba(255,255,255,0.2)" : "none",
-        transition: "transform 0.2s, box-shadow 0.2s",
-        animation: `fadeUp 0.5s ${delay}s both`,
-        touchAction: "manipulation",
-      }}
-    >
-      <span style={{
-        position: "absolute", top: 0,
-        left: hovered ? "150%" : "-80%",
-        width: "60%", height: "100%",
-        background: "linear-gradient(90deg, transparent, rgba(0,0,0,0.07), transparent)",
-        transition: "left 0.5s", pointerEvents: "none",
-      }} />
-      {children}
-    </button>
-  );
-}
-
-// ─── Back Button ──────────────────────────────────────────
-function BackButton({ onClick }: { onClick: () => void }) {
-  const [hovered, setHovered] = useState(false);
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
-      style={{
-        position: "absolute", top: 16, left: 16,
-        width: 36, height: 36, borderRadius: "50%",
-        border: `1.5px solid ${hovered ? "#2563eb" : "#222"}`,
-        background: "#0a0a0a", display: "flex", alignItems: "center",
-        justifyContent: "center", cursor: "pointer",
-        color: hovered ? "#3b82f6" : "#666",
-        transform: hovered ? "translateX(-2px)" : "translateX(0)",
-        transition: "border-color 0.2s, color 0.2s, transform 0.2s",
-        touchAction: "manipulation", zIndex: 10,
-      }}
-    >
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" width={14} height={14}>
-        <path d="M19 12H5M5 12l7-7M5 12l7 7" />
-      </svg>
-    </button>
-  );
-}
-
-// ─── Password strength bar ────────────────────────────────
+// ─────────────────────────────────────────────────────────
+// PASSWORD STRENGTH BAR
+// ─────────────────────────────────────────────────────────
 function PasswordStrength({ password }: { password: string }) {
-  const getStrength = () => {
+  const getStrength = (): number => {
     if (!password) return 0;
     let score = 0;
     if (password.length >= 8) score++;
@@ -222,6 +234,7 @@ function PasswordStrength({ password }: { password: string }) {
     if (/[^A-Za-z0-9]/.test(password)) score++;
     return score;
   };
+
   const strength = getStrength();
   const labels = ["", "Weak", "Fair", "Good", "Strong"];
   const colors = ["", "#ef4444", "#f97316", "#eab308", "#22c55e"];
@@ -232,16 +245,24 @@ function PasswordStrength({ password }: { password: string }) {
     <div style={{ marginBottom: 10, animation: "fadeUp 0.3s both" }}>
       <div style={{ display: "flex", gap: 4, marginBottom: 4 }}>
         {[1, 2, 3, 4].map((i) => (
-          <div key={i} style={{
-            flex: 1, height: 3, borderRadius: 2,
-            background: i <= strength ? colors[strength] : "#333",
-            transition: "background 0.3s",
-          }} />
+          <div
+            key={i}
+            style={{
+              flex: 1,
+              height: 3,
+              borderRadius: 2,
+              background: i <= strength ? colors[strength] : "#333",
+              transition: "background 0.3s",
+            }}
+          />
         ))}
       </div>
       <p style={{
-        fontSize: 11, fontFamily: "'Rajdhani', sans-serif",
-        fontWeight: 600, color: colors[strength], textAlign: "right",
+        fontSize: 11,
+        fontFamily: "'Rajdhani', sans-serif",
+        fontWeight: 600,
+        color: colors[strength],
+        textAlign: "right",
       }}>
         {labels[strength]}
       </p>
@@ -249,26 +270,167 @@ function PasswordStrength({ password }: { password: string }) {
   );
 }
 
-// ─── Main Component ───────────────────────────────────────
+// ─────────────────────────────────────────────────────────
+// PILL BUTTON — with loading spinner + disabled state
+// ─────────────────────────────────────────────────────────
+function PillButton({
+  children,
+  onClick,
+  delay = 0,
+  fontSize = 16,
+  padding = "13px",
+  loading = false,
+}: {
+  children: React.ReactNode;
+  onClick: () => void;
+  delay?: number;
+  fontSize?: number;
+  padding?: string;
+  loading?: boolean;
+}) {
+  const [hovered, setHovered] = useState(false);
+
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={loading}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      style={{
+        width: "100%",
+        padding,
+        borderRadius: 28,
+        border: "none",
+        background: loading ? "#ccc" : "#fff",
+        color: "#000",
+        fontFamily: "'Rajdhani', sans-serif",
+        fontSize,
+        fontWeight: 700,
+        letterSpacing: "0.5px",
+        cursor: loading ? "not-allowed" : "pointer",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        gap: 8,
+        position: "relative",
+        overflow: "hidden",
+        transform: hovered && !loading ? "translateY(-2px)" : "translateY(0)",
+        boxShadow: hovered && !loading ? "0 8px 28px rgba(255,255,255,0.2)" : "none",
+        transition: "transform 0.2s, box-shadow 0.2s, background 0.2s",
+        animation: `fadeUp 0.5s ${delay}s both`,
+        touchAction: "manipulation",
+        opacity: loading ? 0.7 : 1,
+      }}
+    >
+      {/* Shimmer */}
+      {!loading && (
+        <span style={{
+          position: "absolute",
+          top: 0,
+          left: hovered ? "150%" : "-80%",
+          width: "60%",
+          height: "100%",
+          background: "linear-gradient(90deg, transparent, rgba(0,0,0,0.07), transparent)",
+          transition: "left 0.5s",
+          pointerEvents: "none",
+        }} />
+      )}
+
+      {/* Spinner */}
+      {loading ? (
+        <>
+          <svg
+            width={16} height={16} viewBox="0 0 24 24"
+            fill="none" stroke="currentColor" strokeWidth="2.5"
+            style={{ animation: "spin 0.8s linear infinite" }}
+          >
+            <circle cx="12" cy="12" r="10" strokeOpacity="0.25" />
+            <path d="M12 2a10 10 0 0 1 10 10" />
+          </svg>
+          Loading...
+        </>
+      ) : (
+        children
+      )}
+    </button>
+  );
+}
+
+// ─────────────────────────────────────────────────────────
+// BACK BUTTON
+// ─────────────────────────────────────────────────────────
+function BackButton({ onClick }: { onClick: () => void }) {
+  const [hovered, setHovered] = useState(false);
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      style={{
+        position: "absolute",
+        top: 16,
+        left: 16,
+        width: 36,
+        height: 36,
+        borderRadius: "50%",
+        border: `1.5px solid ${hovered ? "#2563eb" : "#222"}`,
+        background: "#0a0a0a",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        cursor: "pointer",
+        color: hovered ? "#3b82f6" : "#666",
+        transform: hovered ? "translateX(-2px)" : "translateX(0)",
+        transition: "border-color 0.2s, color 0.2s, transform 0.2s",
+        touchAction: "manipulation",
+        zIndex: 10,
+      }}
+    >
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" width={14} height={14}>
+        <path d="M19 12H5M5 12l7-7M5 12l7 7" />
+      </svg>
+    </button>
+  );
+}
+
+// ─────────────────────────────────────────────────────────
+// MAIN PAGE
+// ─────────────────────────────────────────────────────────
 export default function SignUpPage() {
+  const router = useRouter();
   const width = useWindowWidth();
+
+  // ── State ──
   const [page, setPage] = useState<Page>("register");
+  const [role] = useState<Role>("student"); // set from API response
+
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [code, setCode] = useState("");
 
-  // Errors
+  // ── Errors ──
   const [emailError, setEmailError] = useState("");
   const [passwordError, setPasswordError] = useState("");
   const [confirmError, setConfirmError] = useState("");
+  const [codeError, setCodeError] = useState("");
   const [shakeCode, setShakeCode] = useState(false);
 
-  const [resendMsg, setResendMsg] = useState(false);
+  // ── Loading states (prevent double submissions) ──
+  const [loadingRegister, setLoadingRegister] = useState(false);
+  const [loadingVerify, setLoadingVerify] = useState(false);
+
+  // ── Resend 60s cooldown ──
+  const [resendCooldown, setResendCooldown] = useState(0);
+  const cooldownRef = useRef<NodeJS.Timeout | null>(null);
+
+  // ── Card re-animation key ──
   const [cardKey, setCardKey] = useState(0);
   const codeRef = useRef<HTMLInputElement>(null);
 
-  // ── Breakpoints ──
+  // ── Responsive breakpoints ──
   const isXs = width < 400;
   const isSm = width >= 400 && width < 640;
 
@@ -282,31 +444,63 @@ export default function SignUpPage() {
   const btnPad       = isXs ? "11px" : "13px";
   const logoSize     = isXs ? 60 : isSm ? 70 : 80;
   const subtitleSize = isXs ? 13 : 14;
+  const outerPad     = isXs ? "0" : isSm ? "16px" : "24px";
 
+  // ── Navigate between steps ──
   const goTo = useCallback((p: Page) => {
     setCardKey((k) => k + 1);
     setPage(p);
   }, []);
 
-  const triggerShake = (setter: (v: boolean) => void) => {
-    setter(true);
-    setTimeout(() => setter(false), 600);
-  };
+  // ── Redirect after success based on role ──
+  const redirectToDashboard = useCallback(
+    (userRole: Role) => {
+      router.push(
+        userRole === "professor" ? "/dashboard/professor" : "/dashboard/student"
+      );
+    },
+    [router]
+  );
 
-  // ── Validation ──
+  // ── Start 60s resend cooldown ──
+  const startCooldown = useCallback(() => {
+    setResendCooldown(60);
+    if (cooldownRef.current) clearInterval(cooldownRef.current);
+    cooldownRef.current = setInterval(() => {
+      setResendCooldown((prev) => {
+        if (prev <= 1) {
+          clearInterval(cooldownRef.current!);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (cooldownRef.current) clearInterval(cooldownRef.current);
+    };
+  }, []);
+
+  // ── @esi.dz domain check ──
+  const validateEsiEmail = (val: string): boolean =>
+    val.toLowerCase().endsWith("@esi.dz");
+
+  // ── Form validation ──
   const validate = (): boolean => {
     let valid = true;
 
-    // Email
     if (!email) {
       setEmailError("Email is required"); valid = false;
     } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
       setEmailError("Enter a valid email address"); valid = false;
+    } else if (!validateEsiEmail(email)) {
+      setEmailError("Only @esi.dz email addresses are allowed"); valid = false;
     } else {
       setEmailError("");
     }
 
-    // Password
     if (!password) {
       setPasswordError("Password is required"); valid = false;
     } else if (password.length < 8) {
@@ -315,7 +509,6 @@ export default function SignUpPage() {
       setPasswordError("");
     }
 
-    // Confirm
     if (!confirmPassword) {
       setConfirmError("Please confirm your password"); valid = false;
     } else if (password !== confirmPassword) {
@@ -327,22 +520,87 @@ export default function SignUpPage() {
     return valid;
   };
 
-  const handleRegister = useCallback(() => {
+  // ── Register — API placeholder ──
+  const handleRegister = useCallback(async () => {
+    if (loadingRegister) return;
     if (!validate()) return;
-    goTo("verify");
-    setTimeout(() => codeRef.current?.focus(), 400);
-  }, [email, password, confirmPassword, goTo]);
+    setLoadingRegister(true);
+    try {
+      // TODO: replace with real API call
+      // const res = await fetch("/api/auth/register", {
+      //   method: "POST",
+      //   headers: { "Content-Type": "application/json" },
+      //   body: JSON.stringify({ email, password }),
+      // });
+      // const data = await res.json();
+      // if (!res.ok) throw new Error(data.message);
+      // setRole(data.role); // "student" or "professor" from API
 
-  const handleVerify = useCallback(() => {
-    if (code.length < 4) { triggerShake(setShakeCode); return; }
-    goTo("success");
-  }, [code, goTo]);
+      await new Promise((r) => setTimeout(r, 1000)); // simulated delay
+      goTo("verify");
+      startCooldown();
+      setTimeout(() => codeRef.current?.focus(), 400);
+    } catch {
+      setEmailError("Registration failed. Please try again.");
+    } finally {
+      setLoadingRegister(false);
+    }
+  }, [email, password, confirmPassword, loadingRegister, goTo, startCooldown]);
 
-  const handleResend = () => {
-    setResendMsg(true);
-    setTimeout(() => setResendMsg(false), 3000);
-  };
+  // ── Verify — API placeholder ──
+  const handleVerify = useCallback(async () => {
+    if (loadingVerify) return;
 
+    // Must be exactly 6 digits
+    if (code.length !== 6) {
+      setCodeError("Code must be exactly 6 digits");
+      setShakeCode(true);
+      setTimeout(() => setShakeCode(false), 600);
+      return;
+    }
+
+    setCodeError("");
+    setLoadingVerify(true);
+    try {
+      // TODO: replace with real API call
+      // const res = await fetch("/api/auth/verify", {
+      //   method: "POST",
+      //   headers: { "Content-Type": "application/json" },
+      //   body: JSON.stringify({ email, code }),
+      // });
+      // const data = await res.json();
+      // if (!res.ok) throw new Error(data.message);
+
+      await new Promise((r) => setTimeout(r, 1000)); // simulated delay
+      goTo("success");
+      setTimeout(() => redirectToDashboard(role), 1800);
+    } catch {
+      setCodeError("Invalid code. Please try again.");
+      setShakeCode(true);
+      setTimeout(() => setShakeCode(false), 600);
+    } finally {
+      setLoadingVerify(false);
+    }
+  }, [code, email, role, loadingVerify, goTo, redirectToDashboard]);
+
+  // ── Resend — API placeholder ──
+  const handleResend = useCallback(async () => {
+    if (resendCooldown > 0) return;
+    startCooldown();
+    try {
+      // TODO: replace with real API call
+      // await fetch("/api/auth/resend-code", {
+      //   method: "POST",
+      //   headers: { "Content-Type": "application/json" },
+      //   body: JSON.stringify({ email }),
+      // });
+      await new Promise((r) => setTimeout(r, 500));
+    } catch {
+      // silently fail — cooldown already started
+    }
+  }, [resendCooldown, startCooldown]);
+
+  // ── Keyboard Enter ──
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key !== "Enter") return;
@@ -353,8 +611,9 @@ export default function SignUpPage() {
     return () => window.removeEventListener("keydown", onKey);
   }, [page, handleRegister, handleVerify]);
 
-  const outerPad = isXs ? "0" : isSm ? "16px" : "24px";
-
+  // ─────────────────────────────────────────────────────
+  // RENDER
+  // ─────────────────────────────────────────────────────
   return (
     <>
       <style>{`
@@ -407,6 +666,10 @@ export default function SignUpPage() {
           75%  { clip-path: inset(98% 0 0 0); }
           100% { clip-path: inset(0 100% 98% 0); }
         }
+        @keyframes spin {
+          from { transform: rotate(0deg); }
+          to   { transform: rotate(360deg); }
+        }
 
         .outer-wrapper {
           min-height: 100dvh;
@@ -425,7 +688,6 @@ export default function SignUpPage() {
         @media (min-height: 700px) {
           .outer-wrapper { align-items: center; }
         }
-
         button { -webkit-tap-highlight-color: transparent; }
         input  { font-size: max(16px, 1em); }
         @media (min-width: 400px) { input { font-size: inherit; } }
@@ -454,10 +716,14 @@ export default function SignUpPage() {
           {/* Border trace */}
           <div style={{ position: "absolute", inset: 0, borderRadius: cardRadius, border: "1.5px solid #2563eb", opacity: 0.18, animation: "borderTrace 6s linear infinite", pointerEvents: "none" }} />
 
-          {/* ══ REGISTER ══ */}
+          {/* ══════════════════════════════════════════
+              REGISTER PAGE
+          ══════════════════════════════════════════ */}
           {page === "register" && (
             <div style={{ animation: "pageSlide 0.4s cubic-bezier(0.22,1,0.36,1) both" }}>
-              <BackButton onClick={() => {}} />
+
+              {/* Back → landing / login page */}
+              <BackButton onClick={() => router.push("/")} />
 
               <Logo size={logoSize} />
 
@@ -465,11 +731,16 @@ export default function SignUpPage() {
                 Create your account
               </div>
 
-              {/* Email */}
+              {/* Email — @esi.dz only */}
               <InputRow
-                id="email" placeholder="Email address" type="email"
-                value={email} onChange={(v) => { setEmail(v); setEmailError(""); }}
-                error={emailError} delay={0.18} fontSize={inputSize}
+                id="email"
+                placeholder="Email address (@esi.dz)"
+                type="email"
+                value={email}
+                onChange={(v) => { setEmail(v); setEmailError(""); }}
+                error={emailError}
+                delay={0.18}
+                fontSize={inputSize}
                 icon={
                   <svg viewBox="0 0 24 24" fill="none" stroke="#555" strokeWidth="1.8" width={16} height={16}>
                     <rect x="2" y="4" width="20" height="16" rx="2.5" />
@@ -478,24 +749,40 @@ export default function SignUpPage() {
                 }
               />
 
-              {/* Password */}
+              {/* Password + strength bar */}
               <InputRow
-                id="password" placeholder="Password"
-                value={password} onChange={(v) => { setPassword(v); setPasswordError(""); }}
-                error={passwordError} delay={0.23} toggleable fontSize={inputSize}
-                icon={<EyeOff />}
+                id="password"
+                placeholder="Password"
+                value={password}
+                onChange={(v) => { setPassword(v); setPasswordError(""); }}
+                error={passwordError}
+                delay={0.23}
+                toggleable
+                fontSize={inputSize}
               />
               <PasswordStrength password={password} />
 
-              {/* Confirm Password */}
+              {/* Confirm password */}
               <InputRow
-                id="confirm" placeholder="Confirm Password"
-                value={confirmPassword} onChange={(v) => { setConfirmPassword(v); setConfirmError(""); }}
-                error={confirmError} delay={0.28} toggleable fontSize={inputSize}
-                icon={<EyeOff />}
+                id="confirm"
+                placeholder="Confirm Password"
+                value={confirmPassword}
+                onChange={(v) => { setConfirmPassword(v); setConfirmError(""); }}
+                error={confirmError}
+                delay={0.28}
+                toggleable
+                fontSize={inputSize}
               />
 
-              <PillButton onClick={handleRegister} delay={0.38} fontSize={btnSize} padding={btnPad}>
+              <div style={{ marginBottom: isXs ? 16 : 20 }} />
+
+              <PillButton
+                onClick={handleRegister}
+                delay={0.34}
+                fontSize={btnSize}
+                padding={btnPad}
+                loading={loadingRegister}
+              >
                 Register
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" width={17} height={17}>
                   <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2" />
@@ -505,9 +792,12 @@ export default function SignUpPage() {
             </div>
           )}
 
-          {/* ══ VERIFY ══ */}
+          {/* ══════════════════════════════════════════
+              VERIFY PAGE
+          ══════════════════════════════════════════ */}
           {page === "verify" && (
             <div style={{ animation: "pageSlide 0.4s cubic-bezier(0.22,1,0.36,1) both" }}>
+
               <BackButton onClick={() => goTo("register")} />
 
               <Logo size={logoSize} />
@@ -519,19 +809,25 @@ export default function SignUpPage() {
               {/* Email badge */}
               <div style={{ display: "flex", justifyContent: "center", marginBottom: isXs ? 14 : 18, animation: "fadeUp 0.5s 0.14s both" }}>
                 <div style={{ background: "rgba(37,99,235,0.1)", border: "1px solid rgba(37,99,235,0.3)", borderRadius: 100, padding: "4px 14px", display: "flex", alignItems: "center", gap: 6 }}>
-                  <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#2563eb", display: "block", animation: "fadeUp 1s ease-in-out infinite alternate" }} />
-                  <span style={{ color: "#3b82f6", fontSize: 12, fontFamily: "'Courier Prime', monospace", fontWeight: 700 }}>{email}</span>
+                  <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#2563eb", display: "block" }} />
+                  <span style={{ color: "#3b82f6", fontSize: 12, fontFamily: "'Courier Prime', monospace", fontWeight: 700 }}>
+                    {email}
+                  </span>
                 </div>
               </div>
 
               <p style={{ textAlign: "center", color: "#999", fontSize: subtitleSize, lineHeight: 1.65, marginBottom: isXs ? 18 : 24, fontWeight: 500, animation: "fadeUp 0.5s 0.15s both", fontFamily: "'Rajdhani', sans-serif" }}>
-                Please enter the code that has been<br />sent to you through your E-mail
+                Please enter the 6-digit code sent<br />to your E-mail
               </p>
 
+              {/* Code input */}
               <div style={{
-                background: "#1a1a1a", borderRadius: 10,
-                display: "flex", alignItems: "center", padding: "0 14px",
-                marginBottom: 14,
+                background: "#1a1a1a",
+                borderRadius: 10,
+                display: "flex",
+                alignItems: "center",
+                padding: "0 14px",
+                marginBottom: codeError ? 6 : 14,
                 border: `1.5px solid ${shakeCode ? "#ef4444" : "#333"}`,
                 boxShadow: shakeCode ? "0 0 0 3px rgba(239,68,68,0.14)" : "none",
                 transition: "border-color 0.25s, box-shadow 0.25s",
@@ -540,53 +836,101 @@ export default function SignUpPage() {
                 <input
                   ref={codeRef}
                   type="text"
-                  placeholder="Enter The Code"
+                  placeholder="Enter 6-digit code"
                   value={code}
-                  onChange={(e) => setCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                  onChange={(e) => {
+                    setCode(e.target.value.replace(/\D/g, "").slice(0, 6));
+                    setCodeError("");
+                  }}
                   maxLength={6}
                   inputMode="numeric"
                   autoComplete="one-time-code"
                   style={{
-                    flex: 1, background: "transparent", border: "none", outline: "none",
-                    color: "#ddd", fontFamily: "'Courier Prime', monospace",
-                    fontSize: isXs ? 16 : 18, fontWeight: 700,
-                    padding: "13px 0", letterSpacing: code ? 6 : 1, minWidth: 0,
+                    flex: 1,
+                    background: "transparent",
+                    border: "none",
+                    outline: "none",
+                    color: "#ddd",
+                    fontFamily: "'Courier Prime', monospace",
+                    fontSize: isXs ? 16 : 18,
+                    fontWeight: 700,
+                    padding: "13px 0",
+                    letterSpacing: code ? 6 : 1,
+                    minWidth: 0,
                   }}
                 />
-                <span style={{ color: "#555", display: "flex", alignItems: "center", flexShrink: 0 }}>
-                  <EyeOff />
-                </span>
               </div>
 
-              <PillButton onClick={handleVerify} delay={0.28} fontSize={btnSize} padding={btnPad}>
-                Enter
+              {/* Code error */}
+              {codeError && (
+                <p style={{ color: "#ef4444", fontSize: 11, fontFamily: "'Rajdhani', sans-serif", fontWeight: 600, marginBottom: 10, paddingLeft: 4, animation: "fadeUp 0.3s both" }}>
+                  {codeError}
+                </p>
+              )}
+
+              <PillButton
+                onClick={handleVerify}
+                delay={0.28}
+                fontSize={btnSize}
+                padding={btnPad}
+                loading={loadingVerify}
+              >
+                Verify
               </PillButton>
 
-              <button type="button" onClick={handleResend} style={{
-                display: "block", width: "100%", textAlign: "center", marginTop: 14,
-                background: "none", border: "none",
-                color: resendMsg ? "#22c55e" : "#555",
-                fontSize: isXs ? 12 : 13, fontWeight: 600,
-                textDecoration: "underline", cursor: "pointer",
-                transition: "color 0.2s", fontFamily: "'Rajdhani', sans-serif",
-                letterSpacing: 0.3, animation: "fadeUp 0.5s 0.32s both",
-                padding: "4px 0", touchAction: "manipulation",
-              }}>
-                {resendMsg ? "✓ Code sent again!" : "Resend the code"}
+              {/* Resend with 60s cooldown */}
+              <button
+                type="button"
+                onClick={handleResend}
+                disabled={resendCooldown > 0}
+                style={{
+                  display: "block",
+                  width: "100%",
+                  textAlign: "center",
+                  marginTop: 14,
+                  background: "none",
+                  border: "none",
+                  color: resendCooldown > 0 ? "#444" : "#555",
+                  fontSize: isXs ? 12 : 13,
+                  fontWeight: 600,
+                  textDecoration: resendCooldown > 0 ? "none" : "underline",
+                  cursor: resendCooldown > 0 ? "not-allowed" : "pointer",
+                  transition: "color 0.2s",
+                  fontFamily: "'Rajdhani', sans-serif",
+                  letterSpacing: 0.3,
+                  animation: "fadeUp 0.5s 0.32s both",
+                  padding: "4px 0",
+                  touchAction: "manipulation",
+                }}
+              >
+                {resendCooldown > 0
+                  ? `Resend available in ${resendCooldown}s`
+                  : "Resend the code"}
               </button>
             </div>
           )}
 
-          {/* ══ SUCCESS ══ */}
+          {/* ══════════════════════════════════════════
+              SUCCESS PAGE
+          ══════════════════════════════════════════ */}
           {page === "success" && (
             <div style={{ display: "flex", flexDirection: "column", alignItems: "center", padding: `${isXs ? 6 : 10}px 0`, animation: "pageSlide 0.4s cubic-bezier(0.22,1,0.36,1) both" }}>
+
               <Logo size={logoSize} />
 
+              {/* Check circle */}
               <div style={{
-                width: isXs ? 60 : 72, height: isXs ? 60 : 72, borderRadius: "50%",
-                border: "2.5px solid #22c55e", display: "flex", alignItems: "center",
-                justifyContent: "center", color: "#22c55e", fontSize: isXs ? 24 : 30,
-                marginBottom: isXs ? 14 : 20, boxShadow: "0 0 28px rgba(34,197,94,0.28)",
+                width: isXs ? 60 : 72,
+                height: isXs ? 60 : 72,
+                borderRadius: "50%",
+                border: "2.5px solid #22c55e",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                color: "#22c55e",
+                fontSize: isXs ? 24 : 30,
+                marginBottom: isXs ? 14 : 20,
+                boxShadow: "0 0 28px rgba(34,197,94,0.28)",
                 animation: "checkPop 0.5s cubic-bezier(0.34,1.56,0.64,1) both",
               }}>
                 ✓
@@ -597,17 +941,18 @@ export default function SignUpPage() {
               </div>
 
               <p style={{ textAlign: "center", color: "#999", fontSize: subtitleSize, lineHeight: 1.6, marginBottom: isXs ? 18 : 24, animation: "fadeUp 0.5s 0.25s both", fontFamily: "'Rajdhani', sans-serif" }}>
-                Account verified.<br />Welcome to <strong style={{ color: "#fff" }}>ESIcodeHub</strong>.
+                Account verified.<br />Redirecting to your dashboard…
               </p>
 
-              <div style={{ width: "100%", animation: "fadeUp 0.5s 0.3s both" }}>
-                <PillButton onClick={() => alert("Redirecting to dashboard…")} delay={0} fontSize={btnSize} padding={btnPad}>
-                  Go to Dashboard
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" width={16} height={16}>
-                    <path d="M5 12h14M12 5l7 7-7 7" />
-                  </svg>
-                </PillButton>
-              </div>
+              {/* Redirect spinner */}
+              <svg
+                width={28} height={28} viewBox="0 0 24 24"
+                fill="none" stroke="#2563eb" strokeWidth="2.5"
+                style={{ animation: "spin 0.8s linear infinite" }}
+              >
+                <circle cx="12" cy="12" r="10" strokeOpacity="0.25" />
+                <path d="M12 2a10 10 0 0 1 10 10" />
+              </svg>
             </div>
           )}
         </div>
