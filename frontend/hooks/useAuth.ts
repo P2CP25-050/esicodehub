@@ -44,7 +44,7 @@ export const useAuth = (): UseAuthReturn =>
         const profile = await getMe();
         setUser(profile.data);
         //those we will be using tjhem later
-        setIsAuthenticated(!!getAccessToken());
+        setIsAuthenticated(true);
       } catch {
 
         clearTokens();

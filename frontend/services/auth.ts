@@ -65,7 +65,9 @@ export const refreshToken = (refresh: string) =>
 	  '${process.env.NEXT_PUBLIC_API_URL}/auth/token/refresh/',
 	  { refresh }
   );
-//logout by clearing tokens on client side 
+//the response returned  by GET auth/me endpoint
+//returns the current user's profile based on the access token provided in the request headers
+//email ,   first_name, last_name, role (student or professor)
 export interface MeResponse {
   email: string;
   first_name: string;

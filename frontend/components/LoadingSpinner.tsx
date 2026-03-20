@@ -30,11 +30,7 @@ export const LoadingSpinner = ({
         }}
       />
     
-      <style>{`
-        @keyframes spin {
-          to { transform: rotate(360deg); }
-        }
-      `}</style>
+
       <span
         style={{
           color: '#475569',
