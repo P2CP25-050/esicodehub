@@ -49,6 +49,7 @@ INSTALLED_APPS = [
     'rest_framework',
     'rest_framework_simplejwt',
     'esi_db',
+    'personal_submissions',
 ]
 
 AUTH_USER_MODEL = 'accounts.User'
