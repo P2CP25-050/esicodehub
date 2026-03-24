@@ -49,6 +49,7 @@ INSTALLED_APPS = [
     'rest_framework',
     'rest_framework_simplejwt',
     'esi_db',
+    'personal_submissions',
 ]
 
 AUTH_USER_MODEL = 'accounts.User'
@@ -154,3 +155,9 @@ SIMPLE_JWT = {
     'ACCESS_TOKEN_LIFETIME':  timedelta(minutes=60),
     'REFRESH_TOKEN_LIFETIME': timedelta(days=7),
 }
+
+GS_BUCKET_NAME = os.getenv('GCS_BUCKET_NAME')
+GS_CREDENTIALS = os.getenv('GCS_CREDENTIALS_PATH')
+GS_FILE_OVERWRITE = False
+GS_DEFAULT_ACL = None
+GS_EXPIRATION = 3600

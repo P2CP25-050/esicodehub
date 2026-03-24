@@ -59,6 +59,7 @@ services:
     volumes:
       - ./backend:/app/backend
       - ./static:/app/backend/staticfiles
+      - ./gcs-credentials.json:/app/gcs-credentials.json
 
     depends_on:
       db:
