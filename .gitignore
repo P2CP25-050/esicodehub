@@ -6,3 +6,5 @@ env/
 data/
 
 **/static/
+
+gcs-credentials.json
