@@ -1,33 +1,14 @@
 //submissions.types.ts
 
 export const SUPPORTED_LANGUAGES = [
-  // Common languages first
-  'Python',
-  'C',
-  'C++',
-  'Java',
-  'JavaScript',
-  'TypeScript',
+  // Common first
+  'Python', 'C', 'C++', 'Java', 'JavaScript', 'TypeScript',
   // Rest of MOSS-supported languages
-  'C#',
-  'PHP',
-  'Ruby',
-  'Swift',
-  'Kotlin',
-  'Go',
-  'Rust',
-  'Scala',
-  'Haskell',
-  'MATLAB',
-  'Perl',
-  'R',
-  'SQL',
-  'Assembly',
-  'Pascal',
-  'Fortran',
-  'VHDL',
-  'Verilog',
-] as const; // readonly — cannot be modified
+  'C#', 'Visual Basic', 'Fortran', 'ML', 'Haskell',
+  'Lisp', 'Scheme', 'Pascal', 'Modula2', 'Ada',
+  'Perl', 'TCL', 'MATLAB', 'VHDL', 'Verilog',
+  'Spice', 'MIPS Assembly', 'x86 Assembly', 'HCL2',
+] as const;
 
 
 export type SupportedLanguage = typeof SUPPORTED_LANGUAGES[number];
@@ -39,7 +20,7 @@ export interface PersonalSubmissionFile {
   file_name:  string; // e.g. "bubble_sort.py"
   file_path:  string; // path on the server
   file_size:  number; // size in bytes
-  created_at: string; // ISO date string e.g. "2024-01-15T10:30:00Z"
+  created_at: string; // ISO date string 
 }
 
 //the student or professor who created the submission
@@ -55,10 +36,10 @@ export interface PersonalSubmission {
   id:          number;
   title:       string;
   description: string;
-  language:    SupportedLanguage; //  typed — only valid languages allowed
-  type:        string;            // e.g. "assignment" | "project" | "exercise"
-  course:      string;            // e.g. "alsdd", "sys2"
-  is_public:   boolean;           // whether other students can see it
+  language:    string; 
+  submission_type:        string;            // e.g. "assignment" | "project" | "exercise"
+  course_tage:      string;            // e.g. "alsdd", "sys2"
+  visibility:   'public' | 'private';           // whether other students can see it
   created_at:  string;
   updated_at:  string;
   files?:      PersonalSubmissionFile[]; // only in detail view
@@ -69,17 +50,17 @@ export interface PersonalSubmission {
 export interface PersonalSubmissionCreatePayload {
   title:        string;
   description?: string;
-  language:     SupportedLanguage; //  typed — prevents sending "Pyhton" etc.
-  type:         string;
-  course:       string;
-  is_public?:   boolean;           // defaults to false if not provided
+  language:     string; //  typed — prevents sending "Pyhton" etc.
+  submission_type:         string;
+  course_tage:       string;
+  visibility?:   'public' | 'private';           // defaults to 'private' if not provided
 }
 
 // Parameters for listing submissions with optional filters and pagination
 export interface SubmissionListParams {
-  language?: SupportedLanguage; //  typed filter
-  type?:     string;
-  course?:   string;
+  language?: string; //  typed filter
+  submission_type?:     string;
+  course_tage?:   string;
   search?:   string;            // search by title or description
   page?:     number;            // which page to fetch
 }
