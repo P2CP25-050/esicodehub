@@ -38,7 +38,7 @@ export interface PersonalSubmission {
   description: string;
   language:    string; 
   submission_type:        string;            // e.g. "assignment" | "project" | "exercise"
-  course_tage:      string;            // e.g. "alsdd", "sys2"
+  course_tag:      string;            // e.g. "alsdd", "sys2"
   visibility:   'public' | 'private';           // whether other students can see it
   created_at:  string;
   updated_at:  string;
@@ -52,7 +52,7 @@ export interface PersonalSubmissionCreatePayload {
   description?: string;
   language:     string; //  typed — prevents sending "Pyhton" etc.
   submission_type:         string;
-  course_tage:       string;
+  course_tag:       string;
   visibility?:   'public' | 'private';           // defaults to 'private' if not provided
 }
 
@@ -60,7 +60,7 @@ export interface PersonalSubmissionCreatePayload {
 export interface SubmissionListParams {
   language?: string; //  typed filter
   submission_type?:     string;
-  course_tage?:   string;
+  course_tag?:   string;
   search?:   string;            // search by title or description
   page?:     number;            // which page to fetch
 }
