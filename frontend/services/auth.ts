@@ -1,111 +1,79 @@
-import axios, { type AxiosInstance } from 'axios';
-import { getAccessToken, getRefreshToken, saveTokens, clearTokens } from '@/lib/tokens';
+import apiClient from '@/lib/axios';
+import axios from 'axios';
 
-// --- Types -------------------------------------------------------------------
 
-export interface LoginPayload {
+
+//interfaces
+export interface RegisterRequest {
+  email: string;
+  password: string;
+  password_confirm: string;
+}
+
+export interface VerifyEmailRequest {
+  email: string;
+  code: string;
+}
+
+export interface ResendVerificationRequest {
+  email: string;
+}
+
+export interface LoginRequest {
   email: string;
   password: string;
 }
 
-export interface AuthUser {
-  id: string;
-  email: string;
-  role: 'professor' | 'student';
+export interface AuthTokens {
+  access: string;
+  refresh: string;
 }
 
-export interface AuthTokens {
-  accessToken: string;
-  refreshToken: string;
+export interface AuthUser {
+  email: string;
+  first_name: string;
+  last_name: string;
+  role: 'student' | 'professor';
+}
+
+export interface LoginResponse {
+  access: string;
+  refresh: string;
   user: AuthUser;
 }
 
-// --- Axios instance ----------------------------------------------------------
+//functions
 
-const apiKey = process.env.NEXT_PUBLIC_API_KEY;
-if (!apiKey) {
-  console.warn('[auth] NEXT_PUBLIC_API_KEY is not set — requests will be rejected by the backend.');
+//validation and auth flows
+export const register = (data: RegisterRequest) =>
+  apiClient.post('/auth/register/', data);
+
+//verify email with code sent to user's email
+export const verifyEmail = (data: VerifyEmailRequest) =>
+  apiClient.post('/auth/verify-email/', data);
+
+//resend verification code to user's email
+export const resendVerification = (data: ResendVerificationRequest) =>
+  apiClient.post('/auth/resend-verification/', data);
+
+//login and get tokens
+export const login = (data: LoginRequest) =>
+  apiClient.post<LoginResponse>('/auth/login/', data);
+//refresh access token using refresh token
+export const refreshToken = (refresh: string) =>
+  axios.post<AuthTokens>(
+	  `${process.env.NEXT_PUBLIC_API_URL}/auth/token/refresh/`,
+	  { refresh }
+  );
+//the response returned  by GET auth/me endpoint
+//returns the current user's profile based on the access token provided in the request headers
+//email ,   first_name, last_name, role (student or professor)
+export interface MeResponse {
+  email: string;
+  first_name: string;
+  last_name: string;
+  role: 'student' | 'professor';
 }
-
-export const api: AxiosInstance = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_API_URL,
-  headers: {
-    'Content-Type': 'application/json',
-    'X-API-Key': apiKey ?? '',
-  },
-  timeout: 10_000,
-});
-
-// --- Request interceptor: attach Bearer token --------------------------------
-
-api.interceptors.request.use((config) => {
-  const token = getAccessToken();
-  if (token) config.headers['Authorization'] = `Bearer ${token}`;
-  return config;
-});
-
-// --- Response interceptor: silent token refresh on 401 ----------------------
-
-let isRefreshing = false;
-let queue: Array<(token: string) => void> = [];
-
-function processQueue(newToken: string) {
-  queue.forEach((resolve) => resolve(newToken));
-  queue = [];
-}
-
-api.interceptors.response.use(
-  (response) => response,
-  async (error) => {
-    const original = error.config;
-
-    // Only attempt refresh on 401; never retry the refresh call itself
-    if (error.response?.status !== 401 || original._retry || original.url?.includes('/auth/')) {
-      return Promise.reject(error);
-    }
-
-    if (isRefreshing) {
-      return new Promise((resolve) => {
-        queue.push((token: string) => {
-          original.headers['Authorization'] = `Bearer ${token}`;
-          resolve(api(original));
-        });
-      });
-    }
-
-    original._retry = true;
-    isRefreshing = true;
-
-    try {
-      const res = await axios.post<AuthTokens>(
-        `${process.env.NEXT_PUBLIC_API_URL}/auth/refresh`,
-        { refreshToken: getRefreshToken() },
-        { headers: { 'X-API-Key': apiKey ?? '' } },
-      );
-      saveTokens(res.data);
-      processQueue(res.data.accessToken);
-      original.headers['Authorization'] = `Bearer ${res.data.accessToken}`;
-      return api(original);
-    } catch {
-      clearTokens();
-      window.location.href = '/login';
-      return Promise.reject(error);
-    } finally {
-      isRefreshing = false;
-    }
-  },
-);
-
-// --- Auth endpoints ----------------------------------------------------------
-
-/** POST /auth/login */
-export const login = (payload: LoginPayload) =>
-  api.post<AuthTokens>('/auth/login', payload);
-
-/** POST /auth/refresh */
-export const refreshToken = (token: string) =>
-  api.post<AuthTokens>('/auth/refresh', { refreshToken: token });
-
-/** POST /auth/logout */
-export const logout = () =>
-  api.post('/auth/logout', { refreshToken: getRefreshToken() });
+//get current user profile using access token
+export const getMe = () =>
+  apiClient.get<MeResponse>('/auth/me/');
