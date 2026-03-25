@@ -20,7 +20,6 @@ class PersonalSubmissionAdmin(admin.ModelAdmin):
         'language',
         'course_tag',
         'owner__email',
-        'owner__username',
     )
     list_filter = ('submission_type', 'visibility', 'language', 'created_at')
 
