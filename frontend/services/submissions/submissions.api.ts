@@ -7,11 +7,14 @@ import type {
   PaginatedResponse,
 } from './submissions.types';
 
-//api functions
+// ============================================================================
+// API Functions
+// All functions return res.data directly — no need to write .data in the UI
+// ============================================================================
 
 /**
  * Fetches a paginated list of the current user's submissions.
- * Optionally filtered by language, type, course, search term, or page.
+ * Optionally filtered by language, submission_type, course_tag, search, or page.
  *
  * @example
  * const submissions = await listSubmissions({ language: 'Python', page: 2 });
@@ -34,8 +37,10 @@ export const listSubmissions = async (
  *
  * @example
  * const submission = await getSubmission(5);
- * console.log(submission.title);  // "Bubble Sort"
- * console.log(submission.files);  // array of files
+ * console.log(submission.title);           // "Bubble Sort"
+ * console.log(submission.submission_type); // "review_request"
+ * console.log(submission.course_tag);      // "Algorithms"
+ * console.log(submission.visibility);      // "public"
  */
 export const getSubmission = async (
   id: number
@@ -52,10 +57,11 @@ export const getSubmission = async (
  *
  * @example
  * const submission = await createSubmission({
- *   title: 'Bubble Sort',
- *   language: 'Python',
- *   type: 'assignment',
- *   course: 'Algorithms',
+ *   title:           'Bubble Sort',
+ *   language:        'Python',
+ *   submission_type: 'review_request',
+ *   course_tag:      'Algorithms',
+ *   visibility:      'public',
  * });
  */
 export const createSubmission = async (
@@ -74,6 +80,7 @@ export const createSubmission = async (
  *
  * @example
  * const updated = await updateSubmission(5, { title: 'New Title' });
+ * const updated = await updateSubmission(5, { visibility: 'private' });
  */
 export const updateSubmission = async (
   id:   number,
@@ -119,8 +126,8 @@ export const uploadFiles = async (
   const formData = new FormData();
 
   files.forEach((file, index) => {
-    formData.append('files',      file);               // binary file data
-    formData.append('file_paths', filePaths[index]);   // its relative path
+    formData.append('files',      file);             // binary file data
+    formData.append('file_paths', filePaths[index]); // its relative path
   });
 
   //  No Content-Type header needed — axios sets it automatically for FormData
@@ -150,7 +157,7 @@ export const deleteFile = async (
  * Fetches the raw text content of a specific file.
  * Used to display code in the editor or viewer.
  *
- * @examples
+ * @example
  * const content = await getFileContent(5, 12);
  * console.log(content); // "def bubble_sort(arr): ..."
  */
