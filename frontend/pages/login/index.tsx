@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useCallback } from "react";
 import { useRouter } from "next/router";
 import { login } from '@/services/auth';
 import { saveTokens } from '@/lib/tokens';
@@ -14,7 +14,7 @@ import BackButton from "@/components/auth/BackButton"
 import Logo from "@/components/auth/Logo";
 // ─── Types ───────────────────────────────────────────────
 type Page = "Login" ;
-//HOOK Width
+
 
 
 
