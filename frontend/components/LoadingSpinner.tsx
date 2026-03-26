@@ -1,4 +1,3 @@
-
 //the spinner of the loading page
 interface LoadingSpinnerProps {
   message?: string; 
