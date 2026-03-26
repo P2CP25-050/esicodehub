@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { useRouter } from "next/router";
 import { login } from '@/services/auth';
 import { saveTokens } from '@/lib/tokens';
@@ -12,6 +12,11 @@ import InputRow from "@/components/auth/InputRow";
 
 import BackButton from "@/components/auth/BackButton"
 import Logo from "@/components/auth/Logo";
+// ─── Types ───────────────────────────────────────────────
+type Page = "Login" ;
+//HOOK Width
+
+
 
 
 // ─── Ghost pill button ────────────────────────────────────
@@ -77,6 +82,7 @@ function Message({ text, type }: { text: string; type: "error" | "success" }) {
 // ─── Main Component ───────────────────────────────────────
 export default function LoginPage() {
   const router = useRouter();
+  const [cardKey, setCardKey] = useState(0);
 
   // Login
   const [email, setEmail] = useState("");
@@ -259,6 +265,7 @@ export default function LoginPage() {
           />
 
           {/* ══ LOGIN PAGE ══ */}
+          {page === "Login" && (
             <div style={{ animation: "pageSlide 0.4s cubic-bezier(0.22,1,0.36,1) both" }}>
               <BackButton onClick={() => router.back()} />
               {/* Logo */}
@@ -359,6 +366,8 @@ export default function LoginPage() {
                 Register
               </GhostButton>
             </div>
+          )}
+
          
          
 
