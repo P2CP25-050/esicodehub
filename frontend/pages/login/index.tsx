@@ -82,7 +82,6 @@ function Message({ text, type }: { text: string; type: "error" | "success" }) {
 // ─── Main Component ───────────────────────────────────────
 export default function LoginPage() {
   const router = useRouter();
-  const [page, setPage] = useState<Page>("Login");
   const [cardKey, setCardKey] = useState(0);
 
   // Login
@@ -101,10 +100,6 @@ export default function LoginPage() {
   //@esi.dz domain check
    const isEsiEmail = (v: string) => v.toLowerCase().endsWith("@esi.dz");
  //-------------------------------
-   const goTo = useCallback((p: Page) => {
-    setCardKey((k) => k + 1);
-    setPage(p);
-  }, []);
 
   const shake = (setter: (v: boolean) => void) => {
     setter(true);
@@ -275,9 +270,7 @@ export default function LoginPage() {
               <BackButton onClick={() => router.back()} />
               {/* Logo */}
               <div style={{ display: "flex", flexDirection: "column", alignItems: "center", marginBottom: 10, animation: "fadeUp 0.5s 0.1s both" }}>
-               <Logo>
-                
-               </Logo> 
+               <Logo size={72} />
               </div>
 
               {/* Title */}
