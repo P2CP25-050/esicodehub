@@ -52,10 +52,6 @@ class PersonalSubmissionDetailSerializer(serializers.ModelSerializer):
     # Nested owner object with basic user info
     owner = serializers.SerializerMethodField()
 
-    # Computed fields same as list serializer
-    owner_name = serializers.SerializerMethodField()
-    file_count = serializers.SerializerMethodField()
-
     class Meta:
         model = PersonalSubmission
         fields = [
@@ -68,8 +64,6 @@ class PersonalSubmissionDetailSerializer(serializers.ModelSerializer):
             'visibility',
             'created_at',
             'updated_at',
-            'owner_name',
-            'file_count',
             'owner',
             'files',
         ]
@@ -82,14 +76,6 @@ class PersonalSubmissionDetailSerializer(serializers.ModelSerializer):
             'last_name': obj.owner.last_name,
             'role': obj.owner.role,
         }
-
-    def get_owner_name(self, obj):
-        """Return the full name of the submission owner."""
-        return f"{obj.owner.first_name} {obj.owner.last_name}"
-
-    def get_file_count(self, obj):
-        """Return the total number of files attached to this submission."""
-        return obj.files.count()
 
 
 class PersonalSubmissionCreateSerializer(serializers.ModelSerializer):
