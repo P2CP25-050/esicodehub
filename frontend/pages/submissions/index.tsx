@@ -124,109 +124,107 @@ export default function SubmissionsPage() {
           0%, 100% { transform: translateY(0px);   }
           50%       { transform: translateY(-8px);  }
         }
+          
       `}</style>
 
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/20">
+     <div className="min-h-screen bg-gradient-to-br from-[#0f1f3d] via-[#1a2b4d] to-[#223659]/60">
 
         {/* ════════════════════════════════════════
             HEADER
         ════════════════════════════════════════ */}
-        <header className="relative bg-gradient-to-r from-[#0a1628] via-[#0f1f3d] to-[#0a1628] overflow-hidden">
+       <header className="relative bg-black/30 backdrop-blur-md border-b border-white/10">
+  {/* Animated background grid – keep it but make it more subtle */}
+  <div className={`
+    absolute inset-0
+    bg-[linear-gradient(rgba(59,130,246,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(59,130,246,0.03)_1px,transparent_1px)]
+    bg-[size:48px_48px]
+   `}/>
 
-          {/* Animated background grid */}
-          <div className={`
-            absolute inset-0
-            bg-[linear-gradient(rgba(59,130,246,0.06)_1px,transparent_1px),linear-gradient(90deg,rgba(59,130,246,0.06)_1px,transparent_1px)]
-            bg-[size:48px_48px]
-           `}/>
+  {/* Radial glow – slightly reduced opacity */}
+  <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[200px] bg-blue-500/5 blur-3xl rounded-full" />
 
-          {/* Radial glow */}
-          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[200px] bg-blue-500/10 blur-3xl rounded-full" />
+  {/* Decorative </> – keep as is */}
+  <div
+    className={`
+      absolute right-8 top-1/2 -translate-y-1/2
+      text-[7rem] font-black text-white/[0.02]
+      font-mono select-none pointer-events-none leading-none
+    `}
+    style={{ animation: 'float 6s ease-in-out infinite' }}
+  >
+    &lt;/&gt;
+  </div>
 
-          {/* Decorative </> — right side, floating */}
-          <div
-            className={`
-              absolute right-8 top-1/2 -translate-y-1/2
-              text-[7rem] font-black text-white/[0.04]
-              font-mono select-none pointer-events-none leading-none
-            `}
-            style={{ animation: 'float 6s ease-in-out infinite' }}
-          >
-            &lt;/&gt;
-          </div>
+  {/* Left accent bar – keep */}
+  <div className="absolute left-0 inset-y-0 w-1 bg-gradient-to-b from-blue-400 via-blue-500 to-indigo-600" />
 
-          {/* Left accent bar */}
-          <div className="absolute left-0 inset-y-0 w-1 bg-gradient-to-b from-blue-400 via-blue-500 to-indigo-600" />
-
-          <div className="relative max-w-7xl mx-auto px-6 lg:px-8 py-5">
-            <div className="flex items-center justify-between gap-6">
-
-              {/* Logo */}
-              <div
-                className="flex items-center gap-3 cursor-pointer group"
-                onClick={() => router.push('/')}
-              >
-                <div className={`
-                  relative w-10 h-10 rounded-xl overflow-hidden
-                  ring-2 ring-blue-500/30 group-hover:ring-blue-400/60
-                  transition-all duration-200
-                `}
-                >
-                  <Image
-                    src="/logo.png"
-                    alt="ESICodeHub"
-                    fill
-                    className="object-contain"
-                  />
-                </div>
-                <span className={`
-                  hidden sm:block
-                  text-sm font-bold text-white/70
-                  group-hover:text-white/90
-                  transition-colors duration-150
-                  font-mono
-                `}>
-                  ESICodeHub
-                </span>
-              </div>
-
-              {/* Page title */}
-              <div className="text-center flex-1">
-                <h1 className={`
-                  text-2xl sm:text-3xl font-black text-white
-                  tracking-tight
-                `}>
-                  Submissions
-                </h1>
-                <p className="text-blue-300/70 text-xs font-medium mt-0.5 hidden sm:block">
-                  Browse code shared by ESI students
-                </p>
-              </div>
-
-              {/* Auth area */}
-              <div className="flex items-center gap-3">
-  {isAuthenticated && (
-    <div className="flex items-center gap-2">
-      {/* Online dot */}
-      <span
-        className="w-2 h-2 rounded-full bg-emerald-400"
-        style={{ animation: 'pulse-dot 2s ease infinite' }}
-      />
-      <button
-        onClick={() => router.push('/dashboard')}
-        className={`
-          text-sm font-semibold text-blue-300
-          hover:text-white transition-colors duration-150
-        `}
+  <div className="relative max-w-7xl mx-auto px-6 lg:px-8 py-5">
+    {/* Logo, title, auth area – unchanged */}
+    <div className="flex items-center justify-between gap-6">
+      {/* Logo */}
+      <div
+        className="flex items-center gap-3 cursor-pointer group"
+        onClick={() => router.push('/')}
       >
-        Dashboard
-      </button>
-    </div>
-  )}
-</div>
-            </div>
+        <div className={`
+          relative w-10 h-10 rounded-xl overflow-hidden
+          ring-2 ring-blue-500/30 group-hover:ring-blue-400/60
+          transition-all duration-200
+        `}>
+          <Image
+            src="/logo.png"
+            alt="ESICodeHub"
+            fill
+            className="object-contain"
+          />
+        </div>
+        <span className={`
+          hidden sm:block
+          text-sm font-bold text-white/70
+          group-hover:text-white/90
+          transition-colors duration-150
+          font-mono
+        `}>
+          ESICodeHub
+        </span>
+      </div>
+
+      {/* Page title */}
+      <div className="text-center flex-1">
+        <h1 className={`
+          text-2xl sm:text-3xl font-black text-white
+          tracking-tight
+        `}>
+          Submissions
+        </h1>
+        <p className="text-blue-300/70 text-xs font-medium mt-0.5 hidden sm:block">
+          Browse code shared by ESI students
+        </p>
+      </div>
+
+      {/* Auth area */}
+      <div className="flex items-center gap-3">
+        {isAuthenticated && (
+          <div className="flex items-center gap-2">
+            <span
+              className="w-2 h-2 rounded-full bg-emerald-400"
+              style={{ animation: 'pulse-dot 2s ease infinite' }}
+            />
+            <button
+              onClick={() => router.push('/dashboard')}
+              className={`
+                text-sm font-semibold text-blue-300
+                hover:text-white transition-colors duration-150
+              `}
+            >
+              Dashboard
+            </button>
           </div>
-        </header>
+        )}
+      </div>
+    </div>
+  </div>
+</header>
 
         {/* ════════════════════════════════════════
             CONTENT
