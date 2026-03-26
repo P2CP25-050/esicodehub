@@ -62,7 +62,7 @@ export const login = (data: LoginRequest) =>
 //refresh access token using refresh token
 export const refreshToken = (refresh: string) =>
   axios.post<AuthTokens>(
-	  '${process.env.NEXT_PUBLIC_API_URL}/auth/token/refresh/',
+	  `${process.env.NEXT_PUBLIC_API_URL}/auth/token/refresh/`,
 	  { refresh }
   );
 //the response returned  by GET auth/me endpoint
