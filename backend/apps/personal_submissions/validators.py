@@ -7,8 +7,8 @@ def validate_code_file(file):
     """
     Validates that the uploaded file is safe and text-based.
     Blacklist: rejects known executable/harmful extensions
-    MIME check: rejects anything that isn't text-based or a known code type"""
-    
+    MIME check: rejects anything that isn't text-based or a known code type
+    """
     # Reject known dangerous executable
     dangerous_extensions = [
         '.exe', '.dll', '.so', '.dylib', '.bin',
@@ -23,7 +23,7 @@ def validate_code_file(file):
     # Read first 2048 bytes to determine the real MIME type
     file_content = file.read(2048)
     # reset pointer of the file to read it later
-    file.seek(0)  
+    file.seek(0)
 
     mime_type = magic.from_buffer(file_content, mime=True)
 
