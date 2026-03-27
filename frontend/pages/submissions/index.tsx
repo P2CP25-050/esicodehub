@@ -8,22 +8,14 @@ import type { PersonalSubmission, SubmissionListParams } from '@/services/submis
 import SearchBar    from '@/components/submissions/SearchBar';
 import Filters      from '@/components/submissions/Filters';
 import SubmissionsGrid from '@/components/submissions/SubmissionsGrid';
-
-const PAGE_SIZE = 20;
+/*
+const PAGE_SIZE = 20;*/
 
 export default function SubmissionsPage() {
   const router              = useRouter();
   const { isAuthenticated } = useAuth();
 
-  useEffect(() => {
-  if (!isAuthenticated) {
-    router.push('/login'); // or '/'
-  }
-}, [isAuthenticated]);
 
-if (!isAuthenticated) {
-  return <p className="text-white text-center mt-10">Redirecting...</p>;
-}
 
   const [submissions, setSubmissions] = useState<PersonalSubmission[]>([]);
   const [total,       setTotal]       = useState(0);
@@ -68,7 +60,11 @@ if (!isAuthenticated) {
     search:          search          || undefined,
   }), [language, submissionType, courseTag, search]);
 
-  // Dropdown/tag filters → immediate
+    useEffect(() => {
+  if (!isAuthenticated) router.push('/login');
+}, [isAuthenticated, router]);
+
+ // Dropdown/tag filters → immediate
   useEffect(() => {
     setPage(1);
     fetchSubmissions({ ...buildParams(), page: 1 });
@@ -83,6 +79,12 @@ if (!isAuthenticated) {
     }, 300);
     return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
   }, [search]); // eslint-disable-line
+
+if (!isAuthenticated) {
+  return <p className="text-white text-center mt-10">Redirecting...</p>;
+}
+
+ 
 
   const handleLoadMore = () => {
     const next = page + 1;
@@ -104,10 +106,7 @@ if (!isAuthenticated) {
       <Head>
         <title>Submissions — ESICodeHub</title>
         <meta name="description" content="Browse and explore code shared by ESI students." />
-        <link
-          href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap"
-          rel="stylesheet"
-        />
+
       </Head>
 
       {/* ── Global styles & keyframes ── */}
