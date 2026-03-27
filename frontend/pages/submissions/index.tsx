@@ -15,6 +15,16 @@ export default function SubmissionsPage() {
   const router              = useRouter();
   const { isAuthenticated } = useAuth();
 
+  useEffect(() => {
+  if (!isAuthenticated) {
+    router.push('/login'); // or '/'
+  }
+}, [isAuthenticated]);
+
+if (!isAuthenticated) {
+  return <p className="text-white text-center mt-10">Redirecting...</p>;
+}
+
   const [submissions, setSubmissions] = useState<PersonalSubmission[]>([]);
   const [total,       setTotal]       = useState(0);
   const [page,        setPage]        = useState(1);
