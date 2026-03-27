@@ -10,8 +10,10 @@
     "test": "jest --watchAll=false"
   },
   "dependencies": {
+    "@monaco-editor/react": "^4.7.0",
     "axios": "^1.13.5",
     "framer-motion": "^12.38.0",
+    "monaco-editor": "^0.55.1",
     "next": "16.1.6",
     "react": "19.2.3",
     "react-dom": "19.2.3"

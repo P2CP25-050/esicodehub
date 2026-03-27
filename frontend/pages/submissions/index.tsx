@@ -60,9 +60,9 @@ export default function SubmissionsPage() {
     search:          search          || undefined,
   }), [language, submissionType, courseTag, search]);
 
-    useEffect(() => {
+    /*useEffect(() => {
   if (!isAuthenticated) router.push('/login');
-}, [isAuthenticated, router]);
+}, [isAuthenticated, router]);*/
 
  // Dropdown/tag filters → immediate
   useEffect(() => {
@@ -80,11 +80,10 @@ export default function SubmissionsPage() {
     return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
   }, [search]); // eslint-disable-line
 
-if (!isAuthenticated) {
+/*if (!isAuthenticated) {
   return <p className="text-white text-center mt-10">Redirecting...</p>;
 }
-
- 
+*/
 
   const handleLoadMore = () => {
     const next = page + 1;
