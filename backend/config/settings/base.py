@@ -149,9 +149,17 @@ REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'rest_framework_simplejwt.authentication.JWTAuthentication',
     ),
+    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
+    'PAGE_SIZE': 20,
 }
 
 SIMPLE_JWT = {
     'ACCESS_TOKEN_LIFETIME':  timedelta(minutes=60),
     'REFRESH_TOKEN_LIFETIME': timedelta(days=7),
 }
+
+GS_BUCKET_NAME = os.getenv('GCS_BUCKET_NAME')
+GS_CREDENTIALS = os.getenv('GCS_CREDENTIALS_PATH')
+GS_FILE_OVERWRITE = False
+GS_DEFAULT_ACL = None
+GS_EXPIRATION = 3600

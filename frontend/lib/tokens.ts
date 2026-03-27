@@ -1,5 +1,3 @@
-
-
 let accessToken: string | null = null;
 let storedRefreshToken: string | null = null;
 

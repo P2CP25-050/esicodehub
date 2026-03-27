@@ -3,32 +3,30 @@ from django.db import models
 
 
 class PersonalSubmission(models.Model):
-    SUBMISSION_TYPE_REVIEW = 'review'
-    SUBMISSION_TYPE_HELP = 'help'
-    SUBMISSION_TYPE_SHARING = 'sharing'
-    SUBMISSION_TYPE_CHOICES = [
-        (SUBMISSION_TYPE_REVIEW, 'Review'),
-        (SUBMISSION_TYPE_HELP, 'Help'),
-        (SUBMISSION_TYPE_SHARING, 'Sharing'),
-    ]
 
-    VISIBILITY_PUBLIC = 'public'
-    VISIBILITY_PRIVATE = 'private'
-    VISIBILITY_CHOICES = [
-        (VISIBILITY_PUBLIC, 'Public'),
-        (VISIBILITY_PRIVATE, 'Private'),
-    ]
+    class SubmissionType(models.TextChoices):
+        REVIEW = 'review', 'Review'
+        HELP = 'help', 'Help'
+        SHARING = 'sharing', 'Sharing'
 
-    owner = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    class Visibility(models.TextChoices):
+        PUBLIC = 'public', 'Public'
+        PRIVATE = 'private', 'Private'
+
+    owner = models.ForeignKey(
+            settings.AUTH_USER_MODEL,
+            on_delete=models.CASCADE,
+            related_name='personal_submissions'
+        )
     title = models.CharField(max_length=255)
     description = models.TextField(blank=True)
     language = models.CharField(max_length=50)
     course_tag = models.CharField(max_length=100, blank=True)
-    submission_type = models.CharField(max_length=20, choices=SUBMISSION_TYPE_CHOICES)
+    submission_type = models.CharField(max_length=20, choices=SubmissionType.choices)
     visibility = models.CharField(
-        max_length=20,
-        choices=VISIBILITY_CHOICES,
-        default=VISIBILITY_PUBLIC,
+        max_length=10,
+        choices=Visibility.choices,
+        default=Visibility.PUBLIC,
     )
     gcs_prefix = models.CharField(max_length=500)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -47,7 +45,7 @@ class PersonalSubmission(models.Model):
         return f'personal/{user_id}/{submission_id}/{file_path}'
 
     def __str__(self):
-        return self.title
+        return f"{self.title} by {self.owner.email}"
 
 
 class PersonalSubmissionFile(models.Model):
