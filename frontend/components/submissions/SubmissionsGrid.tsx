@@ -70,7 +70,7 @@ function EmptyState({ hasFilters, isAuthenticated, onNew }: {
           <polyline points="10 9 9 9 8 9"/>
         </svg>
       </div>
-      <h3 className="text-xl font-bold text-gray-900 mb-2">
+      <h3 className="text-xl font-bold text-white mb-2">
         {hasFilters ? 'No submissions found' : 'No submissions yet'}
       </h3>
       <p className="text-gray-400 text-sm max-w-sm mb-8 leading-relaxed">

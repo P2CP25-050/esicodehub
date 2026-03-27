@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter } from 'next/router';
 import Head from 'next/head';
 import Image from 'next/image';
-import { useAuth } from '@/hooks/useAuth';
+import { useAuth } from '@/hooks/useAuth'; 
 import { listSubmissions } from '@/services/submissions/submissions.api';
 import type { PersonalSubmission, SubmissionListParams } from '@/services/submissions/submissions.types';
 import SearchBar    from '@/components/submissions/SearchBar';
@@ -306,17 +306,15 @@ export default function SubmissionsPage() {
         </main>
 
         {/* Footer */}
-        <footer className="mt-16 border-t border-gray-200/60 bg-white/40 backdrop-blur-sm">
-          <div className="max-w-7xl mx-auto px-6 py-6 flex items-center justify-between flex-wrap gap-4">
-            <div className="flex items-center gap-2">
-              <div className="w-6 h-6 relative">
-                <Image src="/logo.png" alt="ESICodeHub" fill className="object-contain" />
-              </div>
-              <span className="text-sm font-bold text-gray-600 font-mono">ESICodeHub</span>
-            </div>
-            <p className="text-xs text-gray-400 font-medium">
-              © {new Date().getFullYear()} ESICodeHub · Built for ESI students
-            </p>
+        
+<footer className="mt-16 border-t border-white/10 bg-black/20 backdrop-blur-sm">
+  <div className="max-w-7xl mx-auto px-6 py-6 flex items-center justify-between flex-wrap gap-4">
+    <div className="flex items-center gap-2">
+      <span className="text-sm font-bold text-white/60 font-mono">ESICodeHub</span>
+    </div>
+    <p className="text-xs text-white/40 font-medium">
+      © {new Date().getFullYear()} ESICodeHub · Built for ESI students
+    </p>
             <div className="flex items-center gap-4">
               <span
                 className="text-xs text-gray-400 cursor-pointer hover:text-gray-600 transition-colors"
@@ -325,7 +323,7 @@ export default function SubmissionsPage() {
                 Home
               </span>
               <span
-                className="text-xs text-gray-400 cursor-pointer hover:text-gray-600 transition-colors"
+                className="text-xs text-white/40 cursor-pointer hover:text-white/70 transition-colors"
                 onClick={() => router.push('/submissions')}
               >
                 Submissions
