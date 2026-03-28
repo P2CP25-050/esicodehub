@@ -19,8 +19,6 @@ load_dotenv(override=False)
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
-# This one is to help with imports, e.g., from apps.accounts.models import User
-sys.path.insert(0, os.path.join(BASE_DIR, 'apps'))
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/6.0/howto/deployment/checklist/
@@ -44,12 +42,12 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'corsheaders',
-    'core',
-    'accounts',
+    'apps.core',
+    'apps.accounts',
     'rest_framework',
     'rest_framework_simplejwt',
-    'esi_db',
-    'personal_submissions',
+    'apps.esi_db',
+    'apps.personal_submissions',
 ]
 
 AUTH_USER_MODEL = 'accounts.User'
@@ -149,6 +147,8 @@ REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'rest_framework_simplejwt.authentication.JWTAuthentication',
     ),
+    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
+    'PAGE_SIZE': 20,
 }
 
 SIMPLE_JWT = {

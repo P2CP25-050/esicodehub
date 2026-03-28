@@ -24,6 +24,10 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/', include('apps.core.urls')),
     path('api/auth/', include('apps.accounts.urls')),
+    path(
+        'api/personal-submissions/',
+        include('apps.personal_submissions.urls'),
+    ),
     path('api/auth/token/', TokenObtainPairView.as_view()),
     path('api/auth/token/refresh/', TokenRefreshView.as_view()),
 ]
