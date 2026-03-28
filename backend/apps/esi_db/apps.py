@@ -2,4 +2,4 @@ from django.apps import AppConfig
 
 
 class EsiDbConfig(AppConfig):
-    name = 'esi_db'
+    name = 'apps.esi_db'
