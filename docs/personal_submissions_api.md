@@ -12,7 +12,7 @@ http://localhost:8000/api
 ### 1. List Submissions
 **GET** `/personal-submissions/`
 
-**Auth:** Not required (public submissions only for unauthenticated users)
+**Auth:** Required
 
 **Query Parameters:**
 | Param | Description | Example |
@@ -103,7 +103,7 @@ http://localhost:8000/api
 ### 3. Get Single Submission
 **GET** `/personal-submissions/<id>/`
 
-**Auth:** Not required for public submissions
+**Auth:** Required
 
 **Response 200:**
 ```json
@@ -207,7 +207,8 @@ http://localhost:8000/api
 - List endpoint is paginated — **20 items per page**
 - `gcs_prefix` is auto-generated as `personal/{user_id}/{submission_id}/`
 - Deleting a submission also deletes all its files from Google Cloud Storage
-- Private submissions are only visible to their owner
+- All endpoints require authentication. Public submissions are visible to any 
+authenticated ESI member. Private submissions are visible to their owner only
 
 ---
 
@@ -282,7 +283,7 @@ http://localhost:8000/api
 ### 8. Get File Content
 **GET** `/personal-submissions/<id>/files/<file_id>/content/`
 
-**Auth:** Not required for public submissions, owner only for private
+**Auth:** Required. Public submissions: any authenticated ESI member. Private submissions: owner only.
 
 **Response 200:**
 The contents of the file are in a text format in an HTTP response
