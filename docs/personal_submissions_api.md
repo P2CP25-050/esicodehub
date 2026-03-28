@@ -208,3 +208,100 @@ http://localhost:8000/api
 - `gcs_prefix` is auto-generated as `personal/{user_id}/{submission_id}/`
 - Deleting a submission also deletes all its files from Google Cloud Storage
 - Private submissions are only visible to their owner
+
+---
+
+## File Endpoints
+
+---
+
+### 6. Upload Files
+**POST** `/personal-submissions/<id>/files/`
+
+**Auth:** Required, owner only
+
+**Request:** `multipart/form-data`
+| Field | Description |
+|-------|-------------|
+| `files` | One or more code files |
+| `file_paths` | Matching relative paths for each file |
+
+**Response 201:**
+```json
+[
+  {
+    "id": 1,
+    "file_name": "main.py",
+    "file_path": "main.py",
+    "file_size": 1024,
+    "created_at": "2026-01-01T00:00:00Z"
+  }
+]
+```
+
+**Response 400:**
+```json
+{ "detail": "main.py exceeds the 10MB per file limit" }
+```
+```json
+{ "detail": "Total submission size would exceed the 50MB limit" }
+```
+```json
+{ "detail": "File type .exe is not allowed." }
+```
+```json
+{ "detail": "Security Error: File content type (application/x-executable) is not allowed." }
+```
+
+**Response 403:**
+```json
+{ "detail": "You do not have permission to perform this action." }
+```
+
+---
+
+### 7. Delete File
+**DELETE** `/personal-submissions/<id>/files/<file_id>/`
+
+**Auth:** Required, owner only
+
+**Response 204:** No content
+
+**Response 403:**
+```json
+{ "detail": "You do not have permission to perform this action." }
+```
+
+**Response 404:**
+```json
+{ "detail": "No PersonalSubmissionFile matches the given query." }
+```
+
+---
+
+### 8. Get File Content
+**GET** `/personal-submissions/<id>/files/<file_id>/content/`
+
+**Auth:** Not required for public submissions, owner only for private
+
+**Response 200:**
+The contents of the file are in a text format in an HTTP response
+
+**Response 400:**
+```json
+{ "detail": "File is binary and cannot be displayed as text" }
+```
+
+**Response 403:**
+```json
+{ "detail": "You do not have permission to perform this action." }
+```
+
+---
+
+## File Upload Notes
+- Accepted files: any text-based code file
+- Rejected files: `.exe`, `.dll`, `.so`, `.dylib`, `.bin`, `.bat`, `.cmd`, `.ps1`, `.vbs`
+- Max file size: **10MB per file**
+- Max total submission size: **50MB**
+- File content must be text-based — binary files are rejected via MIME type check
