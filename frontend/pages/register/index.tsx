@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect, useCallback } from "react";
 import { useRouter } from "next/router";
+import { AxiosError } from 'axios';
 
 // ─── Reusable auth components (no redefinition) ───────────
 import Logo             from "@/components/auth/Logo";
@@ -227,9 +228,16 @@ export default function RegisterPage() {
       startCooldown();
       setTimeout(() => codeRef.current?.focus(), 400);
     } catch (err: unknown) {
-      setEmailError(
-        err instanceof Error ? err.message : "Registration failed. Try again."
-      );
+	if (err instanceof AxiosError) {
+		const status = err.response?.status;
+		const data = err.response?.data;
+		if (status === 404) setEmailError("This email is not registered in the ESI system.");
+		else if (status === 400 && data?.error?.includes('already exists')) setEmailError("An account with this email already exists.");
+		else if (status === 400) setEmailError(data?.email?.[0] || data?.error || "Registration failed.");
+		else setEmailError("Something went wrong. Please try again.");
+	} else {
+		setEmailError("Registration failed. Try again.");
+	}
     } finally {
       setLoadingRegister(false);
     }
@@ -255,11 +263,15 @@ export default function RegisterPage() {
       goTo("success");
       setTimeout(() => redirectToDashboard(res.data.user.role), 1800);
     } catch (err: unknown) {
-      setCodeError(
-        err instanceof Error ? err.message : "Invalid code. Try again."
-      );
-      setShakeCode(true);
-      setTimeout(() => setShakeCode(false), 600);
+	if (err instanceof AxiosError) {
+		const status = err.response?.status;
+		if (status === 400) setCodeError("Invalid or expired code. Please try again.");
+		else setCodeError("Something went wrong. Please try again.");
+	} else {
+		setCodeError("Invalid code. Try again.");
+	}
+	setShakeCode(true);
+	setTimeout(() => setShakeCode(false), 600);
     } finally {
       setLoadingVerify(false);
     }
