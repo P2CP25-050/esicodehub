@@ -285,9 +285,7 @@ http://localhost:8000/api
 **Auth:** Not required for public submissions, owner only for private
 
 **Response 200:**
-```json
-{ "content": "def hello():\n    print('Hello, World!')\n" }
-```
+The contents of the file are in a text format in an HTTP response
 
 **Response 400:**
 ```json
