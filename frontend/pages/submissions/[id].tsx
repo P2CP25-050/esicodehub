@@ -268,7 +268,7 @@ export default function SubmissionDetailPage() {
       setSelectedFileId(file.id);
       const displayPath = getDisplayPath(file);
       setSelectedFileName(displayPath);
-      setEditorLanguage(languageFromFilename(displayPath));
+      setEditorLanguage(languageFromFilename(displayPath) ?? 'plaintext');
       setFileError(null);
 
       const cached = fileContents.get(file.id);
@@ -287,7 +287,8 @@ export default function SubmissionDetailPage() {
           return next;
         });
         setEditorValue(content);
-      } catch {
+      } catch (err) {
+        console.error('Error loading file content:', err);
         setFileError('Failed to load file content.');
       } finally {
         setLoadingFile(false);
@@ -306,7 +307,8 @@ export default function SubmissionDetailPage() {
     try {
       await deleteSubmission(submissionId);
       router.push('/submissions');
-    } catch {
+    } catch (err) {
+      console.error('Error deleting submission:', err);
       window.alert('Failed to delete submission.');
     }
   }, [router, submissionId]);
@@ -517,7 +519,7 @@ export default function SubmissionDetailPage() {
                 )}
               </div>
 
-              <div className="relative h-[70vh]">
+             <div className="relative min-h-[50vh] max-h-[80vh] h-[70vh]">
                 {loadingFile && (
                   <div className="absolute inset-0 z-10 flex items-center justify-center bg-black/40">
                     <div className="flex items-center gap-3 text-sm text-white/80">
