@@ -4,7 +4,7 @@ from django.db.models import Q
 from django.shortcuts import get_object_or_404
 from rest_framework import status, serializers
 from rest_framework.pagination import PageNumberPagination
-from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
@@ -26,25 +26,17 @@ MAX_TOTAL_SIZE = 50 * 1024 * 1024   # 50MB per submission
 class PersonalSubmissionListCreateView(APIView):
     """List public submissions and create new personal submissions."""
 
-    def get_permissions(self):
-        if self.request.method == 'POST':
-            return [IsAuthenticated()]
-        return [AllowAny()]
+    permission_classes = [IsAuthenticated]
 
     def get(self, request):
         queryset = PersonalSubmission.objects.select_related('owner').prefetch_related(
             'files'
         )
 
-        if request.user.is_authenticated:
-            queryset = queryset.filter(
-                Q(visibility=PersonalSubmission.Visibility.PUBLIC)
-                | Q(owner=request.user)
-            )
-        else:
-            queryset = queryset.filter(
-                visibility=PersonalSubmission.Visibility.PUBLIC
-            )
+        queryset = queryset.filter(
+            Q(visibility=PersonalSubmission.Visibility.PUBLIC)
+            | Q(owner=request.user)
+        )
 
         language = request.query_params.get('language')
         submission_type = request.query_params.get('type')
@@ -94,10 +86,7 @@ class PersonalSubmissionDetailView(APIView):
         'visibility',
     }
 
-    def get_permissions(self):
-        if self.request.method in ('PATCH', 'DELETE'):
-            return [IsAuthenticated()]
-        return [AllowAny()]
+    permission_classes = [IsAuthenticated]
 
     def get_object(self, pk):
         return get_object_or_404(
@@ -108,7 +97,7 @@ class PersonalSubmissionDetailView(APIView):
     def get(self, request, pk):
         submission = self.get_object(pk)
         is_public = submission.visibility == PersonalSubmission.Visibility.PUBLIC
-        is_owner = request.user.is_authenticated and submission.owner == request.user
+        is_owner = submission.owner == request.user
 
         if not is_public and not is_owner:
             return Response(
@@ -292,7 +281,7 @@ class FileContentView(APIView):
      -Private submissions: owner only
     """
 
-    permission_classes = [AllowAny]
+    permission_classes = [IsAuthenticated]
 
     def get(self, request, pk, file_id):
         submission = get_object_or_404(
@@ -302,7 +291,7 @@ class FileContentView(APIView):
 
         # Private submissions are only accessible by the owner
         is_public = submission.visibility == PersonalSubmission.Visibility.PUBLIC
-        is_owner = request.user.is_authenticated and submission.owner == request.user
+        is_owner = submission.owner == request.user
 
         if not is_public and not is_owner:
             return Response(
