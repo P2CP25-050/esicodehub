@@ -2,4 +2,4 @@ from django.apps import AppConfig
 
 
 class PersonalSubmissionsConfig(AppConfig):
-    name = 'personal_submissions'
+    name = 'apps.personal_submissions'

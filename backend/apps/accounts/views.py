@@ -6,14 +6,14 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import RefreshToken
 
-from accounts.models import User, EmailVerification
-from accounts.serializers import (
+from apps.accounts.models import User, EmailVerification
+from apps.accounts.serializers import (
     RegisterSerializer,
     VerifyEmailSerializer,
     ResendVerificationSerializer,
     LoginSerializer
 )
-from esi_db.models import EsiStudent, EsiProfessor
+from apps.esi_db.models import EsiStudent, EsiProfessor
 
 
 def _lookup_esi_person(email):
