@@ -1,3 +1,5 @@
+from django.db import transaction
+from django.http import HttpResponse
 from django.db.models import Q
 from django.shortcuts import get_object_or_404
 from rest_framework import status, serializers
@@ -190,6 +192,13 @@ class FileUploadView(APIView):
             )
 
         if len(files) != len(file_paths):
+            # Reject paths with directory traversal attempts
+            for file_path in file_paths:
+                if '..' in file_path or file_path.startswith('/'):
+                    return Response(
+                        {'detail': f'Invalid file path: {file_path}'},
+                        status=status.HTTP_400_BAD_REQUEST,
+                    )
             return Response(
                 {'detail': 'Number of files and file_paths must match'},
                 status=status.HTTP_400_BAD_REQUEST,
@@ -224,23 +233,22 @@ class FileUploadView(APIView):
 
         # All validations passed, upload and create records
         created_files = []
-        for file, file_path in zip(files, file_paths):
-            gcs_path = PersonalSubmission.build_file_gcs_path(
-                request.user.id,
-                submission.id,
-                file_path,
-            )
-
-            upload_file(file, gcs_path)
-
-            submission_file = PersonalSubmissionFile.objects.create(
-                submission=submission,
-                file_name=file.name,
-                file_path=file_path,
-                gcs_path=gcs_path,
-                file_size=file.size,
-            )
-            created_files.append(submission_file)
+        with transaction.atomic():
+            for file, file_path in zip(files, file_paths):
+                gcs_path = PersonalSubmission.build_file_gcs_path(
+                    request.user.id,
+                    submission.id,
+                    file_path,
+                )
+                upload_file(file, gcs_path)
+                submission_file = PersonalSubmissionFile.objects.create(
+                    submission=submission,
+                    file_name=file.name,
+                    file_path=file_path,
+                    gcs_path=gcs_path,
+                    file_size=file.size,
+                )
+                created_files.append(submission_file)
 
         serializer = PersonalSubmissionFileSerializer(created_files, many=True)
         return Response(serializer.data, status=status.HTTP_201_CREATED)
@@ -310,10 +318,7 @@ class FileContentView(APIView):
 
         try:
             content = get_file_content(file.gcs_path)
-            return Response(
-                {'content': content},
-                status=status.HTTP_200_OK,
-            )
+            return HttpResponse(content, content_type='text/plain; charset=utf-8')
         except UnicodeDecodeError:
             return Response(
                 {'detail': 'File is binary and cannot be displayed as text'},
