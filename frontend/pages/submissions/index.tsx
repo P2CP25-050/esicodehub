@@ -197,7 +197,7 @@ useEffect(() => {
           transition-all duration-200
         `}>
           <Image
-            src="/logo.png"
+            src="/esicodehub-logo.png"
             alt="ESICodeHub"
             fill
             className="object-contain"
