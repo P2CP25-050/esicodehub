@@ -10,10 +10,10 @@ interface HeaderProps {
 }
 
 const NAV_LINKS = [
-  { label: "Submissions", href: "/submissions", icon: "📄" },
-  { label: "Courses",     href: "/courses",     icon: "📚" },
-  { label: "Leaderboard", href: "/leaderboard",  icon: "🏆" },
-  { label: "Settings",    href: "/settings",     icon: "⚙️" },
+  { label: "Submissions", href: "/submissions" },
+  { label: "Courses",     href: "/courses"},
+  { label: "Leaderboard", href: "/leaderboard"},
+  { label: "Settings",    href: "/settings"},
 ];
 
 
