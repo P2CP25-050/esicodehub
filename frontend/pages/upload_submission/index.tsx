@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, CSSProperties, ChangeEvent } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter } from "next/router";
 import Header from "@/components/UploadSubm/Header";
 import Field from "@/components/UploadSubm/Field";
 import FileUpload from "@/components/UploadSubm/FileUpload";
