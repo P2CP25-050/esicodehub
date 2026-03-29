@@ -6,7 +6,6 @@ import Header from "@/components/UploadSubm/Header";
 import Field from "@/components/UploadSubm/Field";
 import FileUpload from "@/components/UploadSubm/FileUpload";
 import SubmissionPreview from "@/components/UploadSubm/SubmissionPreview";
-import SuccessScreen from "@/components/UploadSubm/SuccessScreen";
 import VisibilityToggle from "@/components/UploadSubm/VisibilityToggle";
 import ProtectedRoute from "@/components/UploadSubm/Protectedroute";
 import { createSubmission, uploadFiles, deleteSubmission } from "@/services/UploadSubmission/upload.api";
