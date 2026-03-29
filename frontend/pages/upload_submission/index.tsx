@@ -44,26 +44,6 @@ export default function NewSubmissionPage() {
   };
 
   const handleSubmit = async () => {
- const handleSubmit = async (e: FormEvent) => {
-  e.preventDefault();
-
-  try {
-    await createSubmissionWithFiles({
-      title,
-      language,
-      submission_type: type,
-      visibility,
-      course_tag: courseTag || undefined,
-      description: description || undefined,
-      files,
-    });
-
-    setSubmitted(true); // ← show success screen
-  } catch (error) {
-    console.error(error);
-    alert("Upload failed");
-  }
-};
 };
 
   if (submitted) {
