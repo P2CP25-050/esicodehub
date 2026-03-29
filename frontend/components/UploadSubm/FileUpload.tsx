@@ -8,7 +8,7 @@ interface FileUploadProps {
 
 export default function FileUpload({ files, onFilesChange }: FileUploadProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [dragging, setDragging] = [false, (_: boolean) => {}];
+  
 
   // We manage dragging state locally via inline logic
   const handleDrop = useCallback(

@@ -1,4 +1,5 @@
-import { CSSProperties } from "react";
+
+import React, { CSSProperties } from "react";
 
 interface SuccessScreenProps {
   title: string;

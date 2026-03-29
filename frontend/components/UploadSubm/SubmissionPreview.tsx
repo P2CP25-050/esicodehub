@@ -15,13 +15,6 @@ interface SubmissionPreviewProps {
   fileCount: number;
 }
  
-const LANGUAGES: Language[] = [
-  "Python", "JavaScript", "Java", "C++", "C", "SQL", "TypeScript", "Pascal", "Other",
-];
-
-const TYPES: SubmissionType[] = [
-  "Review Request", "Help Request", "Educational Sharing",
-];
 
 const TYPE_COLORS: Record<SubmissionType, TypeColorEntry> = {
   "Review Request":      { bg: "#6c47ff", label: "Review Request" },
