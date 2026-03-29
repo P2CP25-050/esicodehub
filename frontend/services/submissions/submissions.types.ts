@@ -59,8 +59,8 @@ export interface PersonalSubmissionCreatePayload {
 // Parameters for listing submissions with optional filters and pagination
 export interface SubmissionListParams {
   language?: string; //  typed filter
-  submission_type?:     string;
-  course_tag?:   string;
+  type?:     string;
+  course?:   string;
   search?:   string;            // search by title or description
   page?:     number;            // which page to fetch
 }

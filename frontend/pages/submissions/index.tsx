@@ -8,8 +8,8 @@ import type { PersonalSubmission, SubmissionListParams } from '@/services/submis
 import SearchBar    from '@/components/submissions/SearchBar';
 import Filters      from '@/components/submissions/Filters';
 import SubmissionsGrid from '@/components/submissions/SubmissionsGrid';
-/*
-const PAGE_SIZE = 20;*/
+import { ProtectedRoute } from '@/components/ProtectedRoute';
+
 
 export default function SubmissionsPage() {
   const router              = useRouter();
@@ -27,10 +27,16 @@ export default function SubmissionsPage() {
 
   const [search,         setSearch]         = useState('');
   const [language,       setLanguage]       = useState('');
-  const [submissionType, setSubmissionType] = useState('');
-  const [courseTag,      setCourseTag]      = useState('');
+  const [type,           setType]           = useState('');
+  const [course,         setCourse]         = useState('');
 
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const searchRef = useRef(search);
+  const skipNextSearchDebounceRef = useRef(false);
+
+  useEffect(() => {
+    searchRef.current = search;
+  }, [search]);
 
   // ── Fetch ──────────────────────────────────────────────────────────────────
   const fetchSubmissions = useCallback(async (
@@ -53,55 +59,65 @@ export default function SubmissionsPage() {
     }
   }, []);
 
-  const buildParams = useCallback((): SubmissionListParams => ({
-    language:        language        || undefined,
-    submission_type: submissionType  || undefined,
-    course_tag:      courseTag       || undefined,
-    search:          search          || undefined,
-  }), [language, submissionType, courseTag, search]);
+  const buildParams = useCallback((searchValue: string): SubmissionListParams => ({
+    language: language || undefined,
+    type: type || undefined,
+    course: course || undefined,
+    search: searchValue || undefined,
+  }), [language, type, course]);
 
-    useEffect(() => {
-  if (!isAuthenticated) router.push('/login');
-}, [isAuthenticated, router]);
 
- // Dropdown/tag filters → immediate
-  useEffect(() => {
+  
+
+// Dropdown/tag filters → immediate
+useEffect(() => {
+  setPage(1);
+  fetchSubmissions({ ...buildParams(searchRef.current), page: 1 });
+}, [language, type, course, fetchSubmissions]); // clean and explicit
+
+// Debounced search
+useEffect(() => {
+  if (skipNextSearchDebounceRef.current) {
+    skipNextSearchDebounceRef.current = false;
+    return;
+  }
+
+  if (debounceRef.current) clearTimeout(debounceRef.current);
+  debounceRef.current = setTimeout(() => {
     setPage(1);
-    fetchSubmissions({ ...buildParams(), page: 1 });
-  }, [language, submissionType, courseTag]); // eslint-disable-line
+    fetchSubmissions({ ...buildParams(search), page: 1 });
+  }, 300);
 
-  // Search → debounced 300ms
-  useEffect(() => {
-    if (debounceRef.current) clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(() => {
-      setPage(1);
-      fetchSubmissions({ ...buildParams(), page: 1 });
-    }, 300);
-    return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
-  }, [search]); // eslint-disable-line
+  return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
+}, [search, fetchSubmissions]);
 
-if (!isAuthenticated) {
-  return <p className="text-white text-center mt-10">Redirecting...</p>;
-}
 
- 
+
 
   const handleLoadMore = () => {
     const next = page + 1;
     setPage(next);
-    fetchSubmissions({ ...buildParams(), page: next }, true);
+    fetchSubmissions({ ...buildParams(searchRef.current), page: next }, true);
   };
 
   const handleClear = () => {
+    if (debounceRef.current) {
+      clearTimeout(debounceRef.current);
+      debounceRef.current = null;
+    }
+
+    // Filter effect will perform one immediate refetch after reset.
+    skipNextSearchDebounceRef.current = true;
     setSearch('');
     setLanguage('');
-    setSubmissionType('');
-    setCourseTag('');
+    setType('');
+    setCourse('');
+    setPage(1);
   };
-
-  const hasActiveFilter = !!(search || language || submissionType || courseTag);
+  const hasActiveFilter = !!(search || language || type || course);
 
   return (
+    <ProtectedRoute>
     <>
       <Head>
         <title>Submissions — ESICodeHub</title>
@@ -261,11 +277,11 @@ if (!isAuthenticated) {
           >
             <Filters
               language={language}
-              submissionType={submissionType}
-              courseTag={courseTag}
+              submissionType={type}
+              courseTag={course}
               onLanguageChange={setLanguage}
-              onSubmissionTypeChange={setSubmissionType}
-              onCourseTagChange={setCourseTag}
+              onSubmissionTypeChange={setType}
+              onCourseTagChange={setCourse}
               onClear={handleClear}
               hasActiveFilter={hasActiveFilter}
               total={total}
@@ -342,5 +358,6 @@ if (!isAuthenticated) {
         </footer>
       </div>
     </>
+    </ProtectedRoute>
   );
 }
