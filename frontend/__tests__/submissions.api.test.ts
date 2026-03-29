@@ -38,7 +38,7 @@ describe('submissions.api', () => {
 
     expect(apiClient.get).toHaveBeenCalledWith(
       '/personal-submissions/',
-      { params: { language: 'Python', page: 2 } }
+      { params: { language: 'Python', type: undefined, course: undefined, search: undefined, page: 2 } }
     );
   });
 

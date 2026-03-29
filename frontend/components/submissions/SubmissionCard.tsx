@@ -58,7 +58,7 @@ function Avatar({ name }: { name: string }) {
   return (
     <div className={`
       w-8 h-8 rounded-full shrink-0
-      bg-gradient-to-br ${gradient}
+      bg-linear-to-br ${gradient}
       flex items-center justify-center
       text-white text-[0.6875rem] font-black
       ring-2 ring-white
@@ -110,7 +110,7 @@ export default function SubmissionCard({ submission, onClick, index }: Submissio
       {/* Top accent line — appears on hover */}
       <div className="
         absolute inset-x-0 top-0 h-0.5
-        bg-gradient-to-r from-blue-500 via-blue-400 to-indigo-500
+        bg-linear-to-r from-blue-500 via-blue-400 to-indigo-500
         scale-x-0 group-hover:scale-x-100
         origin-left transition-transform duration-300
       " />

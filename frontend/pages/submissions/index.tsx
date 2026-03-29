@@ -135,7 +135,7 @@ if (!isAuthenticated) {
           
       `}</style>
 
-     <div className="min-h-screen bg-gradient-to-br from-[#0f1f3d] via-[#1a2b4d] to-[#223659]/60">
+    <div className="min-h-screen bg-linear-to-br from-[#0f1f3d] via-[#1a2b4d] to-[#223659]/60">
 
         {/* ════════════════════════════════════════
             HEADER
@@ -145,17 +145,17 @@ if (!isAuthenticated) {
   <div className={`
     absolute inset-0
     bg-[linear-gradient(rgba(59,130,246,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(59,130,246,0.03)_1px,transparent_1px)]
-    bg-[size:48px_48px]
+    bg-size-[48px_48px]
    `}/>
 
   {/* Radial glow – slightly reduced opacity */}
-  <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[200px] bg-blue-500/5 blur-3xl rounded-full" />
+  <div className="absolute top-0 left-1/2 -translate-x-1/2 w-150 h-50 bg-blue-500/5 blur-3xl rounded-full" />
 
   {/* Decorative </> – keep as is */}
   <div
     className={`
       absolute right-8 top-1/2 -translate-y-1/2
-      text-[7rem] font-black text-white/[0.02]
+      text-[7rem] font-black text-white/2
       font-mono select-none pointer-events-none leading-none
     `}
     style={{ animation: 'float 6s ease-in-out infinite' }}
@@ -164,7 +164,7 @@ if (!isAuthenticated) {
   </div>
 
   {/* Left accent bar – keep */}
-  <div className="absolute left-0 inset-y-0 w-1 bg-gradient-to-b from-blue-400 via-blue-500 to-indigo-600" />
+  <div className="absolute left-0 inset-y-0 w-1 bg-linear-to-b from-blue-400 via-blue-500 to-indigo-600" />
 
   <div className="relative max-w-7xl mx-auto px-6 lg:px-8 py-5">
     {/* Logo, title, auth area – unchanged */}

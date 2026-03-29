@@ -11,6 +11,7 @@ import Head from 'next/head';
 import dynamic from 'next/dynamic';
 import { useRouter } from 'next/router';
 import axios from 'axios';
+import type { EditorProps } from '@monaco-editor/react';
 
 import { useAuth } from '@/hooks/useAuth';
 import type {
@@ -24,7 +25,7 @@ import {
 } from '@/services/submissions/submissions.api';
 import { relativeTime } from '@/utils/time';
 
-const MonacoEditor = dynamic(
+const MonacoEditor = dynamic<EditorProps>(
   () => import('@monaco-editor/react').then((module) => module.default),
   { ssr: false }
 );
