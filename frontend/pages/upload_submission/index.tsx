@@ -68,7 +68,7 @@ function NewSubmissionForm() {
         course_tag: courseTag || undefined,
         description: description || undefined,
       });
-    } catch (err: any) {
+    } catch (err: unknown) {
       // Creation itself failed — nothing was persisted, just show idle + alert
       setPhase({ status: "idle" });
       alert(err?.response?.data?.detail ?? "Failed to create submission. Please try again.");
@@ -82,7 +82,7 @@ function NewSubmissionForm() {
         await uploadFiles(submission.id, files, (percent) => {
           setPhase({ status: "uploading", percent, submissionId: submission.id });
         });
-      } catch (err: any) {
+      } catch (err: unknown) {
         // Partial failure: submission exists but files failed
         setPhase({
           status: "upload_failed",
@@ -108,7 +108,7 @@ function NewSubmissionForm() {
         setPhase({ status: "uploading", percent, submissionId });
       });
       router.push(`/submissions/${submissionId}`);
-    } catch (err: any) {
+    } catch (err: unknown) {
       setPhase({
         status: "upload_failed",
         submissionId,
