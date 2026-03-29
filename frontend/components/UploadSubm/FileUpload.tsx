@@ -143,7 +143,7 @@ export default function FileUpload({ files, onFilesChange }: FileUploadProps) {
           ref={dirInputRef}
           type="file"
           multiple
-          // @ts-ignore – webkitdirectory is non-standard
+          //  @ts-expect-error – webkitdirectory is non-standard
           webkitdirectory=""
           style={{ display: "none" }}
           onChange={handleDirChange}
