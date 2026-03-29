@@ -1,37 +1,48 @@
 "use client";
 
-import { useState, CSSProperties, ChangeEvent, FormEvent } from "react";
+import { useState, CSSProperties, ChangeEvent } from "react";
+import { useRouter } from "next/navigation";
 import Header from "@/components/UploadSubm/Header";
 import Field from "@/components/UploadSubm/Field";
 import FileUpload from "@/components/UploadSubm/FileUpload";
 import SubmissionPreview from "@/components/UploadSubm/SubmissionPreview";
 import SuccessScreen from "@/components/UploadSubm/SuccessScreen";
-import { createSubmissionWithFiles } from '@/services/UploadSubmission/upload.api';
-
 import VisibilityToggle from "@/components/UploadSubm/VisibilityToggle";
-
+import ProtectedRoute from "@/components/UploadSubm/Protectedroute";
+import { createSubmission, uploadFiles, deleteSubmission } from "@/services/UploadSubmission/upload.api";
 
 const LANGUAGES: Language[] = [
   "Python", "JavaScript", "Java", "C++", "C", "SQL", "TypeScript", "Pascal", "Other",
 ];
- 
- const TYPES: SubmissionType[] = [
+
+const TYPES: SubmissionType[] = [
   "Review Request", "Help Request", "Educational Sharing",
 ];
 
 type SubmissionType = "Review Request" | "Help Request" | "Educational Sharing";
 type Language = "Python" | "JavaScript" | "Java" | "C++" | "SQL" | "TypeScript" | "C" | "Pascal" | "Other";
 
-export default function NewSubmissionPage() {
-  const [title, setTitle]               = useState<string>("");
-  const [language, setLanguage]         = useState<Language | "">("");
-  const [type, setType]                 = useState<SubmissionType | "">("");
-  const [courseTag, setCourseTag]       = useState<string>("");
-  const [description, setDescription]  = useState<string>("");
-  const [files, setFiles]               = useState<File[]>([]);
-  const [submitted, setSubmitted]       = useState<boolean>(false);
-  const [visibility, setVisibility] = useState<"public" | "private">("public");
- 
+// Upload state machine
+type UploadPhase =
+  | { status: "idle" }
+  | { status: "creating" }
+  | { status: "uploading"; percent: number; submissionId: number }
+  | { status: "upload_failed"; submissionId: number; error: string };
+
+function NewSubmissionForm() {
+  const router = useRouter();
+
+  const [title, setTitle]              = useState<string>("");
+  const [language, setLanguage]        = useState<Language | "">("");
+  const [type, setType]                = useState<SubmissionType | "">("");
+  const [courseTag, setCourseTag]      = useState<string>("");
+  const [description, setDescription] = useState<string>("");
+  const [files, setFiles]              = useState<{ file: File; relativePath: string }[]>([]);
+  const [visibility, setVisibility]    = useState<"public" | "private">("public");
+  const [phase, setPhase]              = useState<UploadPhase>({ status: "idle" });
+
+  const isSubmitting =
+    phase.status === "creating" || phase.status === "uploading";
 
   const resetForm = () => {
     setTitle("");
@@ -40,24 +51,83 @@ export default function NewSubmissionPage() {
     setCourseTag("");
     setDescription("");
     setFiles([]);
-    setSubmitted(false);
+    setPhase({ status: "idle" });
   };
 
-  const handleSubmit = async () => {
-};
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
 
-  if (submitted) {
-    return (
-      <div style={styles.page}>
-        <Header />
-        <SuccessScreen
-          title={title}
-          onNewSubmission={resetForm}
-          onBack={resetForm}
-        />
-      </div>
-    );
-  }
+    // ── Step 1: create submission ──────────────────────────────────────
+    setPhase({ status: "creating" });
+    let submission;
+    try {
+      submission = await createSubmission({
+        title,
+        language,
+        submission_type: type,
+        visibility,
+        course_tag: courseTag || undefined,
+        description: description || undefined,
+      });
+    } catch (err: any) {
+      // Creation itself failed — nothing was persisted, just show idle + alert
+      setPhase({ status: "idle" });
+      alert(err?.response?.data?.detail ?? "Failed to create submission. Please try again.");
+      return;
+    }
+
+    // ── Step 2: upload files ───────────────────────────────────────────
+    if (files.length > 0) {
+      setPhase({ status: "uploading", percent: 0, submissionId: submission.id });
+      try {
+        await uploadFiles(submission.id, files, (percent) => {
+          setPhase({ status: "uploading", percent, submissionId: submission.id });
+        });
+      } catch (err: any) {
+        // Partial failure: submission exists but files failed
+        setPhase({
+          status: "upload_failed",
+          submissionId: submission.id,
+          error: err?.response?.data?.detail ?? "File upload failed.",
+        });
+        return;
+      }
+    }
+
+    // ── Step 3: redirect ───────────────────────────────────────────────
+    router.push(`/submissions/${submission.id}`);
+  };
+
+  // Retry upload only (submission already exists)
+  const handleRetryUpload = async () => {
+    if (phase.status !== "upload_failed") return;
+    const { submissionId } = phase;
+
+    setPhase({ status: "uploading", percent: 0, submissionId });
+    try {
+      await uploadFiles(submissionId, files, (percent) => {
+        setPhase({ status: "uploading", percent, submissionId });
+      });
+      router.push(`/submissions/${submissionId}`);
+    } catch (err: any) {
+      setPhase({
+        status: "upload_failed",
+        submissionId,
+        error: err?.response?.data?.detail ?? "File upload failed again.",
+      });
+    }
+  };
+
+  // Discard the orphaned submission and stay on the form
+  const handleDiscardAndReset = async () => {
+    if (phase.status !== "upload_failed") return;
+    try {
+      await deleteSubmission(phase.submissionId);
+    } catch {
+      // best-effort rollback
+    }
+    resetForm();
+  };
 
   return (
     <div style={styles.page}>
@@ -72,12 +142,43 @@ export default function NewSubmissionPage() {
         </div>
 
         <div style={styles.layout}>
-          {/* Form Card */}                 
-         <form style={styles.formCard}  onSubmit={handleSubmit}>
+          {/* Form Card */}
+          <form style={styles.formCard} onSubmit={handleSubmit}>
             <h2 style={styles.formTitle}>New Submission</h2>
             <p style={styles.formSubtitle}>
               Share your code, request help, or contribute an educational resource.
             </p>
+
+            {/* ── Upload-failed banner ── */}
+            {phase.status === "upload_failed" && (
+              <div style={styles.errorBanner}>
+                <div style={styles.errorBannerTop}>
+                  <span style={styles.errorIcon}>⚠</span>
+                  <strong>File upload failed</strong>
+                </div>
+                <p style={styles.errorMsg}>{phase.error}</p>
+                <p style={styles.errorSub}>
+                  Your submission was created (ID&nbsp;#{phase.submissionId}) but the files were
+                  not attached. You can retry the upload or discard and start over.
+                </p>
+                <div style={styles.errorActions}>
+                  <button
+                    type="button"
+                    style={styles.btnRetry}
+                    onClick={handleRetryUpload}
+                  >
+                    Retry Upload
+                  </button>
+                  <button
+                    type="button"
+                    style={styles.btnDiscard}
+                    onClick={handleDiscardAndReset}
+                  >
+                    Discard &amp; Start Over
+                  </button>
+                </div>
+              </div>
+            )}
 
             <Field label="Title" required>
               <input
@@ -86,6 +187,7 @@ export default function NewSubmissionPage() {
                 value={title}
                 onChange={(e: ChangeEvent<HTMLInputElement>) => setTitle(e.target.value)}
                 required
+                disabled={isSubmitting}
               />
             </Field>
 
@@ -96,11 +198,10 @@ export default function NewSubmissionPage() {
                   value={language}
                   onChange={(e: ChangeEvent<HTMLSelectElement>) => setLanguage(e.target.value as Language)}
                   required
+                  disabled={isSubmitting}
                 >
                   <option value="">Select language</option>
-                  {LANGUAGES.map((l) => (
-                    <option key={l} value={l}>{l}</option>
-                  ))}
+                  {LANGUAGES.map((l) => <option key={l} value={l}>{l}</option>)}
                 </select>
               </Field>
 
@@ -110,11 +211,10 @@ export default function NewSubmissionPage() {
                   value={type}
                   onChange={(e: ChangeEvent<HTMLSelectElement>) => setType(e.target.value as SubmissionType)}
                   required
+                  disabled={isSubmitting}
                 >
                   <option value="">Select type</option>
-                  {TYPES.map((t) => (
-                    <option key={t} value={t}>{t}</option>
-                  ))}
+                  {TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
                 </select>
               </Field>
             </div>
@@ -125,6 +225,7 @@ export default function NewSubmissionPage() {
                 placeholder="e.g. CS301"
                 value={courseTag}
                 onChange={(e: ChangeEvent<HTMLInputElement>) => setCourseTag(e.target.value)}
+                disabled={isSubmitting}
               />
             </Field>
 
@@ -134,37 +235,60 @@ export default function NewSubmissionPage() {
                 placeholder="Describe your submission, the problem you're solving, or the help you're looking for..."
                 value={description}
                 onChange={(e: ChangeEvent<HTMLTextAreaElement>) => setDescription(e.target.value)}
+                disabled={isSubmitting}
               />
             </Field>
-
-            
 
             <Field label="Files">
               <FileUpload files={files} onFilesChange={setFiles} />
             </Field>
 
+            <Field label="Visibility" hint="Control who can access this item">
+              <VisibilityToggle value={visibility} onChange={setVisibility} />
+            </Field>
 
-    
-      <Field
-        label="Visibility"
-        hint="Control who can access this item"
-      >
-        <VisibilityToggle
-          value={visibility}
-          onChange={setVisibility}
-        />
-      </Field>
-    
- 
+            {/* ── Progress bar ── */}
+            {(phase.status === "creating" || phase.status === "uploading") && (
+              <div style={styles.progressWrap}>
+                <div style={styles.progressHeader}>
+                  <span style={styles.progressLabel}>
+                    {phase.status === "creating"
+                      ? "Creating submission…"
+                      : `Uploading files… ${phase.percent}%`}
+                  </span>
+                  <span style={styles.progressPct}>
+                    {phase.status === "uploading" ? `${phase.percent}%` : ""}
+                  </span>
+                </div>
+                <div style={styles.progressTrack}>
+                  <div
+                    style={{
+                      ...styles.progressFill,
+                      width: phase.status === "creating" ? "10%" : `${phase.percent}%`,
+                      transition: "width 0.3s ease",
+                    }}
+                  />
+                </div>
+              </div>
+            )}
 
             <div style={styles.actions}>
-              <button type="button" style={styles.btnOutline}>Cancel</button>
-              <button type="submit" style={styles.btnPrimary}>
-                Upload Submission +
+              <button
+                type="button"
+                style={styles.btnOutline}
+                disabled={isSubmitting}
+                onClick={resetForm}
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                style={{ ...styles.btnPrimary, ...(isSubmitting ? styles.btnDisabled : {}) }}
+                disabled={isSubmitting}
+              >
+                {isSubmitting ? "Uploading…" : "Upload Submission +"}
               </button>
             </div>
-
-            
           </form>
 
           {/* Sidebar */}
@@ -178,6 +302,14 @@ export default function NewSubmissionPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function NewSubmissionPage() {
+  return (
+    <ProtectedRoute>
+      <NewSubmissionForm />
+    </ProtectedRoute>
   );
 }
 
@@ -246,6 +378,11 @@ const styles: Record<string, CSSProperties> = {
     cursor: "pointer",
     boxShadow: "0 4px 14px rgba(29,110,245,0.35)",
   },
+  btnDisabled: {
+    opacity: 0.6,
+    cursor: "not-allowed",
+    boxShadow: "none",
+  },
   btnOutline: {
     padding: "12px 24px",
     background: "#fff",
@@ -253,6 +390,62 @@ const styles: Record<string, CSSProperties> = {
     border: "1.5px solid #d1d9e6",
     borderRadius: 10,
     fontSize: 14,
+    fontWeight: 600,
+    cursor: "pointer",
+  },
+  // Progress bar
+  progressWrap: {
+    marginTop: 20,
+    marginBottom: 4,
+    background: "#f0f6ff",
+    border: "1px solid #dbeafe",
+    borderRadius: 10,
+    padding: "14px 16px",
+  },
+  progressHeader: { display: "flex", justifyContent: "space-between", marginBottom: 8 },
+  progressLabel: { fontSize: 13, color: "#1e3a5f", fontWeight: 500 },
+  progressPct: { fontSize: 13, color: "#2563eb", fontWeight: 600 },
+  progressTrack: {
+    height: 6,
+    background: "#dbeafe",
+    borderRadius: 99,
+    overflow: "hidden",
+  },
+  progressFill: {
+    height: "100%",
+    background: "linear-gradient(90deg, #2563eb, #60a5fa)",
+    borderRadius: 99,
+  },
+  // Error banner
+  errorBanner: {
+    marginBottom: 24,
+    background: "#fff7ed",
+    border: "1px solid #fed7aa",
+    borderRadius: 10,
+    padding: "16px 18px",
+  },
+  errorBannerTop: { display: "flex", alignItems: "center", gap: 8, marginBottom: 6 },
+  errorIcon: { fontSize: 16, color: "#b45309" },
+  errorMsg: { fontSize: 13, color: "#92400e", margin: "0 0 6px" },
+  errorSub: { fontSize: 12, color: "#b45309", margin: "0 0 12px" },
+  errorActions: { display: "flex", gap: 8 },
+  btnRetry: {
+    padding: "8px 16px",
+    background: "#2563eb",
+    color: "#fff",
+    border: "none",
+    borderRadius: 8,
+    fontSize: 13,
+    fontWeight: 600,
+    cursor: "pointer",
+  },
+  btnDiscard: {
+    padding: "8px 16px",
+    background: "#fff",
+    color: "#92400e",
+    border: "1px solid #fed7aa",
+    borderRadius: 8,
+    fontSize: 13,
     fontWeight: 600,
     cursor: "pointer",
   },
