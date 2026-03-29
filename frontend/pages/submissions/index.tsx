@@ -73,7 +73,7 @@ export default function SubmissionsPage() {
 useEffect(() => {
   setPage(1);
   fetchSubmissions({ ...buildParams(searchRef.current), page: 1 });
-}, [language, type, course, fetchSubmissions]); // clean and explicit
+}, [language, type, course, buildParams, fetchSubmissions]); 
 
 // Debounced search
 useEffect(() => {
@@ -89,7 +89,7 @@ useEffect(() => {
   }, 300);
 
   return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
-}, [search, fetchSubmissions]);
+}, [search, buildParams, fetchSubmissions]);
 
 
 
