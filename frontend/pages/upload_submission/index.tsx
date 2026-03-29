@@ -1,5 +1,3 @@
-"use client";
-
 import { useState, CSSProperties, ChangeEvent } from "react";
 import { useRouter } from "next/router";
 import Header from "@/components/UploadSubm/Header";
@@ -8,24 +6,31 @@ import FileUpload from "@/components/UploadSubm/FileUpload";
 import SubmissionPreview from "@/components/UploadSubm/SubmissionPreview";
 import VisibilityToggle from "@/components/UploadSubm/VisibilityToggle";
 import ProtectedRoute from "@/components/UploadSubm/Protectedroute";
-import { createSubmission, uploadFiles, deleteSubmission } from "@/services/UploadSubmission/upload.api";
+// Use the existing, correct API service — not the local duplicate
+import { createSubmission, uploadFiles, deleteSubmission } from "@/services/submissions/submissions.api";
+
+
+
+
 
 const LANGUAGES: Language[] = [
   "Python", "JavaScript", "Java", "C++", "C", "SQL", "TypeScript", "Pascal", "Other",
 ];
 
-const TYPES: SubmissionType[] = [
-  "Review Request", "Help Request", "Educational Sharing",
+// Separate display labels from API values (backend expects: review | help | sharing)
+const TYPE_OPTIONS: { value: SubmissionTypeValue; label: string }[] = [
+  { value: "review",  label: "Review Request" },
+  { value: "help",    label: "Help Request" },
+  { value: "sharing", label: "Educational Sharing" },
 ];
 
-type SubmissionType = "Review Request" | "Help Request" | "Educational Sharing";
+type SubmissionTypeValue = "review" | "help" | "sharing";
 type Language = "Python" | "JavaScript" | "Java" | "C++" | "SQL" | "TypeScript" | "C" | "Pascal" | "Other";
 
 // Upload state machine
 type UploadPhase =
   | { status: "idle" }
   | { status: "creating" }
-  | { status: "uploading"; percent: number; submissionId: number }
   | { status: "upload_failed"; submissionId: number; error: string };
 
 function NewSubmissionForm() {
@@ -33,15 +38,14 @@ function NewSubmissionForm() {
 
   const [title, setTitle]              = useState<string>("");
   const [language, setLanguage]        = useState<Language | "">("");
-  const [type, setType]                = useState<SubmissionType | "">("");
+  const [type, setType]                = useState<SubmissionTypeValue | "">("");
   const [courseTag, setCourseTag]      = useState<string>("");
   const [description, setDescription] = useState<string>("");
   const [files, setFiles]              = useState<{ file: File; relativePath: string }[]>([]);
   const [visibility, setVisibility]    = useState<"public" | "private">("public");
   const [phase, setPhase]              = useState<UploadPhase>({ status: "idle" });
 
-  const isSubmitting =
-    phase.status === "creating" || phase.status === "uploading";
+  const isSubmitting = phase.status === "creating";
 
   const resetForm = () => {
     setTitle("");
@@ -63,13 +67,12 @@ function NewSubmissionForm() {
       submission = await createSubmission({
         title,
         language,
-        submission_type: type,
+        submission_type: type, // API value: review | help | sharing
         visibility,
-        course_tag: courseTag || undefined,
-        description: description || undefined,
+        course_tag: courseTag,
+        description: description !== "" ? description : undefined,
       });
-    } catch (err: unknown) {
-      // Creation itself failed — nothing was persisted, just show idle + alert
+    } catch (err: any) {
       setPhase({ status: "idle" });
       alert(err?.response?.data?.detail ?? "Failed to create submission. Please try again.");
       return;
@@ -77,13 +80,13 @@ function NewSubmissionForm() {
 
     // ── Step 2: upload files ───────────────────────────────────────────
     if (files.length > 0) {
-      setPhase({ status: "uploading", percent: 0, submissionId: submission.id });
       try {
-        await uploadFiles(submission.id, files, (percent) => {
-          setPhase({ status: "uploading", percent, submissionId: submission.id });
-        });
-      } catch (err: unknown) {
-        // Partial failure: submission exists but files failed
+        await uploadFiles(
+          submission.id,
+          files.map((e) => e.file),
+          files.map((e) => e.relativePath),
+        );
+      } catch (err: any) {
         setPhase({
           status: "upload_failed",
           submissionId: submission.id,
@@ -97,18 +100,19 @@ function NewSubmissionForm() {
     router.push(`/submissions/${submission.id}`);
   };
 
-  // Retry upload only (submission already exists)
   const handleRetryUpload = async () => {
     if (phase.status !== "upload_failed") return;
     const { submissionId } = phase;
 
-    setPhase({ status: "uploading", percent: 0, submissionId });
+    setPhase({ status: "creating" });
     try {
-      await uploadFiles(submissionId, files, (percent) => {
-        setPhase({ status: "uploading", percent, submissionId });
-      });
+      await uploadFiles(
+        submissionId,
+        files.map((e) => e.file),
+        files.map((e) => e.relativePath),
+      );
       router.push(`/submissions/${submissionId}`);
-    } catch (err: unknown) {
+    } catch (err: any) {
       setPhase({
         status: "upload_failed",
         submissionId,
@@ -117,7 +121,6 @@ function NewSubmissionForm() {
     }
   };
 
-  // Discard the orphaned submission and stay on the form
   const handleDiscardAndReset = async () => {
     if (phase.status !== "upload_failed") return;
     try {
@@ -128,9 +131,12 @@ function NewSubmissionForm() {
     resetForm();
   };
 
+  // Derive display label for SubmissionPreview from the current API value
+  const typeLabel = (TYPE_OPTIONS.find((o) => o.value === type)?.label ?? "") as "Review Request" | "Help Request" | "Educational Sharing" | "";
+
   return (
     <div style={styles.page}>
-      <Header />
+      <Header activePage="Submissions" />
 
       <div style={styles.container}>
         {/* Breadcrumb */}
@@ -208,12 +214,14 @@ function NewSubmissionForm() {
                 <select
                   style={styles.select}
                   value={type}
-                  onChange={(e: ChangeEvent<HTMLSelectElement>) => setType(e.target.value as SubmissionType)}
+                  onChange={(e: ChangeEvent<HTMLSelectElement>) => setType(e.target.value as SubmissionTypeValue)}
                   required
                   disabled={isSubmitting}
                 >
                   <option value="">Select type</option>
-                  {TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
+                  {TYPE_OPTIONS.map(({ value, label }) => (
+                    <option key={value} value={value}>{label}</option>
+                  ))}
                 </select>
               </Field>
             </div>
@@ -247,26 +255,13 @@ function NewSubmissionForm() {
             </Field>
 
             {/* ── Progress bar ── */}
-            {(phase.status === "creating" || phase.status === "uploading") && (
+            {phase.status === "creating" && (
               <div style={styles.progressWrap}>
                 <div style={styles.progressHeader}>
-                  <span style={styles.progressLabel}>
-                    {phase.status === "creating"
-                      ? "Creating submission…"
-                      : `Uploading files… ${phase.percent}%`}
-                  </span>
-                  <span style={styles.progressPct}>
-                    {phase.status === "uploading" ? `${phase.percent}%` : ""}
-                  </span>
+                  <span style={styles.progressLabel}>Uploading submission…</span>
                 </div>
                 <div style={styles.progressTrack}>
-                  <div
-                    style={{
-                      ...styles.progressFill,
-                      width: phase.status === "creating" ? "10%" : `${phase.percent}%`,
-                      transition: "width 0.3s ease",
-                    }}
-                  />
+                  <div style={{ ...styles.progressFill, width: "10%" }} />
                 </div>
               </div>
             )}
@@ -294,7 +289,7 @@ function NewSubmissionForm() {
           <SubmissionPreview
             title={title}
             language={language}
-            type={type}
+            type={typeLabel}
             courseTag={courseTag}
             fileCount={files.length}
           />
@@ -306,9 +301,9 @@ function NewSubmissionForm() {
 
 export default function NewSubmissionPage() {
   return (
-    <ProtectedRoute>
+    
       <NewSubmissionForm />
-    </ProtectedRoute>
+    
   );
 }
 
@@ -392,7 +387,6 @@ const styles: Record<string, CSSProperties> = {
     fontWeight: 600,
     cursor: "pointer",
   },
-  // Progress bar
   progressWrap: {
     marginTop: 20,
     marginBottom: 4,
@@ -415,7 +409,6 @@ const styles: Record<string, CSSProperties> = {
     background: "linear-gradient(90deg, #2563eb, #60a5fa)",
     borderRadius: 99,
   },
-  // Error banner
   errorBanner: {
     marginBottom: 24,
     background: "#fff7ed",
