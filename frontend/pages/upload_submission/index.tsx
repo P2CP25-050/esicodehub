@@ -92,8 +92,8 @@ export default function NewSubmissionPage() {
         </div>
 
         <div style={styles.layout}>
-          {/* Form Card */}
-         <form style={styles.formCard} onSubmit={handleSubmit}>
+          {/* Form Card */}                 
+         <form style={styles.formCard}  onSubmit={handleSubmit}>
             <h2 style={styles.formTitle}>New Submission</h2>
             <p style={styles.formSubtitle}>
               Share your code, request help, or contribute an educational resource.
