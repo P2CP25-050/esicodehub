@@ -5,7 +5,7 @@ import Field from "@/components/submissions/Field";
 import FileUpload from "@/components/submissions/FileUpload";
 import SubmissionPreview from "@/components/submissions/SubmissionPreview";
 import VisibilityToggle from "@/components/submissions/VisibilityToggle";
-import { ProtectedRout } from "@/components/ProtectedRout";
+import { ProtectedRoute } from "@/components/ProtectedRoute";
 // Use the existing, correct API service — not the local duplicate
 import { createSubmission, uploadFiles, deleteSubmission } from "@/services/submissions/submissions.api";
 

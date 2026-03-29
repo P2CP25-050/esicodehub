@@ -1,4 +1,4 @@
-import { useRef, useCallback, CSSProperties, DragEvent, ChangeEvent } from "react";
+import { useRef, CSSProperties, DragEvent, ChangeEvent } from "react";
 
 interface FileEntry {
   file: File;
@@ -32,27 +32,21 @@ export default function FileUpload({ files, onFilesChange }: FileUploadProps) {
   const totalSize = files.reduce((sum, e) => sum + e.file.size, 0);
   const overLimit = totalSize > MAX_TOTAL_BYTES;
 
-  const mergeEntries = useCallback(
-    (incoming: FileEntry[]) => {
-      // deduplicate by relativePath
-      const existing = new Map(files.map((e) => [e.relativePath, e]));
-      for (const entry of incoming) existing.set(entry.relativePath, entry);
-      onFilesChange([...existing.values()]);
-    },
-    [files, onFilesChange]
-  );
+  const mergeEntries = (incoming: FileEntry[]) => {
+    const existing = new Map(files.map((e) => [e.relativePath, e]));
+    for (const entry of incoming) existing.set(entry.relativePath, entry);
+    onFilesChange([...existing.values()]);
+  };
 
-  const handleDrop = useCallback(
-    (e: DragEvent<HTMLDivElement>) => {
-      e.preventDefault();
-      const dropped: FileEntry[] = Array.from(e.dataTransfer.files).map((f) => ({
-        file: f,
-        relativePath: f.name,
-      }));
-      mergeEntries(dropped);
-    },
-    [mergeEntries]
-  );
+  
+  const handleDrop = (e: DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    const dropped: FileEntry[] = Array.from(e.dataTransfer.files).map((f) => ({
+      file: f,
+      relativePath: f.name,
+    }));
+    mergeEntries(dropped);
+  };
 
   const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files) return;
