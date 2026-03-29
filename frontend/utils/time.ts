@@ -7,11 +7,11 @@
  */
 export const relativeTime = (dateStr: string): string => {
   const timestamp = new Date(dateStr).getTime();
-  if (Number.isNaN(timestamp)) {
-    return 'invalid date';
-  }
 
   const diff   = Date.now() - timestamp;
+  if (Number.isNaN(diff)) {
+    return '';
+  }
   const mins   = Math.floor(diff / 60_000);
   const hours  = Math.floor(diff / 3_600_000);
   const days   = Math.floor(diff / 86_400_000);
