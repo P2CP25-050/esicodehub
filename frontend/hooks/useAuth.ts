@@ -43,7 +43,7 @@ export const useAuth = (): UseAuthReturn =>
         saveTokens(res.data);
         const profile = await getMe();
         setUser(profile.data);
-        //those we will be using tjhem later
+        //those we will be using them later
         setIsAuthenticated(true);
       } catch {
 
