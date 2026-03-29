@@ -21,67 +21,50 @@ export interface PersonalSubmission {
 }
 
 /**
- * Main Upload Page API
- * Creates submission + uploads files
+ * Step 1: Create the submission record, returns the new submission with its ID.
  */
-export const createSubmissionWithFiles = async ({
-  title,
-  language,
-  submission_type,
-  visibility,
-  course_tag,
-  description,
-  files,
-}: {
-  title: string;
-  language: string;
-  submission_type: string;
-  visibility: "public" | "private";
-  course_tag?: string;
-  description?: string;
-  files: File[];
-}): Promise<PersonalSubmission> => {
-  let createdSubmission: PersonalSubmission | null = null;
+export const createSubmission = async (
+  payload: CreateSubmissionPayload
+): Promise<PersonalSubmission> => {
+  const res = await apiClient.post<PersonalSubmission>(
+    "/personal-submissions/",
+    payload
+  );
+  return res.data;
+};
 
-  try {
-    // 1️⃣ Create submission
-    const submissionRes = await apiClient.post<PersonalSubmission>(
-      "/personal-submissions/",
-      {
-        title,
-        language,
-        submission_type,
-        visibility,
-        course_tag,
-        description,
-      }
-    );
+/**
+ * Step 2: Upload files to an existing submission.
+ * Accepts an optional onProgress callback (0–100).
+ */
+export const uploadFiles = async (
+  submissionId: number,
+  files: { file: File; relativePath: string }[],
+  onProgress?: (percent: number) => void
+): Promise<void> => {
+  if (files.length === 0) return;
 
-    createdSubmission = submissionRes.data;
+  const formData = new FormData();
+  files.forEach(({ file, relativePath }) => {
+    formData.append("files", file, relativePath);
+  });
 
-    // 2️⃣ Upload files
-    if (files.length > 0) {
-      const formData = new FormData();
-
-      files.forEach((file) => {
-        formData.append("files", file);
-      });
-
-      await apiClient.post(
-        `/personal-submissions/${createdSubmission.id}/files/`,
-        formData
-      );
+  await apiClient.post(
+    `/personal-submissions/${submissionId}/files/`,
+    formData,
+    {
+      onUploadProgress: (event) => {
+        if (onProgress && event.total) {
+          onProgress(Math.round((event.loaded * 100) / event.total));
+        }
+      },
     }
+  );
+};
 
-    return createdSubmission;
-  } catch (error) {
-    // rollback if file upload fails
-    if (createdSubmission?.id) {
-      await apiClient.delete(
-        `/personal-submissions/${createdSubmission.id}/`
-      );
-    }
-
-    throw error;
-  }
+/**
+ * Rollback helper — deletes the submission if file upload fails.
+ */
+export const deleteSubmission = async (submissionId: number): Promise<void> => {
+  await apiClient.delete(`/personal-submissions/${submissionId}/`);
 };
