@@ -301,9 +301,9 @@ function NewSubmissionForm() {
 
 export default function NewSubmissionPage() {
   return (
-    
+    <ProtectedRoute>
       <NewSubmissionForm />
-    
+    </ProtectedRoute>
   );
 }
 
