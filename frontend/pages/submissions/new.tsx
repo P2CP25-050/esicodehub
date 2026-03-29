@@ -1,11 +1,11 @@
 import { useState, CSSProperties, ChangeEvent } from "react";
 import { useRouter } from "next/router";
-import Header from "@/components/UploadSubm/Header";
-import Field from "@/components/UploadSubm/Field";
-import FileUpload from "@/components/UploadSubm/FileUpload";
-import SubmissionPreview from "@/components/UploadSubm/SubmissionPreview";
-import VisibilityToggle from "@/components/UploadSubm/VisibilityToggle";
-import ProtectedRoute from "@/components/UploadSubm/Protectedroute";
+import Header from "@/components/submissions/Header";
+import Field from "@/components/submissions/Field";
+import FileUpload from "@/components/submissions/FileUpload";
+import SubmissionPreview from "@/components/submissions/SubmissionPreview";
+import VisibilityToggle from "@/components/submissions/VisibilityToggle";
+import { ProtectedRout } from "@/components/ProtectedRout";
 // Use the existing, correct API service — not the local duplicate
 import { createSubmission, uploadFiles, deleteSubmission } from "@/services/submissions/submissions.api";
 
