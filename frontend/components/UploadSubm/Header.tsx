@@ -1,30 +1,25 @@
-import { useState } from "react";
+import { useState, CSSProperties } from "react";
 import Image from "next/image";
-import { CSSProperties } from "react";
-
+import { useAuth } from "@/hooks/useAuth";
 
 interface HeaderProps {
-  userName?: string;
-  userRole?: "Student" | "Teacher";
   activePage?: string;
 }
 
 const NAV_LINKS = [
   { label: "Submissions", href: "/submissions" },
-  { label: "Courses",     href: "/courses"},
-  { label: "Leaderboard", href: "/leaderboard"},
-  { label: "Settings",    href: "/settings"},
+  { label: "Courses",     href: "/courses" },
+  { label: "Leaderboard", href: "/leaderboard" },
+  { label: "Settings",    href: "/settings" },
 ];
 
-
-
-export default function Header({
-  userName = "Teacher Name",
-  userRole = "Teacher",
-  activePage = "Submissions",
-}: HeaderProps) {
+export default function Header({ activePage = "Submissions" }: HeaderProps) {
   const [hoveredNav, setHoveredNav] = useState<string | null>(null);
- 
+  const { user } = useAuth();
+
+   const userName = user ? `${user.first_name} ${user.last_name}` : "—";
+  const userRole = user?.role ?? "student";
+
   return (
     <header style={styles.header}>
       <div style={styles.headerInner}>
@@ -40,7 +35,7 @@ export default function Header({
               priority
             />
           </div>
- 
+
           <nav style={styles.desktopNav}>
             {NAV_LINKS.map(({ label, href }) => {
               const isActive = activePage === label;
@@ -64,7 +59,7 @@ export default function Header({
             })}
           </nav>
         </div>
- 
+
         {/* Right: Profile */}
         <div style={styles.headerRight}>
           <a href="/profile" style={styles.profileBtn} aria-label="Go to profile">
@@ -84,7 +79,7 @@ export default function Header({
     </header>
   );
 }
- 
+
 const styles: Record<string, CSSProperties> = {
   header: {
     background: "#0d1b2a",
@@ -157,4 +152,3 @@ const styles: Record<string, CSSProperties> = {
   profileName: { color: "#e2e8f0", fontSize: 13, fontWeight: 600, lineHeight: 1.3, whiteSpace: "nowrap" },
   profileRole: { color: "#94a3b8", fontSize: 12, fontWeight: 400, lineHeight: 1.2, whiteSpace: "nowrap" },
 };
- 

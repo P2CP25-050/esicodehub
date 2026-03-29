@@ -1,5 +1,3 @@
-"use client";
-
 import { useRef, useCallback, CSSProperties, DragEvent, ChangeEvent } from "react";
 
 interface FileEntry {

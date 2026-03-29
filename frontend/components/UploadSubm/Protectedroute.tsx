@@ -1,7 +1,6 @@
-"use client";
-
 import { useEffect, useState, CSSProperties } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter } from "next/router";
+import { getAccessToken } from "@/lib/tokens";
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -11,7 +10,6 @@ function isTokenValid(token: string | null): boolean {
   if (!token) return false;
   try {
     const payload = JSON.parse(atob(token.split(".")[1]));
-    // exp is in seconds
     return payload.exp * 1000 > Date.now();
   } catch {
     return false;
@@ -26,11 +24,11 @@ export default function ProtectedRoute({ children }: ProtectedRouteProps) {
   const router = useRouter();
 
   useEffect(() => {
-    const token = localStorage.getItem("access_token");
+    // Use in-memory token store — never localStorage (project rule)
+    const token = getAccessToken();
     setAuthState(isTokenValid(token) ? "authorized" : "denied");
   }, []);
 
-  // Countdown redirect when denied
   useEffect(() => {
     if (authState !== "denied") return;
     if (countdown === 0) {
@@ -53,7 +51,6 @@ export default function ProtectedRoute({ children }: ProtectedRouteProps) {
     return (
       <div style={styles.center}>
         <div style={styles.card}>
-          {/* Lock icon */}
           <div style={styles.iconWrap}>
             <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#2563eb" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
               <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
@@ -105,7 +102,6 @@ const styles: Record<string, CSSProperties> = {
     background: "#f0f4ff",
     fontFamily: "'Segoe UI', system-ui, sans-serif",
   },
-  // Spinner (checking state)
   spinner: {
     width: 36,
     height: 36,
@@ -114,7 +110,6 @@ const styles: Record<string, CSSProperties> = {
     borderTopColor: "#2563eb",
     animation: "spin 0.7s linear infinite",
   },
-  // Access denied card
   card: {
     background: "#fff",
     borderRadius: 20,
@@ -147,7 +142,6 @@ const styles: Record<string, CSSProperties> = {
     margin: "0 0 28px",
     lineHeight: 1.6,
   },
-  // Countdown ring
   countdownWrap: {
     display: "flex",
     flexDirection: "column",
@@ -183,7 +177,6 @@ const styles: Record<string, CSSProperties> = {
     color: "#94a3b8",
     margin: 0,
   },
-  // Buttons
   actions: {
     display: "flex",
     gap: 10,
