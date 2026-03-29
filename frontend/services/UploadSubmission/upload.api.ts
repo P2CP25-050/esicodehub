@@ -46,7 +46,8 @@ export const uploadFiles = async (
 
   const formData = new FormData();
   files.forEach(({ file, relativePath }) => {
-    formData.append("files", file, relativePath);
+    formData.append("files", file);
+    formData.append("file_paths", relativePath); // required separate field — backend validates count match
   });
 
   await apiClient.post(
