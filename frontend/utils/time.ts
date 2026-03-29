@@ -6,7 +6,14 @@
  * relativeTime("2024-01-10T10:30:00Z") // "5 days ago"
  */
 export const relativeTime = (dateStr: string): string => {
-  const diff   = Date.now() - new Date(dateStr).getTime();
+
+  const timestamp = new Date(dateStr).getTime();
+
+  const diff   = Date.now() - timestamp;
+  if (Number.isNaN(diff)) {
+    return '';
+  }
+
   const mins   = Math.floor(diff / 60_000);
   const hours  = Math.floor(diff / 3_600_000);
   const days   = Math.floor(diff / 86_400_000);
@@ -20,3 +27,4 @@ export const relativeTime = (dateStr: string): string => {
   if (weeks < 4)  return `${weeks} week${weeks   > 1 ? 's' : ''} ago`;
   return              `${months} month${months   > 1 ? 's' : ''} ago`;
 };
+  

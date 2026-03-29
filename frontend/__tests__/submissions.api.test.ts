@@ -60,7 +60,7 @@ describe('submissions.api', () => {
   it('calls POST /personal-submissions/', async () => {
     const payload = {
       title: 'Bubble Sort', language: 'Python' as const,
-      type: 'assignment', course: 'Algorithms',
+      submission_type: 'review', course_tag: 'Algorithms',
     };
     (apiClient.post as jest.Mock).mockResolvedValue({
       data: { id: 1, ...payload }

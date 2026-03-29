@@ -6,16 +6,20 @@ import { SUPPORTED_LANGUAGES } from '@/services/submissions/submissions.types';
 
 export const SUBMISSION_TYPES = [
   { value: '',                    label: 'All Types'          },
-  { value: 'review_request',      label: 'Review Request'     },
-  { value: 'help_request',        label: 'Help Request'       },
-  { value: 'educational_sharing', label: 'Educational Sharing'},
+
+  { value: 'review',              label: 'Review Request'     },
+  { value: 'help',                label: 'Help Request'       },
+  { value: 'sharing',             label: 'Educational Sharing'},
+
 ];
 
 const QUICK_LANGS  = ['Python', 'JavaScript', 'Java', 'C++', 'C', 'TypeScript', 'SQL'];
 const QUICK_TYPES  = [
-  { value: 'review_request',      label: 'Review Request'     },
-  { value: 'help_request',        label: 'Help Request'       },
-  { value: 'educational_sharing', label: 'Educational Sharing'},
+
+  { value: 'review',              label: 'Review Request'     },
+  { value: 'help',                label: 'Help Request'       },
+  { value: 'sharing',             label: 'Educational Sharing'},
+
 ];
 
 // ============================================================================

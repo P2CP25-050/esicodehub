@@ -1,4 +1,6 @@
-import { useRef } from 'react';
+
+import { useEffect, useRef } from 'react';
+
 
 interface SearchBarProps {
   value:    string;
@@ -7,6 +9,35 @@ interface SearchBarProps {
 
 export default function SearchBar({ value, onChange }: SearchBarProps) {
   const inputRef = useRef<HTMLInputElement>(null);
+
+
+  useEffect(() => {
+    const isEditableTarget = (target: EventTarget | null): boolean => {
+      if (!(target instanceof HTMLElement)) return false;
+      if (target.isContentEditable) return true;
+      const tag = target.tagName;
+      return tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT';
+    };
+
+    const onGlobalKeyDown = (event: KeyboardEvent) => {
+      if (
+        event.key !== '/' ||
+        event.metaKey ||
+        event.ctrlKey ||
+        event.altKey ||
+        isEditableTarget(event.target)
+      ) {
+        return;
+      }
+
+      event.preventDefault();
+      inputRef.current?.focus();
+    };
+
+    window.addEventListener('keydown', onGlobalKeyDown);
+    return () => window.removeEventListener('keydown', onGlobalKeyDown);
+  }, []);
+
 
   return (
     <div
@@ -42,6 +73,9 @@ export default function SearchBar({ value, onChange }: SearchBarProps) {
           value={value}
           onChange={e => onChange(e.target.value)}
           placeholder="Search submissions by title or keyword..."
+
+          aria-label="Search submissions"
+
           className="
             flex-1 py-4 pr-5 bg-transparent outline-none
             text-gray-800 text-[0.9375rem] placeholder-gray-400

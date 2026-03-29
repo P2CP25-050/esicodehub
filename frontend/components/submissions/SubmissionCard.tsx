@@ -31,9 +31,11 @@ const getLang = (l: string) =>
 // ============================================================================
 
 const TYPE_COLORS: Record<string, { bg: string; text: string }> = {
-  review_request:      { bg: 'bg-teal-100',   text: 'text-teal-700'   },
-  help_request:        { bg: 'bg-purple-100',  text: 'text-purple-700' },
-  educational_sharing: { bg: 'bg-amber-100',   text: 'text-amber-700'  },
+
+  review:  { bg: 'bg-teal-100',   text: 'text-teal-700'   },
+  help:    { bg: 'bg-purple-100', text: 'text-purple-700' },
+  sharing: { bg: 'bg-amber-100',  text: 'text-amber-700'  },
+
 };
 const getType = (t: string) =>
   TYPE_COLORS[t] ?? { bg: 'bg-gray-100', text: 'text-gray-600' };
@@ -58,7 +60,7 @@ function Avatar({ name }: { name: string }) {
   return (
     <div className={`
       w-8 h-8 rounded-full shrink-0
-      bg-linear-to-br ${gradient}
+      bg-gradient-to-br ${gradient}
       flex items-center justify-center
       text-white text-[0.6875rem] font-black
       ring-2 ring-white
@@ -79,13 +81,38 @@ interface SubmissionCardProps {
 }
 
 export default function SubmissionCard({ submission, onClick, index }: SubmissionCardProps) {
+
+  // TODO(submissions.types.ts owner): split list/detail models (e.g. PersonalSubmissionListItem vs PersonalSubmission)
+  // so list views cannot accidentally read detail-only fields.
+  const listLike = submission as PersonalSubmission & {
+    file_count?: number;
+    owner_name?: string;
+    owner?: string | { first_name?: string; last_name?: string };
+  };
+
+
   const lang      = getLang(submission.language);
   const type      = getType(submission.submission_type);
   const typeLabel = SUBMISSION_TYPES.find(t => t.value === submission.submission_type)?.label
                  ?? submission.submission_type;
-  const fileCount = submission.files?.length ?? 0;
-  const owner     = submission.owner;
-  const ownerName = owner ? `${owner.first_name} ${owner.last_name}` : 'ESI Student';
+
+  const fileCount = listLike.file_count ?? submission.files?.length ?? 0;
+
+  const ownerFromObject =
+    typeof listLike.owner === 'object' && listLike.owner
+      ? `${listLike.owner.first_name ?? ''} ${listLike.owner.last_name ?? ''}`.trim()
+      : '';
+
+  const ownerFromString =
+    typeof listLike.owner === 'string'
+      ? listLike.owner
+          .split('@')[0]
+          .replace(/[._-]+/g, ' ')
+          .trim()
+      : '';
+
+  const ownerName = listLike.owner_name?.trim() || ownerFromObject || ownerFromString || 'ESI Student';
+
 
   return (
     <div
@@ -110,7 +137,7 @@ export default function SubmissionCard({ submission, onClick, index }: Submissio
       {/* Top accent line — appears on hover */}
       <div className="
         absolute inset-x-0 top-0 h-0.5
-        bg-linear-to-r from-blue-500 via-blue-400 to-indigo-500
+        bg-gradient-to-r from-blue-500 via-blue-400 to-indigo-500
         scale-x-0 group-hover:scale-x-100
         origin-left transition-transform duration-300
       " />

@@ -8,8 +8,9 @@ import type { PersonalSubmission, SubmissionListParams } from '@/services/submis
 import SearchBar    from '@/components/submissions/SearchBar';
 import Filters      from '@/components/submissions/Filters';
 import SubmissionsGrid from '@/components/submissions/SubmissionsGrid';
-/*
-const PAGE_SIZE = 20;*/
+import { ProtectedRoute } from '@/components/ProtectedRoute';
+
+
 
 export default function SubmissionsPage() {
   const router              = useRouter();
@@ -27,10 +28,18 @@ export default function SubmissionsPage() {
 
   const [search,         setSearch]         = useState('');
   const [language,       setLanguage]       = useState('');
-  const [submissionType, setSubmissionType] = useState('');
-  const [courseTag,      setCourseTag]      = useState('');
+
+  const [type,           setType]           = useState('');
+  const [course,         setCourse]         = useState('');
 
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const searchRef = useRef(search);
+  const skipNextSearchDebounceRef = useRef(false);
+
+  useEffect(() => {
+    searchRef.current = search;
+  }, [search]);
+
 
   // ── Fetch ──────────────────────────────────────────────────────────────────
   const fetchSubmissions = useCallback(async (
@@ -53,54 +62,69 @@ export default function SubmissionsPage() {
     }
   }, []);
 
-  const buildParams = useCallback((): SubmissionListParams => ({
-    language:        language        || undefined,
-    submission_type: submissionType  || undefined,
-    course_tag:      courseTag       || undefined,
-    search:          search          || undefined,
-  }), [language, submissionType, courseTag, search]);
 
-    useEffect(() => {
-  if (!isAuthenticated) router.push('/login');
-}, [isAuthenticated, router]);
+  const buildParams = useCallback((searchValue: string): SubmissionListParams => ({
+    language: language || undefined,
+    type: type || undefined,
+    course: course || undefined,
+    search: searchValue || undefined,
+  }), [language, type, course]);
 
- // Dropdown/tag filters → immediate
-  useEffect(() => {
+
+  
+
+// Dropdown/tag filters → immediate
+useEffect(() => {
+  setPage(1);
+  fetchSubmissions({ ...buildParams(searchRef.current), page: 1 });
+}, [language, type, course, buildParams, fetchSubmissions]); 
+
+// Debounced search
+useEffect(() => {
+  if (skipNextSearchDebounceRef.current) {
+    skipNextSearchDebounceRef.current = false;
+    return;
+  }
+
+  if (debounceRef.current) clearTimeout(debounceRef.current);
+  debounceRef.current = setTimeout(() => {
     setPage(1);
-    fetchSubmissions({ ...buildParams(), page: 1 });
-  }, [language, submissionType, courseTag]); // eslint-disable-line
+    fetchSubmissions({ ...buildParams(search), page: 1 });
+  }, 300);
 
-  // Search → debounced 300ms
-  useEffect(() => {
-    if (debounceRef.current) clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(() => {
-      setPage(1);
-      fetchSubmissions({ ...buildParams(), page: 1 });
-    }, 300);
-    return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
-  }, [search]); // eslint-disable-line
+  return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
+}, [search, buildParams, fetchSubmissions]);
 
-if (!isAuthenticated) {
-  return <p className="text-white text-center mt-10">Redirecting...</p>;
-}
+
+
 
 
   const handleLoadMore = () => {
     const next = page + 1;
     setPage(next);
-    fetchSubmissions({ ...buildParams(), page: next }, true);
+
+    fetchSubmissions({ ...buildParams(searchRef.current), page: next }, true);
   };
 
   const handleClear = () => {
+    if (debounceRef.current) {
+      clearTimeout(debounceRef.current);
+      debounceRef.current = null;
+    }
+
+    // Filter effect will perform one immediate refetch after reset.
+    skipNextSearchDebounceRef.current = true;
     setSearch('');
     setLanguage('');
-    setSubmissionType('');
-    setCourseTag('');
+    setType('');
+    setCourse('');
+    setPage(1);
   };
-
-  const hasActiveFilter = !!(search || language || submissionType || courseTag);
+  const hasActiveFilter = !!(search || language || type || course);
 
   return (
+    <ProtectedRoute>
+
     <>
       <Head>
         <title>Submissions — ESICodeHub</title>
@@ -135,7 +159,9 @@ if (!isAuthenticated) {
           
       `}</style>
 
-    <div className="min-h-screen bg-linear-to-br from-[#0f1f3d] via-[#1a2b4d] to-[#223659]/60">
+
+     <div className="min-h-screen bg-gradient-to-br from-[#0f1f3d] via-[#1a2b4d] to-[#223659]/60">
+
 
         {/* ════════════════════════════════════════
             HEADER
@@ -145,17 +171,21 @@ if (!isAuthenticated) {
   <div className={`
     absolute inset-0
     bg-[linear-gradient(rgba(59,130,246,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(59,130,246,0.03)_1px,transparent_1px)]
-    bg-size-[48px_48px]
+
+    bg-[size:48px_48px]
    `}/>
 
   {/* Radial glow – slightly reduced opacity */}
-  <div className="absolute top-0 left-1/2 -translate-x-1/2 w-150 h-50 bg-blue-500/5 blur-3xl rounded-full" />
+  <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[200px] bg-blue-500/5 blur-3xl rounded-full" />
+
 
   {/* Decorative </> – keep as is */}
   <div
     className={`
       absolute right-8 top-1/2 -translate-y-1/2
-      text-[7rem] font-black text-white/2
+
+      text-[7rem] font-black text-white/[0.02]
+
       font-mono select-none pointer-events-none leading-none
     `}
     style={{ animation: 'float 6s ease-in-out infinite' }}
@@ -164,7 +194,9 @@ if (!isAuthenticated) {
   </div>
 
   {/* Left accent bar – keep */}
-  <div className="absolute left-0 inset-y-0 w-1 bg-linear-to-b from-blue-400 via-blue-500 to-indigo-600" />
+
+  <div className="absolute left-0 inset-y-0 w-1 bg-gradient-to-b from-blue-400 via-blue-500 to-indigo-600" />
+
 
   <div className="relative max-w-7xl mx-auto px-6 lg:px-8 py-5">
     {/* Logo, title, auth area – unchanged */}
@@ -180,7 +212,8 @@ if (!isAuthenticated) {
           transition-all duration-200
         `}>
           <Image
-            src="/logo.png"
+   src="/esicodehub-logo.png"
+
             alt="ESICodeHub"
             fill
             className="object-contain"
@@ -260,11 +293,13 @@ if (!isAuthenticated) {
           >
             <Filters
               language={language}
-              submissionType={submissionType}
-              courseTag={courseTag}
+
+              submissionType={type}
+              courseTag={course}
               onLanguageChange={setLanguage}
-              onSubmissionTypeChange={setSubmissionType}
-              onCourseTagChange={setCourseTag}
+              onSubmissionTypeChange={setType}
+              onCourseTagChange={setCourse}
+
               onClear={handleClear}
               hasActiveFilter={hasActiveFilter}
               total={total}
@@ -287,7 +322,9 @@ if (!isAuthenticated) {
               </svg>
               {error}
               <button
-                onClick={() => fetchSubmissions({ page: 1 })}
+
+                onClick={() => fetchSubmissions({ ...buildParams(searchRef.current), page: 1 })}
+
                 className="ml-auto underline font-bold"
               >
                 Retry
@@ -341,5 +378,8 @@ if (!isAuthenticated) {
         </footer>
       </div>
     </>
+
+    </ProtectedRoute>
   );
 }
+
