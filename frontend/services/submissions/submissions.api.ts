@@ -28,8 +28,8 @@ export const listSubmissions = async (
     ? {
         language: params.language,
         // Backend list endpoint expects `type` and `course` query params.
-        type: params.type ?? params.type,
-        course: params.course ?? params.course,
+        type: params.type ,
+        course: params.course ,
         search: params.search,
         page: params.page,
       }

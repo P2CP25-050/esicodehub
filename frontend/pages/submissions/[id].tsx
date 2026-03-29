@@ -13,6 +13,7 @@ import { useRouter } from 'next/router';
 import axios from 'axios';
 import type { EditorProps } from '@monaco-editor/react';
 
+import { ProtectedRoute } from '@/components/ProtectedRoute';
 import { useAuth } from '@/hooks/useAuth';
 import type {
   PersonalSubmission,
@@ -338,7 +339,7 @@ const FileTree = memo(function FileTree({
               aria-expanded={isExpanded}
             >
               <span className="inline-flex h-4 w-4 items-center justify-center text-xs text-slate-400 group-hover:text-slate-200">
-                {isExpanded ? 'v' : '>'}
+                {isExpanded ? '▾' : '▸'}
               </span>
               <span className="truncate font-medium">{node.name}</span>
             </button>
@@ -379,7 +380,7 @@ const FileTree = memo(function FileTree({
   return <div className="space-y-0.5">{renderNodes(nodes)}</div>;
 });
 
-export default function SubmissionDetailPage() {
+function SubmissionDetailPage() {
   const router = useRouter();
   const { user, isLoading: authLoading } = useAuth();
 
@@ -715,8 +716,8 @@ export default function SubmissionDetailPage() {
         <div className="mx-auto max-w-7xl space-y-4">
           <HeaderSkeleton />
           <div className="grid gap-4 lg:grid-cols-[320px_minmax(0,1fr)]">
-            <div className="h-130 animate-pulse rounded-2xl border border-slate-800 bg-slate-900/70" />
-            <div className="h-130 animate-pulse rounded-2xl border border-slate-800 bg-slate-900/70" />
+            <div className="h-[520px] animate-pulse rounded-2xl border border-slate-800 bg-slate-900/70" />
+            <div className="h-[520px] animate-pulse rounded-2xl border border-slate-800 bg-slate-900/70" />
           </div>
         </div>
       </div>
@@ -763,15 +764,7 @@ export default function SubmissionDetailPage() {
     );
   }
 
-  if (submission.visibility === 'private' && authLoading) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-slate-950 px-4 text-slate-200">
-        <div className="rounded-xl border border-slate-800 bg-slate-900/80 px-5 py-3 text-sm">
-          Checking access...
-        </div>
-      </div>
-    );
-  }
+
 
   if (!canView) {
     return (
@@ -803,7 +796,7 @@ export default function SubmissionDetailPage() {
       </Head>
 
       <div className="min-h-screen bg-slate-950 text-slate-100">
-        <div className="mx-auto max-w-400 px-4 py-6 sm:px-6 lg:px-8">
+        <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
           <header className="rounded-2xl border border-slate-800 bg-slate-900/80 p-5 shadow-sm">
             <div className="flex flex-col gap-4">
               <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
@@ -888,7 +881,7 @@ export default function SubmissionDetailPage() {
               </div>
             </aside>
 
-            <section className="h-[52vh] min-h-90 overflow-hidden rounded-2xl border border-slate-800 bg-slate-900/80 shadow-sm lg:h-[72vh]">
+            <section className="h-[52vh] min-h-[360px] overflow-hidden rounded-2xl border border-slate-800 bg-slate-900/80 shadow-sm lg:h-[72vh]">
               <div className="flex items-center justify-between gap-3 border-b border-slate-800 px-4 py-3">
                 <div className="min-w-0">
                   <p className="truncate text-sm font-medium text-slate-200">
@@ -946,5 +939,13 @@ export default function SubmissionDetailPage() {
         </div>
       </div>
     </>
+  );
+}
+
+export default function SubmissionDetailPageWrapper() {
+  return (
+    <ProtectedRoute>
+      <SubmissionDetailPage />
+    </ProtectedRoute>
   );
 }
