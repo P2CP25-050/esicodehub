@@ -9,10 +9,6 @@ import ProtectedRoute from "@/components/UploadSubm/Protectedroute";
 // Use the existing, correct API service — not the local duplicate
 import { createSubmission, uploadFiles, deleteSubmission } from "@/services/submissions/submissions.api";
 
-
-
-
-
 const LANGUAGES: Language[] = [
   "Python", "JavaScript", "Java", "C++", "C", "SQL", "TypeScript", "Pascal", "Other",
 ];
@@ -72,9 +68,10 @@ function NewSubmissionForm() {
         course_tag: courseTag,
         description: description !== "" ? description : undefined,
       });
-    } catch (err: any) {
+    } catch (err: unknown) {
+      const detail = err instanceof Error ? err.message : "Failed to create submission. Please try again.";
       setPhase({ status: "idle" });
-      alert(err?.response?.data?.detail ?? "Failed to create submission. Please try again.");
+      alert(detail);
       return;
     }
 
@@ -86,11 +83,12 @@ function NewSubmissionForm() {
           files.map((e) => e.file),
           files.map((e) => e.relativePath),
         );
-      } catch (err: any) {
+      } catch (err: unknown) {
+        const detail = err instanceof Error ? err.message : "File upload failed.";
         setPhase({
           status: "upload_failed",
           submissionId: submission.id,
-          error: err?.response?.data?.detail ?? "File upload failed.",
+          error: detail,
         });
         return;
       }
@@ -112,11 +110,12 @@ function NewSubmissionForm() {
         files.map((e) => e.relativePath),
       );
       router.push(`/submissions/${submissionId}`);
-    } catch (err: any) {
+    } catch (err: unknown) {
+      const detail = err instanceof Error ? err.message : "File upload failed again.";
       setPhase({
         status: "upload_failed",
         submissionId,
-        error: err?.response?.data?.detail ?? "File upload failed again.",
+        error: detail,
       });
     }
   };
