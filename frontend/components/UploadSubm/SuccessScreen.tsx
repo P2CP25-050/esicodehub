@@ -14,7 +14,7 @@ export default function SuccessScreen({ title, onNewSubmission, onBack }: Succes
         <div style={styles.successIcon}>✓</div>
         <h2 style={styles.successTitle}>Submission Uploaded!</h2>
         <p style={styles.successSub}>
-          Your submission <strong>"{title}"</strong> has been posted successfully.
+        Your submission <strong>“{title}”</strong> has been posted successfully.
         </p>
         <div style={{ display: "flex", gap: 12, justifyContent: "center", flexWrap: "wrap" }}>
           <button style={styles.btnPrimary} onClick={onNewSubmission}>
