@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState,/* useRef, useEffect ,useCallback */} from "react";
 import { useRouter } from "next/router";
 import { login } from '@/services/auth';
 import { saveTokens } from '@/lib/tokens';
@@ -82,8 +82,8 @@ function Message({ text, type }: { text: string; type: "error" | "success" }) {
 // ─── Main Component ───────────────────────────────────────
 export default function LoginPage() {
   const router = useRouter();
-  const [page, setPage] = useState<Page>("Login");
-  const [cardKey, setCardKey] = useState(0);
+  const [page/*, setPage*/] = useState<Page>("Login");
+  const [cardKey/*, setCardKey*/] = useState(0);
 
   // Login
   const [email, setEmail] = useState("");
@@ -101,10 +101,10 @@ export default function LoginPage() {
   //@esi.dz domain check
    const isEsiEmail = (v: string) => v.toLowerCase().endsWith("@esi.dz");
  //-------------------------------
-   const goTo = useCallback((p: Page) => {
+   /*const goTo = useCallback((p: Page) => {
     setCardKey((k) => k + 1);
     setPage(p);
-  }, []);
+  }, []);*/
 
   const shake = (setter: (v: boolean) => void) => {
     setter(true);
