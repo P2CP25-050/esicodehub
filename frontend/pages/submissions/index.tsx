@@ -304,7 +304,7 @@ useEffect(() => {
               </svg>
               {error}
               <button
-                onClick={() => fetchSubmissions({ page: 1 })}
+                onClick={() => fetchSubmissions({ ...buildParams(searchRef.current), page: 1 })}
                 className="ml-auto underline font-bold"
               >
                 Retry
