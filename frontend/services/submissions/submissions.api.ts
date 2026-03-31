@@ -49,7 +49,7 @@ export const listSubmissions = async (
  * @example
  * const submission = await getSubmission(5);
  * console.log(submission.title);           // "Bubble Sort"
- * console.log(submission.submission_type); // "review_request"
+ * console.log(submission.submission_type); // "review"
  * console.log(submission.course_tag);      // "Algorithms"
  * console.log(submission.visibility);      // "public"
  */
