@@ -1,10 +1,12 @@
 from django.core.mail import send_mail
 from django.contrib.auth import authenticate
+from django.conf import settings
 from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import RefreshToken
+from rest_framework_simplejwt.serializers import TokenRefreshSerializer
 
 from apps.accounts.models import User, EmailVerification
 from apps.accounts.serializers import (
@@ -14,6 +16,28 @@ from apps.accounts.serializers import (
     LoginSerializer
 )
 from apps.esi_db.models import EsiStudent, EsiProfessor
+
+
+def _set_refresh_cookie(response, refresh_token):
+    """Store refresh token in a secure HttpOnly cookie."""
+    response.set_cookie(
+        key=settings.AUTH_REFRESH_COOKIE_NAME,
+        value=refresh_token,
+        max_age=int(settings.SIMPLE_JWT['REFRESH_TOKEN_LIFETIME'].total_seconds()),
+        httponly=True,
+        secure=settings.AUTH_COOKIE_SECURE,
+        samesite=settings.AUTH_COOKIE_SAMESITE,
+        path=settings.AUTH_REFRESH_COOKIE_PATH,
+    )
+
+
+def _clear_refresh_cookie(response):
+    """Remove refresh token cookie on logout or failed refresh."""
+    response.delete_cookie(
+        key=settings.AUTH_REFRESH_COOKIE_NAME,
+        path=settings.AUTH_REFRESH_COOKIE_PATH,
+        samesite=settings.AUTH_COOKIE_SAMESITE,
+    )
 
 
 def _lookup_esi_person(email):
@@ -127,11 +151,10 @@ def verify_email(request):
 
     # Issue JWT tokens
     refresh = RefreshToken.for_user(user)
-    return Response(
+    response = Response(
         {
             'message': 'Email verified successfully',
             'access': str(refresh.access_token),
-            'refresh': str(refresh),
             'user': {
                     'email': user.email,
                     'first_name': user.first_name,
@@ -141,6 +164,8 @@ def verify_email(request):
         },
         status=status.HTTP_200_OK,
     )
+    _set_refresh_cookie(response, str(refresh))
+    return response
 
 
 @api_view(['POST'])
@@ -172,7 +197,7 @@ def resend_verification(request):
 @api_view(['POST'])
 def login(request):
     """Authenticates a verified user using email and password.
-    Returns JWT access and refresh tokens along with basic user info."""
+    Returns an access token and user info, while refresh lives in an HttpOnly cookie."""
     serializer = LoginSerializer(data=request.data)
     serializer.is_valid(raise_exception=True)
 
@@ -209,12 +234,11 @@ def login(request):
             status=status.HTTP_401_UNAUTHORIZED,
         )
 
-    # Return tokens + user object
+    # Return access token + user object and persist refresh token in HttpOnly cookie.
     refresh = RefreshToken.for_user(authenticated_user)
-    return Response(
+    response = Response(
         {
             'access': str(refresh.access_token),
-            'refresh': str(refresh),
             'user': {
                 'email': authenticated_user.email,
                 'first_name': authenticated_user.first_name,
@@ -224,6 +248,56 @@ def login(request):
         },
         status=status.HTTP_200_OK,
     )
+    _set_refresh_cookie(response, str(refresh))
+    return response
+
+
+@api_view(['POST'])
+def token_refresh(request):
+    """Refresh access token using the HttpOnly refresh cookie."""
+    refresh = request.COOKIES.get(settings.AUTH_REFRESH_COOKIE_NAME)
+    if not refresh:
+        response = Response(
+                {'detail': 'No refresh token cookie found.'},
+                status=status.HTTP_401_UNAUTHORIZED
+                )
+        _clear_refresh_cookie(response)
+        return response
+
+    serializer = TokenRefreshSerializer(data={'refresh': refresh})
+    try:
+        serializer.is_valid(raise_exception=True)
+    except Exception:
+        response = Response(
+                {'detail': 'Refresh token is invalid or expired.'},
+                status=status.HTTP_401_UNAUTHORIZED
+                )
+        _clear_refresh_cookie(response)
+        return response
+
+    response = Response(serializer.validated_data, status=status.HTTP_200_OK)
+
+    rotated_refresh = serializer.validated_data.get('refresh')
+    if rotated_refresh:
+        _set_refresh_cookie(response, rotated_refresh)
+
+    return response
+
+
+@api_view(['POST'])
+def logout(request):
+    """Clear refresh cookie and invalidate refresh token when possible."""
+    refresh = request.COOKIES.get(settings.AUTH_REFRESH_COOKIE_NAME)
+    if refresh:
+        try:
+            token = RefreshToken(refresh)
+            token.blacklist()
+        except Exception:
+            pass
+
+    response = Response({'message': 'Logged out successfully.'}, status=status.HTTP_200_OK)
+    _clear_refresh_cookie(response)
+    return response
 
 
 @api_view(['GET'])
