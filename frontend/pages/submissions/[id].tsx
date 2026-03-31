@@ -382,7 +382,7 @@ const FileTree = memo(function FileTree({
 
 function SubmissionDetailPage() {
   const router = useRouter();
-  const { user, isLoading: authLoading } = useAuth();
+  const { user } = useAuth();
 
   const [viewState, setViewState] = useState<ViewState>('idle');
   const [submission, setSubmission] = useState<PersonalSubmission | null>(null);
