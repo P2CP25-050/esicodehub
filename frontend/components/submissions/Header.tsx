@@ -1,6 +1,9 @@
 import { useState, CSSProperties } from "react";
 import Image from "next/image";
+import { useRouter } from 'next/router';
 import { useAuth } from "@/hooks/useAuth";
+import { logout } from '@/services/auth';
+import { clearTokens } from '@/lib/tokens';
 
 interface HeaderProps {
   activePage?: string;
@@ -15,10 +18,22 @@ const NAV_LINKS = [
 
 export default function Header({ activePage = "Submissions" }: HeaderProps) {
   const [hoveredNav, setHoveredNav] = useState<string | null>(null);
+  const router = useRouter();
   const { user } = useAuth();
 
    const userName = user ? `${user.first_name} ${user.last_name}` : "—";
   const userRole = user?.role ?? "student";
+
+  const handleLogout = async () => {
+    try {
+      await logout();
+    } catch {
+      // Clear client auth state even if backend logout fails.
+    } finally {
+      clearTokens();
+      router.replace('/login');
+    }
+  };
 
   return (
     <header style={styles.header}>
@@ -62,6 +77,9 @@ export default function Header({ activePage = "Submissions" }: HeaderProps) {
 
         {/* Right: Profile */}
         <div style={styles.headerRight}>
+          <button type="button" onClick={handleLogout} style={styles.logoutBtn}>
+            Logout
+          </button>
           <a href="/profile" style={styles.profileBtn} aria-label="Go to profile">
             <div style={styles.profileIcon}>
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
@@ -100,6 +118,16 @@ const styles: Record<string, CSSProperties> = {
   },
   headerLeft: { display: "flex", alignItems: "center", gap: 16 },
   headerRight: { display: "flex", alignItems: "center", gap: 4 },
+  logoutBtn: {
+    border: '1px solid rgba(148,163,184,0.4)',
+    background: 'transparent',
+    color: '#e2e8f0',
+    borderRadius: 8,
+    padding: '8px 10px',
+    fontSize: 12,
+    fontWeight: 600,
+    cursor: 'pointer',
+  },
   logo: { display: "flex", alignItems: "center", gap: 8 },
   desktopNav: { display: "flex", alignItems: "center", gap: 4, marginLeft: 16 },
   navLink: {
