@@ -151,7 +151,8 @@ See [CONTRIBUTING.md](docs/CONTRIBUTING.md) for detailed workflow.
 ```bash
 # Backend tests
 cd backend
-pytest
+source venv/bin/activate
+python manage.py test --settings=config.settings.test
 
 # Frontend tests
 cd frontend
