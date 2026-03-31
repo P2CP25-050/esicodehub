@@ -31,9 +31,11 @@ const getLang = (l: string) =>
 // ============================================================================
 
 const TYPE_COLORS: Record<string, { bg: string; text: string }> = {
+
   review:  { bg: 'bg-teal-100',   text: 'text-teal-700'   },
   help:    { bg: 'bg-purple-100', text: 'text-purple-700' },
   sharing: { bg: 'bg-amber-100',  text: 'text-amber-700'  },
+
 };
 const getType = (t: string) =>
   TYPE_COLORS[t] ?? { bg: 'bg-gray-100', text: 'text-gray-600' };
@@ -79,6 +81,7 @@ interface SubmissionCardProps {
 }
 
 export default function SubmissionCard({ submission, onClick, index }: SubmissionCardProps) {
+
   // TODO(submissions.types.ts owner): split list/detail models (e.g. PersonalSubmissionListItem vs PersonalSubmission)
   // so list views cannot accidentally read detail-only fields.
   const listLike = submission as PersonalSubmission & {
@@ -87,10 +90,12 @@ export default function SubmissionCard({ submission, onClick, index }: Submissio
     owner?: string | { first_name?: string; last_name?: string };
   };
 
+
   const lang      = getLang(submission.language);
   const type      = getType(submission.submission_type);
   const typeLabel = SUBMISSION_TYPES.find(t => t.value === submission.submission_type)?.label
                  ?? submission.submission_type;
+
   const fileCount = listLike.file_count ?? submission.files?.length ?? 0;
 
   const ownerFromObject =
@@ -107,6 +112,7 @@ export default function SubmissionCard({ submission, onClick, index }: Submissio
       : '';
 
   const ownerName = listLike.owner_name?.trim() || ownerFromObject || ownerFromString || 'ESI Student';
+
 
   return (
     <div
