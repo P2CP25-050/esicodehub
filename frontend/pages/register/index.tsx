@@ -275,7 +275,7 @@ export default function RegisterPage() {
     } finally {
       setLoadingVerify(false);
     }
-  }, [code, email, loadingVerify, goTo, redirectToDashboard]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [code, email, loadingVerify, goTo, redirectToDashboard]);
 
   // ── RESEND — real API call ──
   const handleResend = useCallback(async () => {

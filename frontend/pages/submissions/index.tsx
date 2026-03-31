@@ -11,6 +11,7 @@ import SubmissionsGrid from '@/components/submissions/SubmissionsGrid';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
 
 
+
 export default function SubmissionsPage() {
   const router              = useRouter();
   const { isAuthenticated } = useAuth();
@@ -27,6 +28,7 @@ export default function SubmissionsPage() {
 
   const [search,         setSearch]         = useState('');
   const [language,       setLanguage]       = useState('');
+
   const [type,           setType]           = useState('');
   const [course,         setCourse]         = useState('');
 
@@ -37,6 +39,7 @@ export default function SubmissionsPage() {
   useEffect(() => {
     searchRef.current = search;
   }, [search]);
+
 
   // ── Fetch ──────────────────────────────────────────────────────────────────
   const fetchSubmissions = useCallback(async (
@@ -58,6 +61,7 @@ export default function SubmissionsPage() {
       setLoadingMore(false);
     }
   }, []);
+
 
   const buildParams = useCallback((searchValue: string): SubmissionListParams => ({
     language: language || undefined,
@@ -94,9 +98,11 @@ useEffect(() => {
 
 
 
+
   const handleLoadMore = () => {
     const next = page + 1;
     setPage(next);
+
     fetchSubmissions({ ...buildParams(searchRef.current), page: next }, true);
   };
 
@@ -118,6 +124,7 @@ useEffect(() => {
 
   return (
     <ProtectedRoute>
+
     <>
       <Head>
         <title>Submissions — ESICodeHub</title>
@@ -152,7 +159,9 @@ useEffect(() => {
           
       `}</style>
 
+
      <div className="min-h-screen bg-gradient-to-br from-[#0f1f3d] via-[#1a2b4d] to-[#223659]/60">
+
 
         {/* ════════════════════════════════════════
             HEADER
@@ -162,17 +171,21 @@ useEffect(() => {
   <div className={`
     absolute inset-0
     bg-[linear-gradient(rgba(59,130,246,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(59,130,246,0.03)_1px,transparent_1px)]
+
     bg-[size:48px_48px]
    `}/>
 
   {/* Radial glow – slightly reduced opacity */}
   <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[200px] bg-blue-500/5 blur-3xl rounded-full" />
 
+
   {/* Decorative </> – keep as is */}
   <div
     className={`
       absolute right-8 top-1/2 -translate-y-1/2
+
       text-[7rem] font-black text-white/[0.02]
+
       font-mono select-none pointer-events-none leading-none
     `}
     style={{ animation: 'float 6s ease-in-out infinite' }}
@@ -181,7 +194,9 @@ useEffect(() => {
   </div>
 
   {/* Left accent bar – keep */}
+
   <div className="absolute left-0 inset-y-0 w-1 bg-gradient-to-b from-blue-400 via-blue-500 to-indigo-600" />
+
 
   <div className="relative max-w-7xl mx-auto px-6 lg:px-8 py-5">
     {/* Logo, title, auth area – unchanged */}
@@ -197,7 +212,8 @@ useEffect(() => {
           transition-all duration-200
         `}>
           <Image
-            src="/esicodehub-logo.png"
+   src="/esicodehub-logo.png"
+
             alt="ESICodeHub"
             fill
             className="object-contain"
@@ -277,11 +293,13 @@ useEffect(() => {
           >
             <Filters
               language={language}
+
               submissionType={type}
               courseTag={course}
               onLanguageChange={setLanguage}
               onSubmissionTypeChange={setType}
               onCourseTagChange={setCourse}
+
               onClear={handleClear}
               hasActiveFilter={hasActiveFilter}
               total={total}
@@ -304,7 +322,9 @@ useEffect(() => {
               </svg>
               {error}
               <button
+
                 onClick={() => fetchSubmissions({ ...buildParams(searchRef.current), page: 1 })}
+
                 className="ml-auto underline font-bold"
               >
                 Retry
@@ -358,6 +378,8 @@ useEffect(() => {
         </footer>
       </div>
     </>
+
     </ProtectedRoute>
   );
 }
+
