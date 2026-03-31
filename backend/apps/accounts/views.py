@@ -257,7 +257,10 @@ def token_refresh(request):
     """Refresh access token using the HttpOnly refresh cookie."""
     refresh = request.COOKIES.get(settings.AUTH_REFRESH_COOKIE_NAME)
     if not refresh:
-        response = Response({'detail': 'No refresh token cookie found.'}, status=status.HTTP_401_UNAUTHORIZED)
+        response = Response(
+                {'detail': 'No refresh token cookie found.'},
+                status=status.HTTP_401_UNAUTHORIZED
+                )
         _clear_refresh_cookie(response)
         return response
 
@@ -265,7 +268,10 @@ def token_refresh(request):
     try:
         serializer.is_valid(raise_exception=True)
     except Exception:
-        response = Response({'detail': 'Refresh token is invalid or expired.'}, status=status.HTTP_401_UNAUTHORIZED)
+        response = Response(
+                {'detail': 'Refresh token is invalid or expired.'},
+                status=status.HTTP_401_UNAUTHORIZED
+                )
         _clear_refresh_cookie(response)
         return response
 
