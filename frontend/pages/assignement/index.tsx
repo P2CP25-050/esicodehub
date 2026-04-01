@@ -3,7 +3,7 @@ import { useState, useEffect, ChangeEvent } from "react";
 import { useRouter } from "next/router";
 import Header from "@/components/submissions/Header";
 import Field from "@/components/submissions/Field";
-import { ProtectedRoute } from '@/components/ProtectedRoute';
+import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { listSubjects, createAssignment } from "@/services/assignement/api";
 import type { Subject } from "@/services/assignement/types";
 
@@ -191,12 +191,7 @@ function NewAssignmentForm() {
       .finally(() => setLoadingSubjects(false));
   }, []);
 
-  // Reset targeting when year changes
-  useEffect(() => {
-    setTargetSections([]);
-    setTargetSubSections([]);
-    setTargetGroups([]);
-  }, [year]);
+  // Targeting reset is handled inline when year changes (avoids useEffect on state)
 
   const isSpecialityYear = year === "2CS" || year === "3CS";
   const availableSections = year ? SECTIONS_BY_YEAR[year as AcademicYear] : [];
@@ -287,8 +282,10 @@ function NewAssignmentForm() {
         allow_late: allowLate,                                         // was: allowLateSubmissions
       });
       router.push(`/assignments/${assignment.id}`);
-    } catch (err: any) {
-      setSubmitError(err?.message ?? "Something went wrong. Please try again.");
+    } catch (err: unknown) {
+      const message =
+        err instanceof Error ? err.message : "Something went wrong. Please try again.";
+      setSubmitError(message);
       setSubmitting(false);
     }
   };
@@ -404,6 +401,9 @@ function NewAssignmentForm() {
                     selected={year === y}
                     onClick={() => {
                       setYear(year === y ? "" : y);
+                      setTargetSections([]);
+                      setTargetSubSections([]);
+                      setTargetGroups([]);
                       setErrors((prev) => ({ ...prev, year: undefined }));
                     }}
                     disabled={submitting}
@@ -574,8 +574,8 @@ export default function NewAssignmentPage() {
   return (
   <ProtectedRoute>
 
-    <NewAssignmentForm />;
-    
+  <NewAssignmentForm />;
+
   </ProtectedRoute>
   );
 }
