@@ -85,6 +85,9 @@ class AssignmentListSerializer(serializers.ModelSerializer):
 
     def get_submission_count(self, obj):
         """Return the total number of submissions for this assignment."""
+        # Use annotation if available, fall back to query
+        if hasattr(obj, 'submission_count'):
+            return obj.submission_count
         return obj.submissions.count()
 
 
@@ -92,53 +95,18 @@ class AssignmentDetailSerializer(serializers.ModelSerializer):
     """
     Used for single assignment view with full data.
     Extends list serializer with created_at, updated_at,
-    submission_count and full professor details.
+    and full professor details.
     """
-    subject = serializers.SerializerMethodField()
-    is_open = serializers.SerializerMethodField()
-    professor_name = serializers.SerializerMethodField()
 
     # Full professor info as a nested object
     professor = serializers.SerializerMethodField()
 
-    # Total number of submissions for this assignment
-    submission_count = serializers.SerializerMethodField()
-
-    class Meta:
-        model = Assignment
-        fields = [
-            'id',
-            'title',
-            'description',
-            'subject',
-            'target_year',
-            'target_sections',
-            'target_groups',
-            'deadline',
-            'allow_late',
-            'is_open',
-            'professor_name',
+    class Meta(AssignmentListSerializer.Meta):
+        fields = AssignmentListSerializer.Meta.fields + [
             'professor',
-            'submission_count',
             'created_at',
             'updated_at',
         ]
-
-    def get_subject(self, obj):
-        """Return nested subject with id, name and code."""
-        return {
-            'id': obj.subject.id,
-            'name': obj.subject.name,
-            'code': obj.subject.code,
-        }
-
-    def get_is_open(self, obj):
-        """Return whether the assignment is currently open for submission."""
-        return obj.is_open_for_submission()
-
-    def get_professor_name(self, obj):
-        """Return the full name of the professor."""
-        return f"{obj.professor.first_name} {obj.professor.last_name}"
 
     def get_professor(self, obj):
         """Return full professor details."""
@@ -147,10 +115,6 @@ class AssignmentDetailSerializer(serializers.ModelSerializer):
             'first_name': obj.professor.first_name,
             'last_name': obj.professor.last_name,
         }
-
-    def get_submission_count(self, obj):
-        """Return the total number of submissions for this assignment."""
-        return obj.submissions.count()
 
 
 class AssignmentCreateSerializer(serializers.ModelSerializer):
@@ -238,6 +202,9 @@ class AssignmentSubmissionListSerializer(serializers.ModelSerializer):
 
     def get_file_count(self, obj):
         """Return the total number of files in this submission."""
+        # Use annotation if available, fall back to query
+        if hasattr(obj, 'file_count'):
+            return obj.file_count
         return obj.files.count()
 
     def get_has_reviews(self, obj):
@@ -278,46 +245,17 @@ class AssignmentSubmissionDetailSerializer(serializers.ModelSerializer):
     Used for viewing a single submission in full.
     Extends list serializer with nested files and all reviews.
     """
-    student_name = serializers.SerializerMethodField()
-    student_email = serializers.SerializerMethodField()
-    file_count = serializers.SerializerMethodField()
-    has_reviews = serializers.SerializerMethodField()
-
     # Nested list of all files in this submission
     files = AssignmentSubmissionFileSerializer(many=True, read_only=True)
 
     # Nested list of all reviews from all professors
     reviews = SubmissionReviewSerializer(many=True, read_only=True)
 
-    class Meta:
-        model = AssignmentSubmission
-        fields = [
-            'id',
-            'student_name',
-            'student_email',
-            'submitted_at',
-            'is_late',
-            'file_count',
-            'has_reviews',
+    class Meta(AssignmentSubmissionListSerializer.Meta):
+        fields = AssignmentSubmissionListSerializer.Meta.fields + [
             'files',
             'reviews',
         ]
-
-    def get_student_name(self, obj):
-        """Return the full name of the student."""
-        return f"{obj.student.first_name} {obj.student.last_name}"
-
-    def get_student_email(self, obj):
-        """Return the email of the student."""
-        return obj.student.email
-
-    def get_file_count(self, obj):
-        """Return the total number of files in this submission."""
-        return obj.files.count()
-
-    def get_has_reviews(self, obj):
-        """Return True if at least one review exists for this submission."""
-        return obj.reviews.exists()
 
 
 class ReviewCommentCreateSerializer(serializers.Serializer):
@@ -327,7 +265,8 @@ class ReviewCommentCreateSerializer(serializers.Serializer):
     """
     file_id = serializers.IntegerField()
     line_number = serializers.IntegerField(min_value=1)
-    content = serializers.CharField()
+    # trim_whitespace prevents saving comments with just white spaces
+    content = serializers.CharField(trim_whitespace=True)
 
 
 class ReviewCreateSerializer(serializers.Serializer):
@@ -341,5 +280,7 @@ class ReviewCreateSerializer(serializers.Serializer):
         decimal_places=2,
         required=False,
         allow_null=True,
+        min_value=0,
+        max_value=20,
     )
     comments = ReviewCommentCreateSerializer(many=True, default=list)
