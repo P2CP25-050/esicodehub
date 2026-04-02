@@ -3,6 +3,18 @@ import magic
 from rest_framework import serializers
 
 
+SAFE_TEXT_EXTENSIONS = {
+    '.c', '.cc', '.cpp', '.cs', '.css', '.csv', '.go', '.h', '.hpp', '.html', '.ini',
+    '.java', '.js', '.json', '.jsx', '.kt', '.kts', '.md', '.php', '.py', '.rb', '.rs',
+    '.scala', '.sh', '.sql', '.svg', '.swift', '.toml', '.ts', '.tsx', '.txt', '.xml',
+    '.yaml', '.yml', '.zsh',
+}
+
+SAFE_TEXT_FILENAMES = {
+    'dockerfile', '.env', '.gitignore', '.gitattributes', '.editorconfig', 'makefile',
+}
+
+
 def validate_code_file(file):
     """
     Validates that the uploaded file is safe and text-based.
@@ -42,6 +54,25 @@ def validate_code_file(file):
         any(mime_type.startswith(prefix) for prefix in valid_mime_prefixes)
         or mime_type in valid_mime_exact
     )
+
+    # Fallback for environments where libmagic can classify text files as
+    # application/octet-stream. We allow known safe text/code filenames and
+    # extensions if the sampled content is UTF-8 and contains no null bytes.
+    file_name = os.path.basename(file.name).lower()
+    looks_like_text_file = (
+        ext in SAFE_TEXT_EXTENSIONS
+        or file_name in SAFE_TEXT_FILENAMES
+    )
+    if not is_valid_mime and looks_like_text_file:
+        sample = file.read(4096)
+        file.seek(0)
+        if b'\x00' not in sample:
+            try:
+                sample.decode('utf-8')
+                is_valid_mime = True
+            except UnicodeDecodeError:
+                is_valid_mime = False
+
     # If the MIME is not in the list it is mostly a Trojan hourse
     if not is_valid_mime:
         raise serializers.ValidationError(

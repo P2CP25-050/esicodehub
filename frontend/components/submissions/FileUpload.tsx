@@ -18,11 +18,8 @@ function formatSize(bytes: number): string {
   return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
 }
 
-function stripRootFolder(path: string): string {
-  // e.g. "project/src/main.py" → "src/main.py"
-  const parts = path.split("/");
-  if (parts.length > 1) return parts.slice(1).join("/");
-  return path;
+function normalizeRelativePath(path: string): string {
+  return path.replace(/\\/g, "/").replace(/^\/+/, "");
 }
 
 export default function FileUpload({ files, onFilesChange }: FileUploadProps) {
@@ -62,7 +59,7 @@ export default function FileUpload({ files, onFilesChange }: FileUploadProps) {
     if (!e.target.files) return;
     const entries: FileEntry[] = Array.from(e.target.files).map((f) => {
       const rawPath = (f as File & { webkitRelativePath?: string }).webkitRelativePath || f.name;
-      return { file: f, relativePath: stripRootFolder(rawPath) };
+      return { file: f, relativePath: normalizeRelativePath(rawPath) };
     });
     mergeEntries(entries);
     e.target.value = "";
@@ -101,7 +98,7 @@ export default function FileUpload({ files, onFilesChange }: FileUploadProps) {
           </svg>
         </div>
         <p style={styles.dropText}>Drag &amp; drop files or a folder here</p>
-        <p style={styles.dropHint}>Any file type · Max 50 MB total</p>
+        <p style={styles.dropHint}>Text/code files only · Max 50 MB total</p>
 
         {/* Action buttons */}
         <div style={styles.buttonRow}>
