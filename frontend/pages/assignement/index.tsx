@@ -572,7 +572,7 @@ function NewAssignmentForm() {
 
 export default function NewAssignmentPage() {
   return (
-  <ProtectedRoute>
+  <ProtectedRoute allowedRole="professor">
 
   <NewAssignmentForm />;
 
