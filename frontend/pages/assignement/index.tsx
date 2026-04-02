@@ -7,7 +7,7 @@ import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { listSubjects, createAssignment } from "@/services/assignement/api";
 import type { Subject } from "@/services/assignement/types";
 
-// ─── Types & constants ──────────────────────────────────────────────────────
+// Types & constants 
 
 type AcademicYear = "1CP" | "2CP" | "1CS" | "2CS" | "3CS";
 const ACADEMIC_YEARS: AcademicYear[] = ["1CP", "2CP", "1CS", "2CS", "3CS"];
@@ -52,8 +52,7 @@ function getAvailableGroups(
   return Array.from(seen).sort((a, b) => a - b);
 }
 
-// ─── Validation ─────────────────────────────────────────────────────────────
-
+// ------------------------------------------------------
 interface FormErrors {
   subject?: string;
   title?: string;
@@ -61,7 +60,8 @@ interface FormErrors {
   deadline?: string;
 }
 
-function validate(fields: {
+function validate(
+  fields: {
   subject: string;
   title: string;
   year: string;
@@ -77,7 +77,7 @@ function validate(fields: {
   return errors;
 }
 
-// ─── Preview Component (side panel) ─────────────────────────────────────────
+// Preview 
 
 interface AssignmentPreviewProps {
   subjectName?: string;
@@ -133,7 +133,7 @@ function AssignmentPreview({
   );
 }
 
-// ─── Chip component (reusable button) ───────────────────────────────────────
+// Chip 
 
 interface ChipProps {
   label: string;
@@ -159,13 +159,13 @@ function Chip({ label, selected, onClick, disabled }: ChipProps) {
   );
 }
 
-// ─── Main form component ────────────────────────────────────────────────────
+// Main form 
 
 function NewAssignmentForm() {
   const router = useRouter();
 
-  // Form state
-  // subject is stored as a string from the <select> value; cast to number on submit
+  
+  // Subject is stored as a string from  <select> ; 
   const [subject, setSubject] = useState("");
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -176,14 +176,14 @@ function NewAssignmentForm() {
   const [deadline, setDeadline] = useState("");
   const [allowLate, setAllowLate] = useState(false);
 
-  // API data & loading
+  
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [loadingSubjects, setLoadingSubjects] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [errors, setErrors] = useState<FormErrors>({});
   const [submitError, setSubmitError] = useState<string | null>(null);
 
-  // Load subjects on mount
+  
   useEffect(() => {
     listSubjects()
       .then(setSubjects)
@@ -191,7 +191,7 @@ function NewAssignmentForm() {
       .finally(() => setLoadingSubjects(false));
   }, []);
 
-  // Targeting reset is handled inline when year changes (avoids useEffect on state)
+  
 
   const isSpecialityYear = year === "2CS" || year === "3CS";
   const availableSections = year ? SECTIONS_BY_YEAR[year as AcademicYear] : [];
@@ -200,7 +200,7 @@ function NewAssignmentForm() {
     (!isSpecialityYear && targetSections.length > 0) ||
     (isSpecialityYear && targetSubSections.length > 0);
 
-  // Targeting handlers
+  
   const handleSectionChange = (section: string) => {
     const removing = targetSections.includes(section);
     const next = removing
@@ -270,16 +270,15 @@ function NewAssignmentForm() {
     setSubmitting(true);
 
     try {
-      // FIX: use the correct AssignmentCreatePayload field names and cast subject to number
       const assignment = await createAssignment({
-        subject: Number(subject),                                      // was: subjectId
+        subject: Number(subject),                                      
         title: title.trim(),
         description: description.trim() || undefined,
-        target_year: year as AcademicYear,                            // was: targetYear
-        target_sections: targetSections.length > 0 ? targetSections : undefined, // was: targetSections (same name, but was inside wrong key)
-        target_groups: targetGroups.length > 0 ? targetGroups : undefined,       // was: targetGroups (same), removed targetSubSections (not in payload)
+        target_year: year as AcademicYear,                            
+        target_sections: targetSections.length > 0 ? targetSections : undefined, 
+        target_groups: targetGroups.length > 0 ? targetGroups : undefined,       
         deadline: new Date(deadline).toISOString(),
-        allow_late: allowLate,                                         // was: allowLateSubmissions
+        allow_late: allowLate,                                         
       });
       router.push(`/assignments/${assignment.id}`);
     } catch (err: unknown) {
@@ -290,7 +289,7 @@ function NewAssignmentForm() {
     }
   };
 
-  // Helper to build targeting summary for preview
+  // Targeting summary for preview
   const targetingSummary = () => {
     if (!year) return "No year selected";
     if (isSpecialityYear) {
@@ -302,7 +301,7 @@ function NewAssignmentForm() {
     return `Sections: ${targetSections.join(", ")} (Groups: ${targetGroups.join(", ")})`;
   };
 
-  // FIX: compare subject (string) to String(s.id) so types match
+  
   const selectedSubjectName = subjects.find((s) => String(s.id) === subject)?.name;
 
   return (
@@ -519,7 +518,7 @@ function NewAssignmentForm() {
               </div>
             </Field>
 
-            {/* Progress / submission state */}
+            {/* Progress */}
             {submitting && (
               <div style={styles.progressWrap}>
                 <div style={styles.progressHeader}>
@@ -553,7 +552,7 @@ function NewAssignmentForm() {
             </div>
           </form>
 
-          {/* Sidebar Preview */}
+          {/* Preview */}
           <AssignmentPreview
             subjectName={selectedSubjectName}
             title={title}
@@ -568,7 +567,7 @@ function NewAssignmentForm() {
   );
 }
 
-// ─── Page wrapper ──────────────────────────────────────────────────────────
+// Main Page 
 
 export default function NewAssignmentPage() {
   return (
@@ -580,7 +579,7 @@ export default function NewAssignmentPage() {
   );
 }
 
-// ─── Styles ───────────────────────────────────────────────────────────────
+// Styles 
 
 const styles: Record<string, React.CSSProperties> = {
   page: {
