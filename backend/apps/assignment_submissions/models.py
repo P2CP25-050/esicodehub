@@ -56,6 +56,9 @@ class Assignment(models.Model):
             return True
         return self.allow_late
 
+    def __str__(self):
+        return f"{self.title} ({self.target_year}) by {self.professor.email}"
+
 
 class AssignmentSubmission(models.Model):
     """Stores a student's submission metadata for one assignment."""
@@ -89,6 +92,9 @@ class AssignmentSubmission(models.Model):
         """Build the full GCS path for a file inside one submission."""
         return f'assignments/{assignment_id}/{student_id}/{submission_id}/{file_path}'
 
+    def __str__(self):
+        return f"{self.student.email} → {self.assignment.title}"
+
 
 class AssignmentSubmissionFile(models.Model):
     """Represents a single file included in an assignment submission."""
@@ -106,6 +112,9 @@ class AssignmentSubmissionFile(models.Model):
 
     class Meta:
         db_table = 'assignment_submission_files'
+
+    def __str__(self):
+        return self.file_name
 
 
 class SubmissionReview(models.Model):
@@ -130,6 +139,9 @@ class SubmissionReview(models.Model):
         db_table = 'submission_reviews'
         unique_together = [['submission', 'professor']]
 
+    def __str__(self):
+        return f"Review by {self.professor.email} on {self.submission}"
+
 
 class ReviewComment(models.Model):
     """Stores an inline comment linked to a reviewed submission file line."""
@@ -146,3 +158,6 @@ class ReviewComment(models.Model):
 
     class Meta:
         db_table = 'review_comments'
+
+    def __str__(self):
+        return f"Line {self.line_number} — {self.content[:50]}"
