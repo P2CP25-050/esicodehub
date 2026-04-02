@@ -7,7 +7,8 @@ import { LoadingSpinner } from './LoadingSpinner';
 //and register pages, preventing authenticated 
 //users from accessing them. If a user is already 
 //logged in and tries to access the login or register page, 
-//they will be automatically redirected to their respective dashboard based on their role (professor or student).
+//they will be automatically redirected to their respective dashboard based on their role (professor 
+// or student).
 
 interface PublicRouteProps {
   children: React.ReactNode;

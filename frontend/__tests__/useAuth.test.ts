@@ -11,8 +11,6 @@ jest.mock('@/services/auth', () => ({
 }));
 
 jest.mock('@/lib/tokens', () => ({
-  getAccessToken:  jest.fn(),
-  getRefreshToken: jest.fn(),
   clearTokens:     jest.fn(),
   saveTokens:      jest.fn(),
 }));
@@ -53,7 +51,6 @@ describe('useAuth', () => {
   // ── Loading state ──────────────────────────────────────────────────────────
 
   it('starts with isLoading = true', () => {
-    (tokenLib.getRefreshToken as jest.Mock).mockReturnValue('some-token');
     (authService.refreshToken as jest.Mock).mockReturnValue(new Promise(() => {}));
 
     const { result } = renderHook(() => useAuth());
@@ -61,19 +58,18 @@ describe('useAuth', () => {
     expect(result.current.isLoading).toBe(true);
   });
 
-  // ── No refresh token ───────────────────────────────────────────────────────
+  // ── Failed refresh ─────────────────────────────────────────────────────────
 
-  it('sets isLoading = false when no refresh token exists', async () => {
-    (tokenLib.getRefreshToken as jest.Mock).mockReturnValue(null);
+  it('sets isLoading = false when refresh fails', async () => {
+    (authService.refreshToken as jest.Mock).mockRejectedValue(new Error('401'));
 
     const { result } = renderHook(() => useAuth());
 
     await waitFor(() => expect(result.current.isLoading).toBe(false));
   });
 
-  it('returns isAuthenticated = false when no refresh token exists', async () => {
-    (tokenLib.getRefreshToken as jest.Mock).mockReturnValue(null);
-    (tokenLib.getAccessToken  as jest.Mock).mockReturnValue(null);
+  it('returns isAuthenticated = false when refresh fails', async () => {
+    (authService.refreshToken as jest.Mock).mockRejectedValue(new Error('401'));
 
     const { result } = renderHook(() => useAuth());
 
@@ -81,53 +77,47 @@ describe('useAuth', () => {
     expect(result.current.isAuthenticated).toBe(false);
   });
 
-  it('does NOT call refreshToken when no refresh token exists', async () => {
-    (tokenLib.getRefreshToken as jest.Mock).mockReturnValue(null);
+  it('calls clearTokens when refresh fails', async () => {
+    (authService.refreshToken as jest.Mock).mockRejectedValue(new Error('401'));
 
     renderHook(() => useAuth());
 
     await waitFor(() => {
-      expect(authService.refreshToken).not.toHaveBeenCalled();
+      expect(tokenLib.clearTokens).toHaveBeenCalled();
     });
   });
 
   // ── Successful refresh ─────────────────────────────────────────────────────
 
-  it('calls refreshToken when a refresh token exists', async () => {
-    (tokenLib.getRefreshToken as jest.Mock).mockReturnValue('valid-refresh-token');
+  it('calls refreshToken on mount', async () => {
     (authService.refreshToken as jest.Mock).mockResolvedValue({
-      data: { access: 'new-access', refresh: 'new-refresh' },
+      data: { access: 'new-access' },
     });
     mockGetMeSuccess();
 
     renderHook(() => useAuth());
 
     await waitFor(() => {
-      expect(authService.refreshToken).toHaveBeenCalledWith('valid-refresh-token');
+      expect(authService.refreshToken).toHaveBeenCalled();
     });
   });
 
   it('calls saveTokens with the new tokens on successful refresh', async () => {
-    (tokenLib.getRefreshToken as jest.Mock).mockReturnValue('valid-refresh-token');
     (authService.refreshToken as jest.Mock).mockResolvedValue({
-      data: { access: 'new-access', refresh: 'new-refresh' },
+      data: { access: 'new-access' },
     });
     mockGetMeSuccess();
 
     renderHook(() => useAuth());
 
     await waitFor(() => {
-      expect(tokenLib.saveTokens).toHaveBeenCalledWith({
-        access:  'new-access',
-        refresh: 'new-refresh',
-      });
+      expect(tokenLib.saveTokens).toHaveBeenCalledWith({ access: 'new-access' });
     });
   });
 
   it('sets isLoading = false after successful refresh', async () => {
-    (tokenLib.getRefreshToken as jest.Mock).mockReturnValue('valid-refresh-token');
     (authService.refreshToken as jest.Mock).mockResolvedValue({
-      data: { access: 'new-access', refresh: 'new-refresh' },
+      data: { access: 'new-access' },
     });
     mockGetMeSuccess();
 
@@ -137,13 +127,10 @@ describe('useAuth', () => {
   });
 
   it('returns isAuthenticated = true after successful refresh', async () => {
-    (tokenLib.getRefreshToken as jest.Mock).mockReturnValue('valid-refresh-token');
     (authService.refreshToken as jest.Mock).mockResolvedValue({
-      data: { access: 'new-access', refresh: 'new-refresh' },
+      data: { access: 'new-access' },
     });
-    // ✅ getMe must resolve so setIsAuthenticated(true) is reached
     mockGetMeSuccess();
-    (tokenLib.getAccessToken as jest.Mock).mockReturnValue('new-access');
 
     const { result } = renderHook(() => useAuth());
 
@@ -152,9 +139,8 @@ describe('useAuth', () => {
   });
 
   it('calls getMe after successful refresh', async () => {
-    (tokenLib.getRefreshToken as jest.Mock).mockReturnValue('valid-refresh-token');
     (authService.refreshToken as jest.Mock).mockResolvedValue({
-      data: { access: 'new-access', refresh: 'new-refresh' },
+      data: { access: 'new-access' },
     });
     mockGetMeSuccess();
 
@@ -166,9 +152,8 @@ describe('useAuth', () => {
   });
 
   it('sets user after successful getMe call', async () => {
-    (tokenLib.getRefreshToken as jest.Mock).mockReturnValue('valid-refresh-token');
     (authService.refreshToken as jest.Mock).mockResolvedValue({
-      data: { access: 'new-access', refresh: 'new-refresh' },
+      data: { access: 'new-access' },
     });
     mockGetMeSuccess();
 
@@ -183,21 +168,7 @@ describe('useAuth', () => {
     });
   });
 
-  // ── Failed refresh ─────────────────────────────────────────────────────────
-
-  it('calls clearTokens when refresh fails', async () => {
-    (tokenLib.getRefreshToken as jest.Mock).mockReturnValue('expired-token');
-    (authService.refreshToken as jest.Mock).mockRejectedValue(new Error('401'));
-
-    renderHook(() => useAuth());
-
-    await waitFor(() => {
-      expect(tokenLib.clearTokens).toHaveBeenCalled();
-    });
-  });
-
   it('sets isLoading = false after failed refresh', async () => {
-    (tokenLib.getRefreshToken as jest.Mock).mockReturnValue('expired-token');
     (authService.refreshToken as jest.Mock).mockRejectedValue(new Error('401'));
 
     const { result } = renderHook(() => useAuth());
@@ -206,9 +177,7 @@ describe('useAuth', () => {
   });
 
   it('returns isAuthenticated = false after failed refresh', async () => {
-    (tokenLib.getRefreshToken as jest.Mock).mockReturnValue('expired-token');
     (authService.refreshToken as jest.Mock).mockRejectedValue(new Error('401'));
-    (tokenLib.getAccessToken  as jest.Mock).mockReturnValue(null);
 
     const { result } = renderHook(() => useAuth());
 
@@ -217,7 +186,6 @@ describe('useAuth', () => {
   });
 
   it('does NOT call saveTokens when refresh fails', async () => {
-    (tokenLib.getRefreshToken as jest.Mock).mockReturnValue('expired-token');
     (authService.refreshToken as jest.Mock).mockRejectedValue(new Error('401'));
 
     renderHook(() => useAuth());
@@ -228,7 +196,6 @@ describe('useAuth', () => {
   });
 
   it('does NOT call getMe when refresh fails', async () => {
-    (tokenLib.getRefreshToken as jest.Mock).mockReturnValue('expired-token');
     (authService.refreshToken as jest.Mock).mockRejectedValue(new Error('401'));
 
     renderHook(() => useAuth());
@@ -240,7 +207,7 @@ describe('useAuth', () => {
   // ── Return shape ───────────────────────────────────────────────────────────
 
   it('always returns user, isLoading, isAuthenticated', async () => {
-    (tokenLib.getRefreshToken as jest.Mock).mockReturnValue(null);
+    (authService.refreshToken as jest.Mock).mockRejectedValue(new Error('401'));
 
     const { result } = renderHook(() => useAuth());
 
