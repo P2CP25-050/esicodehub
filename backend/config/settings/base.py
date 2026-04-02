@@ -48,6 +48,7 @@ INSTALLED_APPS = [
     'rest_framework_simplejwt',
     'apps.esi_db',
     'apps.personal_submissions',
+    'apps.assignment_submissions',
 ]
 
 AUTH_USER_MODEL = 'accounts.User'
