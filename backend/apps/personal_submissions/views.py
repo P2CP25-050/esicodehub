@@ -2,6 +2,7 @@ from django.db import transaction
 from django.http import HttpResponse
 from django.db.models import Q
 from django.shortcuts import get_object_or_404
+from pathlib import PurePosixPath
 from rest_framework import status, serializers
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.permissions import IsAuthenticated
@@ -158,6 +159,18 @@ class FileUploadView(APIView):
 
     permission_classes = [IsAuthenticated]
 
+    @staticmethod
+    def _sanitize_and_validate_path(file_path: str) -> str:
+        normalized = (file_path or '').replace('\\', '/').strip()
+        if not normalized:
+            raise serializers.ValidationError('File path cannot be empty')
+
+        path_obj = PurePosixPath(normalized)
+        if path_obj.is_absolute() or '..' in path_obj.parts:
+            raise serializers.ValidationError(f'Invalid file path: {file_path}')
+
+        return normalized
+
     def post(self, request, pk):
         submission = get_object_or_404(
             PersonalSubmission.objects.select_related('owner'),
@@ -181,15 +194,20 @@ class FileUploadView(APIView):
             )
 
         if len(files) != len(file_paths):
-            # Reject paths with directory traversal attempts
-            for file_path in file_paths:
-                if '..' in file_path or file_path.startswith('/'):
-                    return Response(
-                        {'detail': f'Invalid file path: {file_path}'},
-                        status=status.HTTP_400_BAD_REQUEST,
-                    )
             return Response(
                 {'detail': 'Number of files and file_paths must match'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        # Validate/sanitize all paths before validating files and uploading.
+        try:
+            sanitized_paths = [
+                self._sanitize_and_validate_path(path)
+                for path in file_paths
+            ]
+        except serializers.ValidationError as e:
+            return Response(
+                {'detail': e.detail[0] if isinstance(e.detail, list) else str(e.detail)},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
@@ -223,7 +241,7 @@ class FileUploadView(APIView):
         # All validations passed, upload and create records
         created_files = []
         with transaction.atomic():
-            for file, file_path in zip(files, file_paths):
+            for file, file_path in zip(files, sanitized_paths):
                 gcs_path = PersonalSubmission.build_file_gcs_path(
                     request.user.id,
                     submission.id,

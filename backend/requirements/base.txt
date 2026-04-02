@@ -32,3 +32,4 @@ traitlets==5.14.3
 wcwidth==0.6.0
 django-storages[google]==1.14.6
 google-cloud-storage==3.10.1
+google-crc32c==1.7.1
