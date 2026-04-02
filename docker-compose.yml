@@ -27,6 +27,8 @@ services:
       context: ./frontend
       dockerfile: Dockerfile
 
+    command: sh -c "npm install && npm run dev"
+
     ports:
       - '3000:3000'
 
