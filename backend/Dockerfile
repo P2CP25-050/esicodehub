@@ -9,7 +9,8 @@ COPY requirements/base.txt .
 COPY requirements/dev.txt .
 
 RUN apk update && \
-    apk add --no-cache gcc musl-dev postgresql-dev python3-dev postgresql-client libmagic && \
+    apk add --no-cache build-base linux-headers postgresql-dev python3-dev postgresql-client libmagic libffi-dev && \
+    pip install --no-cache-dir --upgrade pip setuptools wheel && \
     pip install --no-cache-dir -r dev.txt
 
 COPY . .
