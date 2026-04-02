@@ -5,6 +5,7 @@ import type {
   AssignmentListParams,
   AssignmentSubmission,
   AssignmentSubmissionsListParams,
+  AssignmentUpdatePayload,
   PaginatedResponse,
   ReviewCreatePayload,
   SubmissionReview,
@@ -34,7 +35,7 @@ export const createAssignment = async (
 
 export const updateAssignment = async (
   id: number,
-  data: Partial<AssignmentCreatePayload>
+  data: AssignmentUpdatePayload
 ): Promise<Assignment> => {
   const res = await apiClient.patch<Assignment>(`/assignments/${id}/`, data);
   return res.data;
@@ -49,6 +50,12 @@ export const submitToAssignment = async (
   files: File[],
   filePaths: string[]
 ): Promise<AssignmentSubmission> => {
+  if (files.length !== filePaths.length) {
+    throw new Error(
+      `files and filePaths length mismatch: got ${files.length} files and ${filePaths.length} paths`
+    );
+  }
+
   const formData = new FormData();
 
   files.forEach((file, index) => {

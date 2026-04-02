@@ -32,6 +32,13 @@ export interface AssignmentCreatePayload {
   allow_late?: boolean;
 }
 
+export interface AssignmentUpdatePayload {
+  title?: string;
+  description?: string;
+  deadline?: string;
+  allow_late?: boolean;
+}
+
 export interface AssignmentListParams {
   group?: number;
 }
