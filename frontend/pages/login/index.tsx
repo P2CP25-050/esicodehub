@@ -12,6 +12,7 @@ import InputRow from "@/components/auth/InputRow";
 
 import BackButton from "@/components/auth/BackButton"
 import Logo from "@/components/auth/Logo";
+import { PublicRoute } from "@/components/PublicRoute";
 // ─── Types ───────────────────────────────────────────────
 type Page = "Login" ;
 //HOOK Width
@@ -80,7 +81,7 @@ function Message({ text, type }: { text: string; type: "error" | "success" }) {
 
 
 // ─── Main Component ───────────────────────────────────────
-export default function LoginPage() {
+function LoginPageContent() {
   const router = useRouter();
   const [page/*, setPage*/] = useState<Page>("Login");
   const [cardKey/*, setCardKey*/] = useState(0);
@@ -382,5 +383,13 @@ export default function LoginPage() {
         </div>
       </div>
     </>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <PublicRoute>
+      <LoginPageContent />
+    </PublicRoute>
   );
 }
