@@ -11,24 +11,23 @@ interface HeaderProps {
 
 const NAV_LINKS = [
   { label: "Submissions", href: "/submissions" },
-  { label: "Courses",     href: "/courses" },
-  { label: "Leaderboard", href: "/leaderboard" },
-  { label: "Settings",    href: "/settings" },
+  { label: "Assignments", href: "/assignments" },
+  { label: "Q&A Forums",   href: "/forums" },
+  { label: "Insights",    href: "/insights" },
 ];
 
-export default function Header({ activePage = "Submissions" }: HeaderProps) {
+export default function Header({ activePage = "" }: HeaderProps) {
   const [hoveredNav, setHoveredNav] = useState<string | null>(null);
   const router = useRouter();
   const { user } = useAuth();
 
-   const userName = user ? `${user.first_name} ${user.last_name}` : "—";
+  const userName = user ? `${user.first_name} ${user.last_name}` : "—";
   const userRole = user?.role ?? "student";
 
   const handleLogout = async () => {
     try {
       await logout();
     } catch {
-      // Clear client auth state even if backend logout fails.
     } finally {
       clearTokens();
       router.replace('/login');
@@ -38,18 +37,19 @@ export default function Header({ activePage = "Submissions" }: HeaderProps) {
   return (
     <header style={styles.header}>
       <div style={styles.headerInner}>
-        {/* Left: Logo + Desktop Nav */}
         <div style={styles.headerLeft}>
-          <div style={styles.logo}>
-            <Image
-              src="/esicodehub-logo.png"
-              alt="Logo"
-              width={52}
-              height={28}
-              className="object-contain"
-              priority
-            />
-          </div>
+          <link href="/" style={styles.logoLink} aria-label="Go to homepage">
+            <div style={styles.logo}>
+              <Image
+                src="/esicodehub-logo.png"
+                alt="Logo"
+                width={52}
+                height={28}
+                className="object-contain"
+                priority
+              />
+            </div>
+          </link>
 
           <nav style={styles.desktopNav}>
             {NAV_LINKS.map(({ label, href }) => {
@@ -75,7 +75,7 @@ export default function Header({ activePage = "Submissions" }: HeaderProps) {
           </nav>
         </div>
 
-        {/* Right: Profile */}
+        
         <div style={styles.headerRight}>
           <button type="button" onClick={handleLogout} style={styles.logoutBtn}>
             Logout
@@ -127,6 +127,11 @@ const styles: Record<string, CSSProperties> = {
     fontSize: 12,
     fontWeight: 600,
     cursor: 'pointer',
+  },
+  logoLink: {
+    display: "flex",
+    alignItems: "center",
+    textDecoration: "none",
   },
   logo: { display: "flex", alignItems: "center", gap: 8 },
   desktopNav: { display: "flex", alignItems: "center", gap: 4, marginLeft: 16 },
