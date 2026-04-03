@@ -91,7 +91,7 @@ class AssignmentListSerializer(serializers.ModelSerializer):
         return obj.submissions.count()
 
 
-class AssignmentDetailSerializer(serializers.ModelSerializer):
+class AssignmentDetailSerializer(AssignmentListSerializer):
     """
     Used for single assignment view with full data.
     Extends list serializer with created_at, updated_at,

@@ -1,5 +1,6 @@
 """Views for the assignment_submissions app."""
 
+from django.db.models import Q
 from django.shortcuts import get_object_or_404
 from rest_framework import status
 from rest_framework.pagination import PageNumberPagination
@@ -78,6 +79,8 @@ class AssignmentListCreateView(APIView):
         queryset = Assignment.objects.select_related(
             'subject',
             'professor',
+        ).prefetch_related(
+            'submissions',
         ).all()
 
         if request.user.role == 'professor':
@@ -86,16 +89,11 @@ class AssignmentListCreateView(APIView):
 
             if group_filter:
                 group_value = group_filter.strip()
-                filtered = [
-                    assignment
-                    for assignment in queryset
-                    if group_value
-                    in {
-                        str(value).strip()
-                        for value in assignment.target_groups
-                    }
-                ]
-                queryset = filtered
+                if group_value:
+                    group_filters = Q(target_groups__contains=[group_value])
+                    if group_value.isdigit():
+                        group_filters |= Q(target_groups__contains=[int(group_value)])
+                    queryset = queryset.filter(group_filters)
         elif request.user.role == 'student':
             if not request.user.school_id:
                 queryset = Assignment.objects.none()
@@ -110,14 +108,25 @@ class AssignmentListCreateView(APIView):
                     queryset = queryset.filter(
                         target_year=esi_student.study_year,
                     )
-                    queryset = [
-                        assignment
-                        for assignment in queryset
-                        if assignment_matches_student_targeting(
-                            assignment,
-                            esi_student,
+
+                    section = (esi_student.section or '').strip()
+                    if section:
+                        queryset = queryset.filter(
+                            Q(target_sections=[]) |
+                            Q(target_sections__contains=[section])
                         )
-                    ]
+                    else:
+                        queryset = queryset.filter(target_sections=[])
+
+                    if esi_student.group is not None:
+                        student_group = str(esi_student.group).strip()
+                        queryset = queryset.filter(
+                            Q(target_groups=[]) |
+                            Q(target_groups__contains=[esi_student.group]) |
+                            Q(target_groups__contains=[student_group])
+                        )
+                    else:
+                        queryset = queryset.filter(target_groups=[])
         else:
             return Response(
                 {
