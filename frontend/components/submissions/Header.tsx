@@ -1,5 +1,6 @@
 import { useState, CSSProperties } from "react";
 import Image from "next/image";
+import Link from "next/link";
 import { useRouter } from 'next/router';
 import { useAuth } from "@/hooks/useAuth";
 import { logout } from '@/services/auth';
@@ -16,7 +17,7 @@ const NAV_LINKS = [
   { label: "Insights",    href: "/insights" },
 ];
 
-export default function Header({ activePage = "" }: HeaderProps) {
+export default function Header({ activePage = "New Submission" }: HeaderProps) {
   const [hoveredNav, setHoveredNav] = useState<string | null>(null);
   const router = useRouter();
   const { user } = useAuth();
@@ -38,7 +39,7 @@ export default function Header({ activePage = "" }: HeaderProps) {
     <header style={styles.header}>
       <div style={styles.headerInner}>
         <div style={styles.headerLeft}>
-          <link href="/" style={styles.logoLink} aria-label="Go to homepage">
+          <Link href="/" style={styles.logoLink}>
             <div style={styles.logo}>
               <Image
                 src="/esicodehub-logo.png"
@@ -49,7 +50,7 @@ export default function Header({ activePage = "" }: HeaderProps) {
                 priority
               />
             </div>
-          </link>
+          </Link>
 
           <nav style={styles.desktopNav}>
             {NAV_LINKS.map(({ label, href }) => {
