@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef, ReactNode } from "react";
 import { useRouter } from "next/router";
-import { Link } from "next/link";
+import  Link  from "next/link";
 
 // ── Correct imports — existing project files only ────────────────────────────
 import { ProtectedRoute }   from "@/components/ProtectedRoute";

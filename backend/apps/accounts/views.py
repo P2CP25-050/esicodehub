@@ -311,3 +311,12 @@ def me(request):
         'last_name': user.last_name,
         'role': user.role,
     })
+
+
+@api_view(['GET'])
+def subject_list(request):
+    """Return a list of all subjects. No auth required."""
+    from .models import Subject
+    subjects = Subject.objects.all().order_by('code')
+    data = [{'id': s.id, 'name': s.name, 'code': s.code} for s in subjects]
+    return Response(data)

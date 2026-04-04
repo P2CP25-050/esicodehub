@@ -91,7 +91,7 @@ class AssignmentListSerializer(serializers.ModelSerializer):
         return obj.submissions.count()
 
 
-class AssignmentDetailSerializer(serializers.ModelSerializer):
+class AssignmentDetailSerializer(AssignmentListSerializer):
     """
     Used for single assignment view with full data.
     Extends list serializer with created_at, updated_at,
@@ -240,7 +240,7 @@ class SubmissionReviewSerializer(serializers.ModelSerializer):
         return f"{obj.professor.first_name} {obj.professor.last_name}"
 
 
-class AssignmentSubmissionDetailSerializer(serializers.ModelSerializer):
+class AssignmentSubmissionDetailSerializer(AssignmentSubmissionListSerializer):
     """
     Used for viewing a single submission in full.
     Extends list serializer with nested files and all reviews.
