@@ -1,11 +1,11 @@
-"use client";
 import { useState, useEffect, ChangeEvent } from "react";
+import Link from "next/link";
 import { useRouter } from "next/router";
 import Header from "@/components/submissions/Header";
 import Field from "@/components/submissions/Field";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
-import { listSubjects, createAssignment } from "@/services/assignement/api";
-import type { Subject } from "@/services/assignement/types";
+import { listSubjects, createAssignment } from "@/services/assignments";
+import type { Subject } from "@/services/assignments";
 
 // Types & constants 
 
@@ -270,12 +270,15 @@ function NewAssignmentForm() {
     setSubmitting(true);
 
     try {
+      const sendSections =
+        targetSections.length > 0 && targetGroups.length === 0;
+
       const assignment = await createAssignment({
         subject: Number(subject),                                      
         title: title.trim(),
         description: description.trim() || undefined,
         target_year: year as AcademicYear,                            
-        target_sections: targetSections.length > 0 ? targetSections : undefined, 
+        target_sections: sendSections ? targetSections : undefined,
         target_groups: targetGroups.length > 0 ? targetGroups : undefined,       
         deadline: new Date(deadline).toISOString(),
         allow_late: allowLate,                                         
@@ -311,12 +314,12 @@ function NewAssignmentForm() {
       <div style={styles.container}>
         {/* Breadcrumb */}
         <div style={styles.breadcrumb}>
-          <span
+          <Link
+            href="/assignments"
             style={styles.breadcrumbLink}
-            onClick={() => router.push("/assignments")}
           >
             Assignments
-          </span>
+          </Link>
           <span style={styles.breadcrumbSep}>/</span>
           <span style={styles.breadcrumbCurrent}>New Assignment</span>
         </div>
@@ -571,11 +574,9 @@ function NewAssignmentForm() {
 
 export default function NewAssignmentPage() {
   return (
-  <ProtectedRoute allowedRole="professor">
-
-  <NewAssignmentForm />;
-
-  </ProtectedRoute>
+    <ProtectedRoute allowedRole="professor">
+      <NewAssignmentForm />
+    </ProtectedRoute>
   );
 }
 
