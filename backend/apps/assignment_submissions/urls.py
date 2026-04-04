@@ -30,6 +30,9 @@ urlpatterns = [
         '<int:pk>/submissions/<int:submission_id>/files/<int:file_id>/content/',
         SubmissionFileContentView.as_view(), name='file-content'),
     path(
+        '<int:pk>/submissions/<int:submission_id>/review/',
+        SubmissionReviewView.as_view(), name='submission-review'),
+    path(
         '<int:pk>/submissions/<int:submission_id>/reviews/',
         SubmissionReviewView.as_view(), name='submission-reviews'),
 ]

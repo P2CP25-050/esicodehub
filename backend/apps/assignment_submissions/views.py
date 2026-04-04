@@ -1,16 +1,17 @@
 """Views for the assignment_submissions app."""
 
+from pathlib import PurePosixPath
+
 from django.db import transaction
 from django.db.models import Q
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404
-from rest_framework import status, serializers
+from django.utils import timezone
+from rest_framework import serializers, status
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from pathlib import PurePosixPath
-from django.utils import timezone
 
 from apps.esi_db.models import EsiStudent
 from apps.personal_submissions.gcs import (
@@ -393,6 +394,11 @@ class StudentSubmitView(APIView):
                     'is_late': is_late,
                 },
             )
+            gcs_prefix = AssignmentSubmission.build_gcs_prefix(
+                assignment.id,
+                request.user.id,
+                submission.id,
+            )
 
             if not created:
                 old_prefix = submission.gcs_prefix
@@ -656,5 +662,4 @@ class SubmissionReviewView(APIView):
 
         review.refresh_from_db()
         response_serializer = SubmissionReviewSerializer(review)
-        status_code = status.HTTP_201_CREATED if created else status.HTTP_200_OK
-        return Response(response_serializer.data, status=status_code)
+        return Response(response_serializer.data, status=status.HTTP_201_CREATED)
