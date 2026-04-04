@@ -14,6 +14,7 @@ import axios from 'axios';
 import type { EditorProps } from '@monaco-editor/react';
 
 import { ProtectedRoute } from '@/components/ProtectedRoute';
+import Header from '@/components/submissions/Header';
 import { useAuth } from '@/hooks/useAuth';
 import type {
   PersonalSubmission,
@@ -280,21 +281,47 @@ const formatFileSize = (value: number): string => {
 };
 
 const Badge = ({ label }: { label: string }) => (
-  <span className="inline-flex items-center rounded-md border border-slate-700 bg-slate-900 px-2.5 py-1 text-xs font-medium text-slate-300">
+  <span className="inline-flex items-center rounded-full border border-slate-200 bg-white px-2.5 py-1 text-xs font-semibold text-slate-600 shadow-sm">
     {label}
   </span>
 );
 
 const HeaderSkeleton = () => (
-  <div className="rounded-2xl border border-slate-800 bg-slate-900/80 p-5 shadow-sm">
-    <div className="h-5 w-24 animate-pulse rounded bg-slate-800" />
-    <div className="mt-4 h-8 w-2/3 animate-pulse rounded bg-slate-800" />
+  <div className="rounded-2xl border border-slate-200 bg-white/95 p-5 shadow-sm">
+    <div className="h-5 w-24 animate-pulse rounded bg-slate-200" />
+    <div className="mt-4 h-8 w-2/3 animate-pulse rounded bg-slate-200" />
     <div className="mt-3 flex gap-2">
-      <div className="h-6 w-20 animate-pulse rounded bg-slate-800" />
-      <div className="h-6 w-20 animate-pulse rounded bg-slate-800" />
-      <div className="h-6 w-20 animate-pulse rounded bg-slate-800" />
+      <div className="h-6 w-20 animate-pulse rounded bg-slate-200" />
+      <div className="h-6 w-20 animate-pulse rounded bg-slate-200" />
+      <div className="h-6 w-20 animate-pulse rounded bg-slate-200" />
     </div>
   </div>
+);
+
+const BackButton = ({ onClick }: { onClick: () => void }) => (
+  <button
+    type="button"
+    onClick={onClick}
+    className="group inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-slate-300 hover:bg-slate-50 hover:text-slate-900 hover:shadow"
+  >
+    <svg
+      width="14"
+      height="14"
+      viewBox="0 0 16 16"
+      fill="none"
+      className="text-slate-500 transition-transform duration-200 group-hover:-translate-x-0.5 group-hover:text-slate-700"
+      aria-hidden="true"
+    >
+      <path
+        d="M6.5 3.5 2 8m0 0 4.5 4.5M2 8h12"
+        stroke="currentColor"
+        strokeWidth="1.75"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+    Back to submissions
+  </button>
 );
 
 type FileTreeProps = {
@@ -333,12 +360,12 @@ const FileTree = memo(function FileTree({
               onClick={() => onToggleDir(node.fullPath)}
               onFocus={() => onItemFocus(itemKey)}
               onKeyDown={(event) => onItemKeyDown(itemKey, event)}
-              className="group flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm text-slate-300 transition-colors hover:bg-slate-800/80 hover:text-white"
+              className="group flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm text-slate-600 transition-colors duration-150 hover:bg-slate-100 hover:text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-300"
               data-active={activeItemKey === itemKey}
               style={{ paddingLeft: 8 + depth * 14 }}
               aria-expanded={isExpanded}
             >
-              <span className="inline-flex h-4 w-4 items-center justify-center text-xs text-slate-400 group-hover:text-slate-200">
+              <span className="inline-flex h-4 w-4 items-center justify-center text-xs text-slate-400 group-hover:text-slate-700">
                 {isExpanded ? '▾' : '▸'}
               </span>
               <span className="truncate font-medium">{node.name}</span>
@@ -362,14 +389,14 @@ const FileTree = memo(function FileTree({
           className={
             'w-full rounded-md px-2 py-1.5 text-left text-sm transition-colors ' +
             (isActive
-              ? 'bg-blue-500/20 text-blue-100 ring-1 ring-inset ring-blue-500/40'
-              : 'text-slate-300 hover:bg-slate-800/80 hover:text-white')
+              ? 'bg-slate-100 text-slate-900 ring-1 ring-inset ring-slate-300 shadow-sm'
+              : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900')
           }
           data-active={activeItemKey === itemKey}
           style={{ paddingLeft: 8 + depth * 14 }}
         >
           <span className="inline-flex max-w-full items-center gap-2">
-            <span className="text-slate-500">#</span>
+            <span className="text-slate-400">#</span>
             <span className="truncate">{node.name}</span>
           </span>
         </button>
@@ -710,14 +737,19 @@ function SubmissionDetailPage() {
     setActiveTreeItemKey(visibleTreeItems[0].key);
   }, [activeTreeItemKey, selectedFileId, visibleTreeItems]);
 
+  const navigateBack = useCallback(() => {
+    void router.push('/submissions');
+  }, [router]);
+
   if (viewState === 'loading' || viewState === 'idle') {
     return (
-      <div className="min-h-screen bg-slate-950 px-4 py-6 text-slate-100 sm:px-6 lg:px-8">
-        <div className="mx-auto max-w-7xl space-y-4">
+      <div className="min-h-screen bg-linear-to-b from-white via-slate-50 to-white">
+        <Header activePage="Submissions" />
+        <div className="mx-auto max-w-7xl space-y-4 px-4 py-6 sm:px-6 lg:px-8">
           <HeaderSkeleton />
           <div className="grid gap-4 lg:grid-cols-[320px_minmax(0,1fr)]">
-            <div className="h-[520px] animate-pulse rounded-2xl border border-slate-800 bg-slate-900/70" />
-            <div className="h-[520px] animate-pulse rounded-2xl border border-slate-800 bg-slate-900/70" />
+            <div className="h-130 animate-pulse rounded-2xl border border-slate-200 bg-white" />
+            <div className="h-130 animate-pulse rounded-2xl border border-slate-200 bg-white" />
           </div>
         </div>
       </div>
@@ -726,19 +758,16 @@ function SubmissionDetailPage() {
 
   if (viewState === 'forbidden') {
     return (
-      <div className="min-h-screen bg-slate-950 px-4 py-10 text-slate-100 sm:px-6 lg:px-8">
-        <div className="mx-auto max-w-3xl rounded-2xl border border-slate-800 bg-slate-900/80 p-8 shadow-sm">
-          <button
-            type="button"
-            onClick={() => router.back()}
-            className="text-sm font-medium text-slate-300 transition-colors hover:text-white"
-          >
-            {'<- Back'}
-          </button>
-          <h1 className="mt-6 text-3xl font-semibold tracking-tight text-white">403</h1>
-          <p className="mt-2 text-sm text-slate-300">
+      <div className="min-h-screen bg-linear-to-b from-white via-slate-50 to-white text-slate-900">
+        <Header activePage="Submissions" />
+        <div className="px-4 py-10 sm:px-6 lg:px-8">
+          <div className="mx-auto max-w-3xl rounded-3xl border border-slate-200 bg-white/95 p-8 shadow-sm">
+            <BackButton onClick={navigateBack} />
+            <h1 className="mt-6 text-3xl font-semibold tracking-tight text-slate-900">403</h1>
+            <p className="mt-2 text-sm text-slate-600">
             You do not have permission to view this submission.
-          </p>
+            </p>
+          </div>
         </div>
       </div>
     );
@@ -746,19 +775,16 @@ function SubmissionDetailPage() {
 
   if (viewState === 'error' || !submission) {
     return (
-      <div className="min-h-screen bg-slate-950 px-4 py-10 text-slate-100 sm:px-6 lg:px-8">
-        <div className="mx-auto max-w-3xl rounded-2xl border border-slate-800 bg-slate-900/80 p-8 shadow-sm">
-          <button
-            type="button"
-            onClick={() => router.back()}
-            className="text-sm font-medium text-slate-300 transition-colors hover:text-white"
-          >
-            {'<- Back'}
-          </button>
-          <h1 className="mt-6 text-2xl font-semibold tracking-tight text-white">
-            Unable to load submission
-          </h1>
-          <p className="mt-2 text-sm text-slate-300">{submissionError ?? 'Unknown error.'}</p>
+      <div className="min-h-screen bg-linear-to-b from-white via-slate-50 to-white text-slate-900">
+        <Header activePage="Submissions" />
+        <div className="px-4 py-10 sm:px-6 lg:px-8">
+          <div className="mx-auto max-w-3xl rounded-3xl border border-slate-200 bg-white/95 p-8 shadow-sm">
+            <BackButton onClick={navigateBack} />
+            <h1 className="mt-6 text-2xl font-semibold tracking-tight text-slate-900">
+              Unable to load submission
+            </h1>
+            <p className="mt-2 text-sm text-slate-600">{submissionError ?? 'Unknown error.'}</p>
+          </div>
         </div>
       </div>
     );
@@ -768,19 +794,16 @@ function SubmissionDetailPage() {
 
   if (!canView) {
     return (
-      <div className="min-h-screen bg-slate-950 px-4 py-10 text-slate-100 sm:px-6 lg:px-8">
-        <div className="mx-auto max-w-3xl rounded-2xl border border-slate-800 bg-slate-900/80 p-8 shadow-sm">
-          <button
-            type="button"
-            onClick={() => router.back()}
-            className="text-sm font-medium text-slate-300 transition-colors hover:text-white"
-          >
-            {'<- Back'}
-          </button>
-          <h1 className="mt-6 text-3xl font-semibold tracking-tight text-white">403</h1>
-          <p className="mt-2 text-sm text-slate-300">
-            This submission is private and can only be viewed by its owner.
-          </p>
+      <div className="min-h-screen bg-linear-to-b from-white via-slate-50 to-white text-slate-900">
+        <Header activePage="Submissions" />
+        <div className="px-4 py-10 sm:px-6 lg:px-8">
+          <div className="mx-auto max-w-3xl rounded-3xl border border-slate-200 bg-white/95 p-8 shadow-sm">
+            <BackButton onClick={navigateBack} />
+            <h1 className="mt-6 text-3xl font-semibold tracking-tight text-slate-900">403</h1>
+            <p className="mt-2 text-sm text-slate-600">
+              This submission is private and can only be viewed by its owner.
+            </p>
+          </div>
         </div>
       </div>
     );
@@ -795,21 +818,16 @@ function SubmissionDetailPage() {
         <title>{submission.title} - Submission - ESICodeHub</title>
       </Head>
 
-      <div className="min-h-screen bg-slate-950 text-slate-100">
+      <div className="min-h-screen bg-linear-to-b from-white via-slate-50 to-white text-slate-900">
+        <Header activePage="Submissions" />
         <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
-          <header className="rounded-2xl border border-slate-800 bg-slate-900/80 p-5 shadow-sm">
+          <header className="rounded-3xl border border-slate-200 bg-white/95 p-6 shadow-sm transition-shadow duration-300 hover:shadow-md">
             <div className="flex flex-col gap-4">
               <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
                 <div className="min-w-0">
-                  <button
-                    type="button"
-                    onClick={() => router.back()}
-                    className="inline-flex items-center gap-1 text-sm font-medium text-slate-300 transition-colors hover:text-white"
-                  >
-                    {'<- Back'}
-                  </button>
+                  <BackButton onClick={navigateBack} />
 
-                  <h1 className="mt-3 truncate text-2xl font-semibold tracking-tight text-white sm:text-3xl">
+                  <h1 className="mt-4 truncate text-2xl font-semibold tracking-tight text-slate-900 sm:text-3xl">
                     {submission.title}
                   </h1>
 
@@ -831,7 +849,7 @@ function SubmissionDetailPage() {
                     <button
                       type="button"
                       onClick={() => router.push(`/submissions/${submission.id}/edit`)}
-                      className="rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 text-sm font-medium text-slate-100 transition-colors hover:bg-slate-700"
+                      className="rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition-all duration-200 hover:-translate-y-0.5 hover:border-slate-400 hover:bg-slate-50 hover:text-slate-900"
                     >
                       Edit
                     </button>
@@ -839,7 +857,7 @@ function SubmissionDetailPage() {
                       type="button"
                       onClick={handleDelete}
                       disabled={isDeleting}
-                      className="rounded-lg border border-red-700/70 bg-red-900/30 px-3 py-2 text-sm font-medium text-red-200 transition-colors hover:bg-red-900/50 disabled:cursor-not-allowed disabled:opacity-60"
+                      className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-2 text-sm font-semibold text-rose-600 transition-all duration-200 hover:-translate-y-0.5 hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-60"
                     >
                       {isDeleting ? 'Deleting...' : 'Delete'}
                     </button>
@@ -848,21 +866,21 @@ function SubmissionDetailPage() {
               </div>
 
               {submission.description ? (
-                <p className="max-w-4xl text-sm leading-6 text-slate-300">{submission.description}</p>
+                <p className="max-w-4xl text-sm leading-7 text-slate-600">{submission.description}</p>
               ) : null}
             </div>
           </header>
 
-          <div className="mt-4 grid gap-4 lg:grid-cols-[320px_minmax(0,1fr)]">
-            <aside className="h-[44vh] min-h-80 overflow-hidden rounded-2xl border border-slate-800 bg-slate-900/80 shadow-sm lg:h-[72vh]">
-              <div className="border-b border-slate-800 px-4 py-3">
-                <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-300">
+          <div className="mt-5 grid gap-5 lg:grid-cols-[320px_minmax(0,1fr)]">
+            <aside className="h-[44vh] min-h-80 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition-shadow duration-300 hover:shadow-md lg:h-[72vh]">
+              <div className="border-b border-slate-200 px-4 py-3">
+                <h2 className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">
                   Explorer
                 </h2>
               </div>
               <div className="h-[calc(44vh-53px)] overflow-y-auto px-2 py-2 lg:h-[calc(72vh-53px)]">
                 {(submission.files?.length ?? 0) === 0 ? (
-                  <div className="rounded-lg border border-dashed border-slate-700 bg-slate-900 px-3 py-6 text-center text-sm text-slate-400">
+                  <div className="rounded-lg border border-dashed border-slate-300 bg-slate-50 px-3 py-6 text-center text-sm text-slate-500">
                     No files attached to this submission.
                   </div>
                 ) : (
@@ -881,26 +899,26 @@ function SubmissionDetailPage() {
               </div>
             </aside>
 
-            <section className="h-[52vh] min-h-[360px] overflow-hidden rounded-2xl border border-slate-800 bg-slate-900/80 shadow-sm lg:h-[72vh]">
-              <div className="flex items-center justify-between gap-3 border-b border-slate-800 px-4 py-3">
+            <section className="h-[52vh] min-h-90 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition-shadow duration-300 hover:shadow-md lg:h-[72vh]">
+              <div className="flex items-center justify-between gap-3 border-b border-slate-200 px-4 py-3">
                 <div className="min-w-0">
-                  <p className="truncate text-sm font-medium text-slate-200">
+                  <p className="truncate text-sm font-semibold text-slate-800">
                     {selectedFilePath || 'Select a file'}
                   </p>
                   {selectedFileMeta ? (
-                    <p className="text-xs text-slate-400">
+                    <p className="text-xs text-slate-500">
                       {formatFileSize(selectedFileMeta.file_size)}
                     </p>
                   ) : null}
                 </div>
-                {fileError ? <p className="text-xs text-red-300">{fileError}</p> : null}
+                {fileError ? <p className="text-xs text-rose-600">{fileError}</p> : null}
               </div>
 
               <div className="relative h-[calc(52vh-57px)] lg:h-[calc(72vh-57px)]">
                 {loadingFile ? (
-                  <div className="absolute inset-0 z-10 flex items-center justify-center bg-slate-950/65">
-                    <div className="inline-flex items-center gap-2 rounded-md border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-200">
-                      <span className="h-4 w-4 animate-spin rounded-full border-2 border-slate-600 border-t-slate-200" />
+                  <div className="absolute inset-0 z-10 flex items-center justify-center bg-white/75 backdrop-blur-[1px]">
+                    <div className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm">
+                      <span className="h-4 w-4 animate-spin rounded-full border-2 border-slate-300 border-t-slate-700" />
                       Loading file...
                     </div>
                   </div>
@@ -909,8 +927,8 @@ function SubmissionDetailPage() {
                 {selectedFileId == null ? (
                   <div className="flex h-full items-center justify-center px-4 text-center">
                     <div>
-                      <p className="text-base font-medium text-slate-200">No file selected</p>
-                      <p className="mt-1 text-sm text-slate-400">
+                      <p className="text-base font-semibold text-slate-700">No file selected</p>
+                      <p className="mt-1 text-sm text-slate-500">
                         Choose a file from the explorer to preview its source code.
                       </p>
                     </div>
@@ -918,7 +936,7 @@ function SubmissionDetailPage() {
                 ) : (
                   <MonacoEditor
                     height="100%"
-                    theme="vs-dark"
+                    theme="vs"
                     language={editorLanguage}
                     value={editorValue}
                     options={{
