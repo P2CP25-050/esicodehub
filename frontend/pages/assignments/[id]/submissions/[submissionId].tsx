@@ -685,7 +685,7 @@ function AssignmentSubmissionReviewPageContent() {
           }
         : prev
     );
-  }, [computeLineTop, selectedFileId]);
+  }, [computeLineTop, inlineComment, selectedFileId]);
 
   useEffect(() => {
     return () => {
