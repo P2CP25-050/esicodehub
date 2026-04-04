@@ -1,7 +1,5 @@
-"use client";
-
 import { useState, useMemo } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter } from "next/router";
 import Link from "next/link";
 
 // ── Shared app components ──────────────────────────────────────────────────
@@ -41,7 +39,7 @@ function AssignmentsContent() {
   const [searchQuery, setSearchQuery] = useState("");
 
   // Calls GET /assignments/ via listAssignments() — backend filters by role
-  const { assignments, total, loading, error, refetch } = useAssignments(
+  const { assignments, loading, error, refetch } = useAssignments(
     isProfessor ? selectedGroup : undefined
   );
 

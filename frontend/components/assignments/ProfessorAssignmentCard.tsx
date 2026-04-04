@@ -1,6 +1,4 @@
-"use client";
-
-import { useRouter } from "next/navigation";
+import { useRouter } from "next/router";
 import type { Assignment } from "@/services/assignments";
 import { formatDeadline, isPastDeadline, getTargetSummary } from "./utils";
 

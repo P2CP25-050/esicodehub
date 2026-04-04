@@ -1,5 +1,3 @@
-"use client";
-
 import { useState, useEffect, useCallback } from "react";
 import { listAssignments } from "@/services/assignments";
 import type { Assignment, PaginatedResponse } from "@/services/assignments";
