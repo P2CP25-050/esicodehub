@@ -408,6 +408,7 @@ function FilesTab({ submission }: { submission: PersonalSubmission }) {
 
   async function handleDelete() {
     if (!deleteTarget) return;
+    setDeleteError(null);
     setDeleting(true);
     try {
       // deleteFile(submissionId, fileId) — from submissions.api.ts
@@ -415,7 +416,7 @@ function FilesTab({ submission }: { submission: PersonalSubmission }) {
       setFiles((p) => p.filter((f) => f.id !== deleteTarget.id));
       setDeleteTarget(null);
     } catch {
-	setDeleteError("Failed to delete file. Please try again.");
+      setDeleteError("Failed to delete file. Please try again.");
     } finally {
       setDeleting(false);
     }
@@ -474,6 +475,8 @@ function FilesTab({ submission }: { submission: PersonalSubmission }) {
       )}
 
       {/* ── Current files ── */}
+      {deleteError && <ErrorBanner message={deleteError} />}
+
       <p className="text-[13px] font-bold text-[#374151] mb-3">
         Current files ({files.length})
       </p>

@@ -33,10 +33,9 @@ export default function StudentAssignmentCard({ assignment: a }: Props) {
           {a.subject.code}
         </span>
 
-        {/* `submitted` field doesn't exist in the real type — shown via has_reviews placeholder */}
-        {a.is_open === false && (
+        {a.has_submitted && (
           <span className="bg-green-100 text-green-700 text-xs font-bold px-2.5 py-0.5 rounded-md">
-            Closed
+            Submitted ✓
           </span>
         )}
       </div>

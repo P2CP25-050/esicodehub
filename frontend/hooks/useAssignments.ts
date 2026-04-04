@@ -25,6 +25,8 @@ export function useAssignments(group?: number): UseAssignmentsResult {
     setLoading(true);
     setError(null);
     try {
+      // NOTE: page-level search filters this fetched page only.
+      // If pagination is added later, use backend search params instead.
       const data: PaginatedResponse<Assignment> = await listAssignments(
         group !== undefined ? { group } : undefined
       );
