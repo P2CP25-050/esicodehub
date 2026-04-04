@@ -40,15 +40,6 @@ MAX_FILE_SIZE = 10 * 1024 * 1024    # 10MB per file
 MAX_TOTAL_SIZE = 50 * 1024 * 1024   # 50MB per submission
 
 
-def delete_assignment_directory(prefix):
-    """Delete all files under one assignment GCS prefix."""
-    # Import lazily so this module can load even when optional GCS deps
-    # are not installed in lightweight/local environments.
-    from apps.personal_submissions.gcs import delete_directory
-
-    delete_directory(prefix)
-
-
 def assignment_matches_student_targeting(assignment, esi_student):
     """Return True when assignment targeting matches one ESI student."""
     if assignment.target_year != esi_student.study_year:
@@ -280,7 +271,7 @@ class AssignmentDetailView(APIView):
                 status=status.HTTP_403_FORBIDDEN,
             )
 
-        delete_assignment_directory(f'assignments/{assignment.id}/')
+        delete_directory(f'assignments/{assignment.id}/')
         assignment.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
 
@@ -404,22 +395,16 @@ class StudentSubmitView(APIView):
             )
 
             if not created:
-                # Resubmission delete old GCS files and file records
                 old_prefix = submission.gcs_prefix
                 if old_prefix:
                     delete_directory(old_prefix)
                 submission.files.all().delete()
                 submission.is_late = is_late
-                submission.save()
-
-            # Build GCS prefix after getting the submission id
-            gcs_prefix = AssignmentSubmission.build_gcs_prefix(
-                assignment.id,
-                request.user.id,
-                submission.id,
-            )
-            submission.gcs_prefix = gcs_prefix
-            submission.save(update_fields=['gcs_prefix'])
+                submission.gcs_prefix = gcs_prefix  # set both at once
+                submission.save(update_fields=['gcs_prefix', 'is_late'])
+            else:
+                submission.gcs_prefix = gcs_prefix
+                submission.save(update_fields=['gcs_prefix'])
 
             # Upload files and create records
             for file, file_path in zip(files, sanitized_paths):
@@ -493,10 +478,17 @@ class ProfessorSubmissionListView(APIView):
         # Optional group filter
         group_filter = request.query_params.get('group')
         if group_filter:
+            group_value = group_filter.strip()
+            student_ids = [sub.student.school_id for sub in queryset]
+            matching_school_ids = set(
+                EsiStudent.objects.filter(
+                    school_id__in=student_ids,
+                    group=group_value,
+                ).values_list('school_id', flat=True)
+            )
             queryset = [
                 sub for sub in queryset
-                if str(sub.student.school_id) and
-                self._student_in_group(sub.student, group_filter.strip(), assignment)
+                if sub.student.school_id in matching_school_ids
             ]
 
         paginator = SubmissionListPagination()
@@ -504,7 +496,8 @@ class ProfessorSubmissionListView(APIView):
         serializer = AssignmentSubmissionListSerializer(page, many=True)
         return paginator.get_paginated_response(serializer.data)
 
-    def _student_in_group(self, user, group_value, assignment):
+    @staticmethod
+    def _student_in_group(user, group_value, assignment):
         """Check if the student belongs to the requested group."""
         from apps.esi_db.models import EsiStudent
         try:
@@ -607,7 +600,7 @@ class SubmissionReviewView(APIView):
                 status=status.HTTP_403_FORBIDDEN,
             )
 
-        reviews = submission.reviews.prefetch_related('comments').all()
+        reviews = submission.reviews.select_related('professor').prefetch_related('comments').all()
         serializer = SubmissionReviewSerializer(reviews, many=True)
         return Response(serializer.data)
 
@@ -663,4 +656,5 @@ class SubmissionReviewView(APIView):
 
         review.refresh_from_db()
         response_serializer = SubmissionReviewSerializer(review)
-        return Response(response_serializer.data, status=status.HTTP_201_CREATED)
+        status_code = status.HTTP_201_CREATED if created else status.HTTP_200_OK
+        return Response(response_serializer.data, status=status_code)
