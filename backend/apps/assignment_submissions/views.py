@@ -119,28 +119,16 @@ class AssignmentListCreateView(APIView):
                 if not esi_student:
                     queryset = Assignment.objects.none()
                 else:
-                    queryset = queryset.filter(
-                        target_year=esi_student.study_year,
-                    )
-
-                    section = (esi_student.section or '').strip()
-                    if section:
-                        queryset = queryset.filter(
-                            Q(target_sections=[]) |
-                            Q(target_sections__contains=[section])
+                    queryset = queryset.filter(target_year=esi_student.study_year)
+                    targeted_ids = [
+                        assignment.id
+                        for assignment in queryset
+                        if assignment_matches_student_targeting(
+                            assignment,
+                            esi_student,
                         )
-                    else:
-                        queryset = queryset.filter(target_sections=[])
-
-                    if esi_student.group is not None:
-                        student_group = str(esi_student.group).strip()
-                        queryset = queryset.filter(
-                            Q(target_groups=[]) |
-                            Q(target_groups__contains=[esi_student.group]) |
-                            Q(target_groups__contains=[student_group])
-                        )
-                    else:
-                        queryset = queryset.filter(target_groups=[])
+                    ]
+                    queryset = queryset.filter(id__in=targeted_ids)
         else:
             return Response(
                 {
@@ -153,7 +141,11 @@ class AssignmentListCreateView(APIView):
 
         paginator = AssignmentListPagination()
         page = paginator.paginate_queryset(queryset, request, view=self)
-        serializer = AssignmentListSerializer(page, many=True)
+        serializer = AssignmentListSerializer(
+            page,
+            many=True,
+            context={'request': request},
+        )
         return paginator.get_paginated_response(serializer.data)
 
     def post(self, request):
