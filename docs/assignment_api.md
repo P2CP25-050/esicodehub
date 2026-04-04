@@ -25,6 +25,18 @@ Authorization: Bearer <access_token>
 
 ---
 
+## Target Year Choices
+
+| Value | Meaning |
+|-------|---------|
+| `"1CP"` | First year preparatory cycle |
+| `"2CP"` | Second year preparatory cycle |
+| `"1CS"` | First year CS |
+| `"2CS"` | Second year CS |
+| `"3CS"` | Third year CS |
+
+---
+
 ## Assignment Endpoints
 
 ### 1. List Assignments
@@ -47,14 +59,20 @@ Authorization: Bearer <access_token>
     {
       "id": 1,
       "title": "Lab Report 1",
-      "subject": 1,
+      "description": "Submit your lab report",
+      "subject": {
+        "id": 1,
+        "name": "Algorithms and Data Structures",
+        "code": "ASD101"
+      },
+      "target_year": "3CS",
+      "target_sections": ["SIL"],
+      "target_groups": [],
       "deadline": "2026-05-01T23:59:00Z",
       "allow_late": false,
-      "target_year": 2,
-      "target_sections": ["A", "B"],
-      "target_groups": [],
-      "professor": "professor@esi.dz",
-      "created_at": "2026-01-01T00:00:00Z"
+      "is_open": true,
+      "professor_name": "John Doe",
+      "submission_count": 5
     }
   ]
 }
@@ -70,14 +88,20 @@ Authorization: Bearer <access_token>
     {
       "id": 1,
       "title": "Lab Report 1",
-      "subject": 1,
+      "description": "Submit your lab report",
+      "subject": {
+        "id": 1,
+        "name": "Algorithms and Data Structures",
+        "code": "ASD101"
+      },
+      "target_year": "3CS",
+      "target_sections": ["SIL"],
+      "target_groups": [],
       "deadline": "2026-05-01T23:59:00Z",
       "allow_late": false,
-      "target_year": 2,
-      "target_sections": ["A", "B"],
-      "target_groups": [],
-      "professor": "professor@esi.dz",
-      "created_at": "2026-01-01T00:00:00Z"
+      "is_open": true,
+      "professor_name": "John Doe",
+      "submission_count": 5
     }
   ]
 }
@@ -108,8 +132,8 @@ Authorization: Bearer <access_token>
   "subject": 1,
   "deadline": "2026-05-01T23:59:00Z",
   "allow_late": false,
-  "target_year": 2,
-  "target_sections": ["A", "B"],
+  "target_year": "3CS",
+  "target_sections": ["SIL"],
   "target_groups": []
 }
 ```
@@ -120,10 +144,10 @@ Authorization: Bearer <access_token>
 | `title` | string | ✅ | Assignment title |
 | `description` | string | ❌ | Assignment description |
 | `subject` | integer | ✅ | Subject ID |
-| `deadline` | datetime | ✅ | Submission deadline (ISO 8601) |
+| `deadline` | datetime | ✅ | Submission deadline (ISO 8601) — must be in the future |
 | `allow_late` | boolean | ❌ | Whether late submissions are allowed (default: false) |
-| `target_year` | integer | ✅ | Study year to target |
-| `target_sections` | array | ❌ | List of sections to target e.g. `["A", "B"]` |
+| `target_year` | string | ✅ | Study year to target — one of `1CP`, `2CP`, `1CS`, `2CS`, `3CS` |
+| `target_sections` | array | ❌ | List of sections to target e.g. `["SIL", "SIQ"]` |
 | `target_groups` | array | ❌ | List of groups to target e.g. `["1", "2"]` |
 
 > ⚠️ **`target_sections` and `target_groups` are mutually exclusive** — sending both will return a 400 error.
@@ -134,13 +158,24 @@ Authorization: Bearer <access_token>
   "id": 1,
   "title": "Lab Report 1",
   "description": "Submit your lab report",
-  "subject": 1,
+  "subject": {
+    "id": 1,
+    "name": "Algorithms and Data Structures",
+    "code": "ASD101"
+  },
+  "target_year": "3CS",
+  "target_sections": ["SIL"],
+  "target_groups": [],
   "deadline": "2026-05-01T23:59:00Z",
   "allow_late": false,
-  "target_year": 2,
-  "target_sections": ["A", "B"],
-  "target_groups": [],
-  "professor": "professor@esi.dz",
+  "is_open": true,
+  "professor_name": "John Doe",
+  "submission_count": 0,
+  "professor": {
+    "email": "nt_boudjemaa@esi.dz",
+    "first_name": "John",
+    "last_name": "Doe"
+  },
   "created_at": "2026-01-01T00:00:00Z",
   "updated_at": "2026-01-01T00:00:00Z"
 }
@@ -148,14 +183,25 @@ Authorization: Bearer <access_token>
 
 **Response 400 — Mutual exclusivity violation:**
 ```json
-{ "detail": "target_sections and target_groups are mutually exclusive." }
+{
+  "non_field_errors": [
+    "target_sections and target_groups are mutually exclusive. Provide only one of them."
+  ]
+}
+```
+
+**Response 400 — Deadline in the past:**
+```json
+{ "deadline": ["Deadline must be in the future."] }
 ```
 
 **Response 400 — Missing required fields:**
 ```json
 {
   "title": ["This field is required."],
-  "subject": ["This field is required."]
+  "subject": ["This field is required."],
+  "target_year": ["This field is required."],
+  "deadline": ["This field is required."]
 }
 ```
 
@@ -182,13 +228,24 @@ Authorization: Bearer <access_token>
   "id": 1,
   "title": "Lab Report 1",
   "description": "Submit your lab report",
-  "subject": 1,
+  "subject": {
+    "id": 1,
+    "name": "Algorithms and Data Structures",
+    "code": "ASD101"
+  },
+  "target_year": "3CS",
+  "target_sections": ["SIL"],
+  "target_groups": [],
   "deadline": "2026-05-01T23:59:00Z",
   "allow_late": false,
-  "target_year": 2,
-  "target_sections": ["A", "B"],
-  "target_groups": [],
-  "professor": "professor@esi.dz",
+  "is_open": true,
+  "professor_name": "John Doe",
+  "submission_count": 5,
+  "professor": {
+    "email": "nt_boudjemaa@esi.dz",
+    "first_name": "John",
+    "last_name": "Doe"
+  },
   "created_at": "2026-01-01T00:00:00Z",
   "updated_at": "2026-01-01T00:00:00Z"
 }
@@ -239,13 +296,24 @@ Authorization: Bearer <access_token>
   "id": 1,
   "title": "Updated Title",
   "description": "Updated description",
-  "subject": 1,
+  "subject": {
+    "id": 1,
+    "name": "Algorithms and Data Structures",
+    "code": "ASD101"
+  },
+  "target_year": "3CS",
+  "target_sections": ["SIL"],
+  "target_groups": [],
   "deadline": "2026-06-01T23:59:00Z",
   "allow_late": true,
-  "target_year": 2,
-  "target_sections": ["A", "B"],
-  "target_groups": [],
-  "professor": "professor@esi.dz",
+  "is_open": true,
+  "professor_name": "John Doe",
+  "submission_count": 5,
+  "professor": {
+    "email": "nt_boudjemaa@esi.dz",
+    "first_name": "John",
+    "last_name": "Doe"
+  },
   "created_at": "2026-01-01T00:00:00Z",
   "updated_at": "2026-01-01T01:00:00Z"
 }
@@ -291,7 +359,12 @@ Authorization: Bearer <access_token>
 
 - All endpoints require `Content-Type: application/json`
 - List endpoint is paginated — **20 items per page**
+- `subject` is returned as a nested object `{ id, name, code }` — send only the `id` integer when creating
+- `is_open` is a computed field — `true` if the deadline has not passed yet
+- `professor_name` is a computed field — full name of the creating professor
+- `submission_count` is a computed field — total number of submissions for this assignment
 - `professor` field in responses is auto-set from the authenticated user — do not send it in requests
 - Student targeting is based on `target_year`, `target_sections`, and `target_groups` matched against the student's ESI profile
 - Deleting an assignment also deletes all its associated files from Google Cloud Storage
 - `target_sections` and `target_groups` are mutually exclusive — only one can be set per assignment
+- `deadline` must be in the future when creating — past deadlines return 400
