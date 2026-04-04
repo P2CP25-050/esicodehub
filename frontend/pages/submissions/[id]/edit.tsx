@@ -3,7 +3,7 @@ import { useRouter } from "next/router";
 import Image from "next/image";
 
 // ── Correct imports — existing project files only ────────────────────────────
-import { ProtectedRoute }   from "@/components/ProtectedRoute";
+import  ProtectedRoute   from "@/components/ProtectedRoute";
 import { useAuth }          from "@/hooks/useAuth";
 import {
   getSubmission,
