@@ -1,10 +1,10 @@
 import { useState, useEffect, useCallback, useRef, ReactNode } from "react";
 import { useRouter } from "next/router";
-import Image from "next/image";
 
 // ── Correct imports — existing project files only ────────────────────────────
-import  ProtectedRoute   from "@/components/ProtectedRoute";
+import ProtectedRoute       from "@/components/ProtectedRoute";
 import { useAuth }          from "@/hooks/useAuth";
+import Header               from "@/components/submissions/Header";
 import {
   getSubmission,
   updateSubmission,
@@ -57,115 +57,6 @@ function Spinner({ light = false }: { light?: boolean }) {
           : "border-[#d1d9e6] border-t-[#1d6ef5]"
       }`}
     />
-  );
-}
-
-// ─── Header ───────────────────────────────────────────────────────────────────
-
-function Header() {
-  const [menuOpen, setMenuOpen] = useState(false);
-  const { user, logout }        = useAuth();
-  const router                  = useRouter();
-
-  const initials =
-    user?.avatarInitials ?? user?.name?.slice(0, 2).toUpperCase() ?? "?";
-
-  async function handleLogout() {
-    await logout();
-    router.push("/login");
-  }
-
-  const navLinks = [
-    { href: "/submissions", label: "Submissions" },
-    { href: "/courses",     label: "Courses"     },
-    { href: "/leaderboard", label: "Leaderboard" },
-  ];
-
-  return (
-    <>
-      <header className="bg-[#0d1b2a] sticky top-0 z-50 shadow-[0_2px_12px_rgba(0,0,0,0.3)]">
-        <div className="max-w-[1200px] mx-auto px-4 sm:px-6 flex items-center justify-between h-16 gap-4">
-
-          {/* Logo */}
-          <div className="flex-shrink-0 flex items-center">
-            <Image
-              src="/esicodehub-logo.png"
-              alt="ESICodeHub"
-              width={60}
-              height={30}
-              className="object-contain"
-              priority
-            />
-          </div>
-
-          {/* Desktop nav */}
-          <nav className="hidden md:flex items-center gap-7 flex-1 justify-center">
-            {navLinks.map((l) => (
-              <a
-                key={l.href}
-                href={l.href}
-                className="text-[#94a3c8] hover:text-white text-sm font-medium transition-colors whitespace-nowrap"
-              >
-                {l.label}
-              </a>
-            ))}
-          </nav>
-
-          {/* Right: avatar + hamburger */}
-          <div className="flex items-center gap-3 flex-shrink-0">
-            <button
-              onClick={handleLogout}
-              title={`${user?.name ?? user?.email} · click to log out`}
-              className="w-9 h-9 rounded-full bg-gradient-to-br from-[#1d6ef5] to-[#00c6ff] text-white text-sm font-bold flex items-center justify-center hover:opacity-85 transition-opacity"
-            >
-              {initials}
-            </button>
-
-            {/* Hamburger — mobile only */}
-            <button
-              className="md:hidden flex flex-col gap-[5px] p-1 bg-transparent border-0 cursor-pointer"
-              onClick={() => setMenuOpen((v) => !v)}
-              aria-label="Toggle navigation"
-            >
-              <span
-                className="block w-[22px] h-0.5 bg-[#94a3c8] rounded transition-transform duration-200"
-                style={{ transform: menuOpen ? "rotate(45deg) translate(5px,5px)" : "none" }}
-              />
-              <span
-                className="block w-[22px] h-0.5 bg-[#94a3c8] rounded transition-opacity duration-200"
-                style={{ opacity: menuOpen ? 0 : 1 }}
-              />
-              <span
-                className="block w-[22px] h-0.5 bg-[#94a3c8] rounded transition-transform duration-200"
-                style={{ transform: menuOpen ? "rotate(-45deg) translate(5px,-5px)" : "none" }}
-              />
-            </button>
-          </div>
-        </div>
-      </header>
-
-      {/* Mobile slide-down nav */}
-      {menuOpen && (
-        <nav className="md:hidden bg-[#0d1b2a] border-t border-white/5 flex flex-col py-2 z-40">
-          {navLinks.map((l) => (
-            <a
-              key={l.href}
-              href={l.href}
-              onClick={() => setMenuOpen(false)}
-              className="text-[#94a3c8] hover:text-white hover:bg-white/5 text-[15px] font-medium px-6 py-3 transition-colors"
-            >
-              {l.label}
-            </a>
-          ))}
-          <button
-            onClick={() => { setMenuOpen(false); handleLogout(); }}
-            className="text-left text-red-400 hover:text-red-300 hover:bg-red-400/5 text-[15px] font-medium px-6 py-3 transition-colors border-0 bg-transparent cursor-pointer"
-          >
-            Log out
-          </button>
-        </nav>
-      )}
-    </>
   );
 }
 
@@ -548,15 +439,15 @@ function FilesTab({ submission }: { submission: PersonalSubmission }) {
     setUploadError(null);
     setUploadProgress(0);
     try {
-      // Derive file_paths from file names (relative path within the upload)
+      // file_paths derived from file names — required by the backend
       const filePaths = staged.map((f) => f.name);
 
       const newFiles = await uploadFiles(
         submission.id,
         staged,
         filePaths,
-        (pct: number) => setUploadProgress(pct),
       );
+      setUploadProgress(100);
       setFiles((p) => [...p, ...newFiles]);
       setStaged([]);
       setUploadDone(true);
@@ -573,7 +464,7 @@ function FilesTab({ submission }: { submission: PersonalSubmission }) {
     <div>
       {deleteTarget && (
         <DeleteModal
-          fileName={deleteTarget.name}
+          fileName={deleteTarget.file_name}
           onConfirm={handleDelete}
           onCancel={() => !deleting && setDeleteTarget(null)}
           loading={deleting}
@@ -605,10 +496,10 @@ function FilesTab({ submission }: { submission: PersonalSubmission }) {
               >
                 <div className="flex items-center gap-2 min-w-0">
                   <span className="text-base flex-shrink-0">📄</span>
-                  <span className="font-medium text-[#1e3a5f] truncate">{file.name}</span>
+                  <span className="font-medium text-[#1e3a5f] truncate">{file.file_name}</span>
                 </div>
-                <span className="text-[11px] font-mono text-[#94a3b8] truncate">{file.path}</span>
-                <span className="text-xs text-[#64748b] whitespace-nowrap">{fmtSize(file.size)}</span>
+                <span className="text-[11px] font-mono text-[#94a3b8] truncate">{file.file_path}</span>
+                <span className="text-xs text-[#64748b] whitespace-nowrap">{fmtSize(file.file_size)}</span>
                 <div className="flex justify-end">
                   <button
                     onClick={() => setDeleteTarget(file)}
@@ -628,7 +519,7 @@ function FilesTab({ submission }: { submission: PersonalSubmission }) {
                 <div className="flex items-center justify-between gap-3">
                   <div className="flex items-center gap-2 min-w-0">
                     <span className="text-base flex-shrink-0">📄</span>
-                    <span className="font-semibold text-[#1e3a5f] text-sm truncate">{file.name}</span>
+                    <span className="font-semibold text-[#1e3a5f] text-sm truncate">{file.file_name}</span>
                   </div>
                   <button
                     onClick={() => setDeleteTarget(file)}
@@ -638,8 +529,8 @@ function FilesTab({ submission }: { submission: PersonalSubmission }) {
                   </button>
                 </div>
                 <div className="flex flex-col gap-1 pl-7">
-                  <span className="text-[11px] font-mono text-[#94a3b8] truncate">{file.path}</span>
-                  <span className="text-xs text-[#64748b]">{fmtSize(file.size)}</span>
+                  <span className="text-[11px] font-mono text-[#94a3b8] truncate">{file.file_path}</span>
+                  <span className="text-xs text-[#64748b]">{fmtSize(file.file_size)}</span>
                 </div>
               </div>
             ))}
@@ -723,15 +614,18 @@ function EditSubmissionPage() {
   useEffect(() => {
     if (!id || typeof id !== "string" || !user) return;
 
+    const numericId = Number(id);
+    if (isNaN(numericId)) { router.replace("/submissions"); return; }
+
     (async () => {
       setLoading(true);
       try {
-        // getSubmission(id) — from services/submissions/submissions.api.ts
-        const data = await getSubmission(id);
+        // getSubmission expects number — from services/submissions/submissions.api.ts
+        const data = await getSubmission(numericId);
 
         // Access check: only the owner may edit
         if (user.email !== data.owner?.email) {
-          router.replace(`/submissions/${id}`);
+          router.replace(`/submissions/${String(data.id)}`);
           return;
         }
 
@@ -749,7 +643,7 @@ function EditSubmissionPage() {
   if (loading) {
     return (
       <div className="min-h-screen bg-[#f0f4ff]" style={{ fontFamily: "'Segoe UI', system-ui, sans-serif" }}>
-        <Header />
+        <Header activePage="Submissions" />
         <div className="flex items-center justify-center gap-2.5 min-h-[calc(100vh-64px)] text-sm text-[#64748b]">
           <Spinner />
           <span>Loading…</span>
@@ -767,7 +661,7 @@ function EditSubmissionPage() {
       className="min-h-screen bg-[#f0f4ff] text-[#1a2340]"
       style={{ fontFamily: "'Segoe UI', system-ui, sans-serif" }}
     >
-      <Header />
+      <Header activePage="Submissions" />
 
       <div className="max-w-[900px] mx-auto px-3 sm:px-6 py-5 sm:py-8 pb-16">
 
