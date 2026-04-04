@@ -1,8 +1,26 @@
+import os
+
 from google.cloud import storage
 from django.conf import settings
+from django.core.exceptions import ImproperlyConfigured
 
 
 def get_gcs_client():
+    if not settings.GS_CREDENTIALS:
+        raise ImproperlyConfigured(
+            'GCS_CREDENTIALS_PATH is not set. Configure it in environment variables.'
+        )
+
+    if not os.path.exists(settings.GS_CREDENTIALS):
+        raise ImproperlyConfigured(
+            f'GCS credentials file not found at: {settings.GS_CREDENTIALS}'
+        )
+
+    if not settings.GS_BUCKET_NAME:
+        raise ImproperlyConfigured(
+            'GCS_BUCKET_NAME is not set. Configure it in environment variables.'
+        )
+
     return storage.Client.from_service_account_json(
         settings.GS_CREDENTIALS
     )
