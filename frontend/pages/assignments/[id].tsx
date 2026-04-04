@@ -1,5 +1,6 @@
 import {
   useEffect,
+  useRef,
   useState,
   type ChangeEvent,
   type DragEvent,
@@ -160,6 +161,7 @@ function AssignmentDetailPageContent() {
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [toast, setToast] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
   const [fileInputKey, setFileInputKey] = useState(0);
+  const hasLoadedRoleDataRef = useRef(false);
 
   const isStudent = user?.role === 'student';
   const isProfessor = user?.role === 'professor';
@@ -215,6 +217,7 @@ function AssignmentDetailPageContent() {
       setFileInputKey((prev) => prev + 1);
       setCountdown('');
       setInitialDataLoaded(false);
+      hasLoadedRoleDataRef.current = false;
 
       try {
         const assignmentData = await getAssignment(assignmentId);
@@ -282,7 +285,7 @@ function AssignmentDetailPageContent() {
             ? "You don't have access to this assignment"
             : getErrorMessage(error, 'Failed to load assignment data.');
 
-        if (!initialDataLoaded) {
+        if (!hasLoadedRoleDataRef.current) {
           setPageError(message);
         } else {
           setSectionError(message);
@@ -292,6 +295,7 @@ function AssignmentDetailPageContent() {
           setLoadingRoleData(false);
           setLoadingSubmissions(false);
           setInitialDataLoaded(true);
+          hasLoadedRoleDataRef.current = true;
         }
       }
     };
