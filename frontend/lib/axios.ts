@@ -1,11 +1,9 @@
 import axios from 'axios';
 import { getAccessToken, saveTokens, clearTokens } from './tokens';
+
 const apiClient = axios.create({
   baseURL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api',
   withCredentials: true,
-  headers: {
-    'Content-Type': 'application/json',
-  },
 });
 
 
@@ -16,6 +14,13 @@ const apiClient = axios.create({
 //request interceptor to add access token to headers
 apiClient.interceptors.request.use((config) => {
   const token = getAccessToken();
+  const isFormData =
+    typeof FormData !== 'undefined' && config.data instanceof FormData;
+
+  // Let the browser set multipart boundaries automatically for FormData.
+  if (isFormData && config.headers) {
+    config.headers.delete('Content-Type');
+  }
 
   if (token && config.headers) {
     config.headers.set("Authorization", `Bearer ${token}`);

@@ -14,7 +14,7 @@ import { ProtectedRoute } from '@/components/ProtectedRoute';
 
 export default function SubmissionsPage() {
   const router              = useRouter();
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, isLoading } = useAuth();
 
 
 
@@ -75,12 +75,15 @@ export default function SubmissionsPage() {
 
 // Dropdown/tag filters → immediate
 useEffect(() => {
+  if (isLoading || !isAuthenticated) return;
   setPage(1);
   fetchSubmissions({ ...buildParams(searchRef.current), page: 1 });
-}, [language, type, course, buildParams, fetchSubmissions]); 
+}, [isAuthenticated, isLoading, language, type, course, buildParams, fetchSubmissions]); 
 
 // Debounced search
 useEffect(() => {
+  if (isLoading || !isAuthenticated) return;
+
   if (skipNextSearchDebounceRef.current) {
     skipNextSearchDebounceRef.current = false;
     return;
@@ -93,13 +96,15 @@ useEffect(() => {
   }, 300);
 
   return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
-}, [search, buildParams, fetchSubmissions]);
+}, [isAuthenticated, isLoading, search, buildParams, fetchSubmissions]);
 
 
 
 
 
   const handleLoadMore = () => {
+    if (!isAuthenticated) return;
+
     const next = page + 1;
     setPage(next);
 
