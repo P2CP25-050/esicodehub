@@ -6,36 +6,36 @@
   {"model": "accounts.subject", "pk": 5, "fields": {"name": "Architectures des ordinateurs 2", "code": "ARCH2"}},
   {"model": "accounts.subject", "pk": 6, "fields": {"name": "Architectures des ordinateurs 3", "code": "ARCH3"}},
   {"model": "accounts.subject", "pk": 7, "fields": {"name": "Bases de données avancées", "code": "BDA"}},
-  {"model": "accounts.subject", "pk": 8, "fields": {"name": "Bases de données", "code": "BDD"}}
-  {"model": "accounts.subject", "pk": 9, "fields": {"name": "Big data mining", "code": "BDM"}}
-  {"model": "accounts.subject", "pk": 10, "fields": {"name": "Bureautique et Web", "code": "BWEB"}}
-  {"model": "accounts.subject", "pk": 11, "fields": {"name": "Compilation", "code": "COM"}}
-  {"model": "accounts.subject", "pk": 12, "fields": {"name": "Conduite de projets", "code": "CPROJ"}}
-  {"model": "accounts.subject", "pk": 13, "fields": {"name": "Eléctricité", "code": "ELECT"}}
-  {"model": "accounts.subject", "pk": 14, "fields": {"name": "Electronique fondamentale 1", "code": "ELECF1"}}
-  {"model": "accounts.subject", "pk": 15, "fields": {"name": "Electronique fondamentale 2", "code": "ELECF2"}}
-  {"model": "accounts.subject", "pk": 16, "fields": {"name": "Introduction au génie logicie", "code": "IGL"}}
-  {"model": "accounts.subject", "pk": 17, "fields": {"name": "Interaction Homme Machine", "code": "IHM"}}
-  {"model": "accounts.subject", "pk": 18, "fields": {"name": "Logique Mathématique", "code": "LOGM"}}
-  {"model": "accounts.subject", "pk": 19, "fields": {"name": "Machine learning", "code": "ML"}}
-  {"model": "accounts.subject", "pk": 20, "fields": {"name": "Machine learning avancé", "code": "MLA"}}
-  {"model": "accounts.subject", "pk": 21, "fields": {"name": "Outils de Génie Logiciel", "code": "OGL"}}
-  {"model": "accounts.subject", "pk": 22, "fields": {"name": "Programmation Orientée Objet", "code": "POO"}}
-  {"model": "accounts.subject", "pk": 23, "fields": {"name": "Projet Pluridisciplinaire", "code": "PRJP"}}
-  {"model": "accounts.subject", "pk": 24, "fields": {"name": "Projet de spécialité", "code": "PRJS"}}
-  {"model": "accounts.subject", "pk": 25, "fields": {"name": "Projet", "code": "PROJ"}}
-  {"model": "accounts.subject", "pk": 26, "fields": {"name": "Réseaux 1", "code": "RES1"}}
-  {"model": "accounts.subject", "pk": 27, "fields": {"name": "Réseaux 2", "code": "RES2"}}
-  {"model": "accounts.subject", "pk": 28, "fields": {"name": "Réseaux Avancés", "code": "RESA"}}
-  {"model": "accounts.subject", "pk": 29, "fields": {"name": "Recherche Opérationnelle: graphes et algorithmes", "code": "RO"}}
-  {"model": "accounts.subject", "pk": 30, "fields": {"name": "Structure Fichiers et Structures de Données", "code": "SFSD"}}
-  {"model": "accounts.subject", "pk": 31, "fields": {"name": "Introduction aux systèmes d'information", "code": "SINF"}}
-  {"model": "accounts.subject", "pk": 32, "fields": {"name": "Systèmes d'exploitation 1", "code": "SYS1"}}
-  {"model": "accounts.subject", "pk": 33, "fields": {"name": "Systèmes d'exploitation 2", "code": "SYS2"}}
-  {"model": "accounts.subject", "pk": 34, "fields": {"name": "Instroduction au Système d'exploitation 1", "code": "SYST1"}}
-  {"model": "accounts.subject", "pk": 35, "fields": {"name": "Instroduction au Système d'exploitation 2", "code": "SYST2"}}
-  {"model": "accounts.subject", "pk": 36, "fields": {"name": "Technologies de Développement Mobile 1", "code": "TDM1"}}
-  {"model": "accounts.subject", "pk": 37, "fields": {"name": "Technologies de Développement Mobile 2", "code": "TDM2"}}
-  {"model": "accounts.subject", "pk": 38, "fields": {"name": "Techniques de Développement Web", "code": "TDW"}}
+  {"model": "accounts.subject", "pk": 8, "fields": {"name": "Bases de données", "code": "BDD"}},
+  {"model": "accounts.subject", "pk": 9, "fields": {"name": "Big data mining", "code": "BDM"}},
+  {"model": "accounts.subject", "pk": 10, "fields": {"name": "Bureautique et Web", "code": "BWEB"}},
+  {"model": "accounts.subject", "pk": 11, "fields": {"name": "Compilation", "code": "COM"}},
+  {"model": "accounts.subject", "pk": 12, "fields": {"name": "Conduite de projets", "code": "CPROJ"}},
+  {"model": "accounts.subject", "pk": 13, "fields": {"name": "Eléctricité", "code": "ELECT"}},
+  {"model": "accounts.subject", "pk": 14, "fields": {"name": "Electronique fondamentale 1", "code": "ELECF1"}},
+  {"model": "accounts.subject", "pk": 15, "fields": {"name": "Electronique fondamentale 2", "code": "ELECF2"}},
+  {"model": "accounts.subject", "pk": 16, "fields": {"name": "Introduction au génie logicie", "code": "IGL"}},
+  {"model": "accounts.subject", "pk": 17, "fields": {"name": "Interaction Homme Machine", "code": "IHM"}},
+  {"model": "accounts.subject", "pk": 18, "fields": {"name": "Logique Mathématique", "code": "LOGM"}},
+  {"model": "accounts.subject", "pk": 19, "fields": {"name": "Machine learning", "code": "ML"}},
+  {"model": "accounts.subject", "pk": 20, "fields": {"name": "Machine learning avancé", "code": "MLA"}},
+  {"model": "accounts.subject", "pk": 21, "fields": {"name": "Outils de Génie Logiciel", "code": "OGL"}},
+  {"model": "accounts.subject", "pk": 22, "fields": {"name": "Programmation Orientée Objet", "code": "POO"}},
+  {"model": "accounts.subject", "pk": 23, "fields": {"name": "Projet Pluridisciplinaire", "code": "PRJP"}},
+  {"model": "accounts.subject", "pk": 24, "fields": {"name": "Projet de spécialité", "code": "PRJS"}},
+  {"model": "accounts.subject", "pk": 25, "fields": {"name": "Projet", "code": "PROJ"}},
+  {"model": "accounts.subject", "pk": 26, "fields": {"name": "Réseaux 1", "code": "RES1"}},
+  {"model": "accounts.subject", "pk": 27, "fields": {"name": "Réseaux 2", "code": "RES2"}},
+  {"model": "accounts.subject", "pk": 28, "fields": {"name": "Réseaux Avancés", "code": "RESA"}},
+  {"model": "accounts.subject", "pk": 29, "fields": {"name": "Recherche Opérationnelle: graphes et algorithmes", "code": "RO"}},
+  {"model": "accounts.subject", "pk": 30, "fields": {"name": "Structure Fichiers et Structures de Données", "code": "SFSD"}},
+  {"model": "accounts.subject", "pk": 31, "fields": {"name": "Introduction aux systèmes d'information", "code": "SINF"}},
+  {"model": "accounts.subject", "pk": 32, "fields": {"name": "Systèmes d'exploitation 1", "code": "SYS1"}},
+  {"model": "accounts.subject", "pk": 33, "fields": {"name": "Systèmes d'exploitation 2", "code": "SYS2"}},
+  {"model": "accounts.subject", "pk": 34, "fields": {"name": "Instroduction au Système d'exploitation 1", "code": "SYST1"}},
+  {"model": "accounts.subject", "pk": 35, "fields": {"name": "Instroduction au Système d'exploitation 2", "code": "SYST2"}},
+  {"model": "accounts.subject", "pk": 36, "fields": {"name": "Technologies de Développement Mobile 1", "code": "TDM1"}},
+  {"model": "accounts.subject", "pk": 37, "fields": {"name": "Technologies de Développement Mobile 2", "code": "TDM2"}},
+  {"model": "accounts.subject", "pk": 38, "fields": {"name": "Techniques de Développement Web", "code": "TDW"}},
   {"model": "accounts.subject", "pk": 39, "fields": {"name": "Théorie des langages de programmation et applications", "code": "THP"}}
 ]
