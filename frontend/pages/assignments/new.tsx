@@ -179,6 +179,7 @@ function NewAssignmentForm() {
   
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [loadingSubjects, setLoadingSubjects] = useState(true);
+  const [subjectsError, setSubjectsError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [errors, setErrors] = useState<FormErrors>({});
   const [submitError, setSubmitError] = useState<string | null>(null);
@@ -186,8 +187,15 @@ function NewAssignmentForm() {
   
   useEffect(() => {
     listSubjects()
-      .then(setSubjects)
-      .catch(() => setSubjects([]))
+      .then((data) => {
+        setSubjects(data);
+        setSubjectsError(null);
+      })
+      .catch((err: unknown) => {
+        setSubjects([]);
+        const message = err instanceof Error ? err.message : "Failed to load subjects.";
+        setSubjectsError(message);
+      })
       .finally(() => setLoadingSubjects(false));
   }, []);
 
@@ -354,16 +362,23 @@ function NewAssignmentForm() {
                 disabled={loadingSubjects || submitting}
               >
                 <option value="">
-                  {loadingSubjects ? "Loading subjects…" : "Select a subject"}
+                  {loadingSubjects
+                    ? "Loading subjects..."
+                    : subjects.length > 0
+                      ? "Select a subject"
+                      : "No subjects available"}
                 </option>
                 {subjects.map((s) => (
                   <option key={s.id} value={String(s.id)}>
-                    {s.code} — {s.name}
+                    {[s.code, s.name].filter(Boolean).join(" - ") || `Subject ${s.id}`}
                   </option>
                 ))}
               </select>
               {errors.subject && (
                 <div style={styles.fieldError}>{errors.subject}</div>
+              )}
+              {subjectsError && (
+                <div style={styles.fieldHintError}>{subjectsError}</div>
               )}
             </Field>
 
@@ -762,6 +777,7 @@ const styles: Record<string, React.CSSProperties> = {
   errorIcon: { fontSize: 16, color: "#b45309" },
   errorMsg: { fontSize: 13, color: "#92400e", margin: "0 0 6px" },
   fieldError: { fontSize: 12, color: "#ef4444", marginTop: 6 },
+  fieldHintError: { fontSize: 12, color: "#b45309", marginTop: 6 },
   previewCard: {
     background: "#fff",
     borderRadius: 16,

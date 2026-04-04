@@ -10,6 +10,7 @@ import Head from 'next/head';
 import dynamic from 'next/dynamic';
 import { useRouter } from 'next/router';
 import type { EditorProps } from '@monaco-editor/react';
+import type { IDisposable, editor as MonacoEditorNS } from 'monaco-editor';
 
 import Header from '@/components/submissions/Header';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
@@ -406,14 +407,14 @@ function AssignmentSubmissionReviewPageContent() {
 
   const [toast, setToast] = useState<ToastState>(null);
 
-  const editorRef = useRef<any>(null);
-  const monacoRef = useRef<any>(null);
-  const editorDisposablesRef = useRef<Array<{ dispose: () => void }>>([]);
+  const editorRef = useRef<MonacoEditorNS.IStandaloneCodeEditor | null>(null);
+  const monacoRef = useRef<typeof import('monaco-editor') | null>(null);
+  const editorDisposablesRef = useRef<IDisposable[]>([]);
   const decorationIdsRef = useRef<string[]>([]);
 
   const hoveredLineRef = useRef<number | null>(null);
   const inlineDraftRef = useRef<InlineCommentDraft | null>(null);
-  const fileCacheRef = useRef<Record<number, string>>({});
+  const fileCacheRef = useRef<Map<number, string>>(new Map());
 
   useEffect(() => {
     hoveredLineRef.current = hoveredLine;
@@ -581,7 +582,7 @@ function AssignmentSubmissionReviewPageContent() {
       if (!assignmentId || !submissionId) return;
 
       const displayPath = getDisplayPath(file);
-      const cacheHit = fileCacheRef.current[file.id];
+      const cacheHit = fileCacheRef.current.get(file.id);
 
       setSelectedFileId(file.id);
       setSelectedFilePath(displayPath);
@@ -596,10 +597,7 @@ function AssignmentSubmissionReviewPageContent() {
       setFileLoading(true);
       try {
         const content = await getSubmissionFileContent(assignmentId, submissionId, file.id);
-        fileCacheRef.current = {
-          ...fileCacheRef.current,
-          [file.id]: content,
-        };
+        fileCacheRef.current.set(file.id, content);
         setEditorValue(content);
       } catch {
         setEditorValue('');
@@ -637,7 +635,7 @@ function AssignmentSubmissionReviewPageContent() {
         if (cancelled) return;
 
         setSubmission(submissionData);
-        fileCacheRef.current = {};
+        fileCacheRef.current.clear();
 
         const split = splitReviews(reviews, user.first_name, user.last_name);
         setMyReview(split.myReview);
@@ -697,14 +695,17 @@ function AssignmentSubmissionReviewPageContent() {
   }, []);
 
   const handleEditorMount: EditorProps['onMount'] = useCallback(
-    (editor: any, monaco: any) => {
+    (
+      editor: MonacoEditorNS.IStandaloneCodeEditor,
+      monaco: typeof import('monaco-editor')
+    ) => {
       editorRef.current = editor;
       monacoRef.current = monaco;
 
       editorDisposablesRef.current.forEach((disposable) => disposable.dispose());
       editorDisposablesRef.current = [];
 
-      const onMouseMove = editor.onMouseMove((event: any) => {
+      const onMouseMove = editor.onMouseMove((event: MonacoEditorNS.IEditorMouseEvent) => {
         const lineNumber = event.target.position?.lineNumber;
         const targetType = event.target.type;
 
@@ -726,7 +727,7 @@ function AssignmentSubmissionReviewPageContent() {
         setHoveredLine(null);
       });
 
-      const onMouseDown = editor.onMouseDown((event: any) => {
+      const onMouseDown = editor.onMouseDown((event: MonacoEditorNS.IEditorMouseEvent) => {
         const targetType = event.target.type;
         const lineNumber = event.target.position?.lineNumber;
 
@@ -739,11 +740,13 @@ function AssignmentSubmissionReviewPageContent() {
         }
       });
 
-      const onCursorChange = editor.onDidChangeCursorPosition((event: any) => {
+      const onCursorChange = editor.onDidChangeCursorPosition(
+        (event: MonacoEditorNS.ICursorPositionChangedEvent) => {
         if (!event.position?.lineNumber || !selectedFileId) return;
         setHoveredLine(event.position.lineNumber);
         setHoverButtonTop(computeLineTop(event.position.lineNumber));
-      });
+        }
+      );
 
       const onScroll = editor.onDidScrollChange(() => {
         if (hoveredLineRef.current) {
