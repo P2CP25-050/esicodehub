@@ -1,3 +1,6 @@
+import json
+import os
+import tempfile
 from unittest.mock import patch
 
 from django.core.files.uploadedfile import SimpleUploadedFile
@@ -7,6 +10,7 @@ from rest_framework.test import APITestCase
 
 from apps.accounts.models import User
 from .models import PersonalSubmission
+from .gcs import validate_gcs_configuration
 from .validators import validate_code_file
 
 
@@ -87,3 +91,43 @@ class FileValidatorTests(APITestCase):
         file = SimpleUploadedFile('config.yaml', b'\x00\x01\x02\x03')
         with self.assertRaisesMessage(Exception, 'Security Error'):
             validate_code_file(file)
+
+
+class GCSConfigurationValidationTests(APITestCase):
+    @patch.dict(os.environ, {}, clear=True)
+    @patch('apps.personal_submissions.gcs.settings', create=True)
+    def test_validation_reports_missing_bucket_and_credentials(self, settings_mock):
+        settings_mock.GS_BUCKET_NAME = ''
+        settings_mock.GCS_CREDENTIALS_PATH = None
+        settings_mock.GS_CREDENTIALS = None
+
+        issues = validate_gcs_configuration()
+
+        self.assertTrue(any('GCS_BUCKET_NAME is not set' in issue for issue in issues))
+        self.assertTrue(any('GCS credentials are not configured' in issue for issue in issues))
+
+    @patch('apps.personal_submissions.gcs.settings', create=True)
+    def test_validation_reports_windows_host_path_misconfiguration(self, settings_mock):
+        settings_mock.GS_BUCKET_NAME = 'bucket'
+        settings_mock.GCS_CREDENTIALS_PATH = r'C:\Users\student\gcs-credentials.json'
+        settings_mock.GS_CREDENTIALS = r'C:\Users\student\gcs-credentials.json'
+
+        issues = validate_gcs_configuration()
+
+        self.assertTrue(any('host path' in issue for issue in issues))
+
+    @patch('apps.personal_submissions.gcs.settings', create=True)
+    def test_validation_passes_for_existing_json_credentials_file(self, settings_mock):
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False) as handle:
+            json.dump({'type': 'service_account', 'client_email': 'a@b.c'}, handle)
+            credentials_path = handle.name
+
+        try:
+            settings_mock.GS_BUCKET_NAME = 'bucket'
+            settings_mock.GCS_CREDENTIALS_PATH = credentials_path
+            settings_mock.GS_CREDENTIALS = credentials_path
+
+            issues = validate_gcs_configuration()
+            self.assertEqual(issues, [])
+        finally:
+            os.unlink(credentials_path)
