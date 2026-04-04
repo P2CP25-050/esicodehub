@@ -740,4 +740,4 @@ export default function EditSubmissionPageWrapper() {
       <EditSubmissionPage />
     </ProtectedRoute>
   );
-}
+}git add "pages/submissions/[id]/edit.tsx"
