@@ -23,10 +23,13 @@ from rest_framework_simplejwt.views import (
     TokenRefreshView,
 )
 
+from apps.accounts.views import subject_list
+
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/', include('apps.core.urls')),
     path('api/auth/', include('apps.accounts.urls')),
+    path('api/subjects/', subject_list, name='subject-list'),
     path('api/assignments/', include('apps.assignment_submissions.urls')),
     path(
         'api/personal-submissions/',

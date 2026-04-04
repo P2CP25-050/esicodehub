@@ -1,0 +1,10 @@
+[
+  {"model": "accounts.subject", "pk": 1, "fields": {"name": "Algorithmique et Structure de Données", "code": "ASD"}},
+  {"model": "accounts.subject", "pk": 2, "fields": {"name": "Systèmes d'Exploitation", "code": "SE"}},
+  {"model": "accounts.subject", "pk": 3, "fields": {"name": "Bases de Données", "code": "BD"}},
+  {"model": "accounts.subject", "pk": 4, "fields": {"name": "Programmation Orientée Objet", "code": "POO"}},
+  {"model": "accounts.subject", "pk": 5, "fields": {"name": "Réseaux Informatiques", "code": "RI"}},
+  {"model": "accounts.subject", "pk": 6, "fields": {"name": "Analyse Numérique", "code": "AN"}},
+  {"model": "accounts.subject", "pk": 7, "fields": {"name": "Logique Mathématique", "code": "LM"}},
+  {"model": "accounts.subject", "pk": 8, "fields": {"name": "Programmation Web", "code": "PW"}}
+]
