@@ -1,8 +1,9 @@
 import { useState, useEffect, useCallback, useRef, ReactNode } from "react";
 import { useRouter } from "next/router";
+import  Link  from "next/link";
 
 // ── Correct imports — existing project files only ────────────────────────────
-import ProtectedRoute       from "@/components/ProtectedRoute";
+import { ProtectedRoute }   from "@/components/ProtectedRoute";
 import { useAuth }          from "@/hooks/useAuth";
 import Header               from "@/components/submissions/Header";
 import {
@@ -401,6 +402,7 @@ function FilesTab({ submission }: { submission: PersonalSubmission }) {
   const [uploadProgress, setUploadProgress] = useState(0);
   const [uploadDone,     setUploadDone]     = useState(false);
   const [uploadError,    setUploadError]    = useState<string | null>(null);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   // ── Delete ──────────────────────────────────────────────────────────────────
 
@@ -413,7 +415,7 @@ function FilesTab({ submission }: { submission: PersonalSubmission }) {
       setFiles((p) => p.filter((f) => f.id !== deleteTarget.id));
       setDeleteTarget(null);
     } catch {
-      // keep modal open so user sees it failed
+	setDeleteError("Failed to delete file. Please try again.");
     } finally {
       setDeleting(false);
     }
@@ -667,16 +669,16 @@ function EditSubmissionPage() {
 
         {/* Breadcrumb */}
         <nav className="flex items-center flex-wrap gap-1.5 sm:gap-2 mb-5 sm:mb-6 text-xs sm:text-sm">
-          <a href="/submissions" className="text-[#2563eb] font-medium hover:underline whitespace-nowrap">
+          <Link href="/submissions" className="text-[#2563eb] font-medium hover:underline whitespace-nowrap">
             Submissions
-          </a>
+          </Link>
           <span className="text-[#94a3b8]">/</span>
-          <a
+          <Link
             href={`/submissions/${submission.id}`}
             className="text-[#2563eb] font-medium hover:underline truncate max-w-[140px] sm:max-w-[260px]"
           >
             {submission.title}
-          </a>
+          </Link>
           <span className="text-[#94a3b8]">/</span>
           <span className="text-[#64748b]">Edit</span>
         </nav>
@@ -740,4 +742,4 @@ export default function EditSubmissionPageWrapper() {
       <EditSubmissionPage />
     </ProtectedRoute>
   );
-}git add "pages/submissions/[id]/edit.tsx"
+}
