@@ -44,6 +44,9 @@ class AssignmentListSerializer(serializers.ModelSerializer):
     # True if assignment is currently open for submission
     is_open = serializers.SerializerMethodField()
 
+    # True when the current student has already submitted for this assignment
+    has_submitted = serializers.SerializerMethodField()
+
     # Full name of the professor who created the assignment
     professor_name = serializers.SerializerMethodField()
 
@@ -63,6 +66,7 @@ class AssignmentListSerializer(serializers.ModelSerializer):
             'deadline',
             'allow_late',
             'is_open',
+            'has_submitted',
             'professor_name',
             'submission_count',
         ]
@@ -78,6 +82,16 @@ class AssignmentListSerializer(serializers.ModelSerializer):
     def get_is_open(self, obj):
         """Return whether the assignment is currently open for submission."""
         return obj.is_open_for_submission()
+
+    def get_has_submitted(self, obj):
+        """Return True when the authenticated student has a submission."""
+        request = self.context.get('request')
+        user = getattr(request, 'user', None)
+
+        if not user or user.role != 'student':
+            return False
+
+        return obj.submissions.filter(student=user).exists()
 
     def get_professor_name(self, obj):
         """Return the full name of the professor."""

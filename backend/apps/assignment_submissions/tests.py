@@ -274,3 +274,78 @@ class SubmissionReviewApiTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(response.data), 1)
         self.assertEqual(response.data[0]['general_comment'], 'Solid work')
+
+
+class AssignmentListHasSubmittedTests(APITestCase):
+    def setUp(self):
+        self.subject = Subject.objects.create(name='Networks', code='NET101')
+        self.professor = User.objects.create_user(
+            email='prof3@test.local',
+            password='testpass123',
+            first_name='Prof',
+            last_name='Three',
+            role=User.Role.PROFESSOR,
+            is_active=True,
+            is_verified=True,
+        )
+        self.student = User.objects.create_user(
+            email='student3@test.local',
+            password='testpass123',
+            first_name='Stud',
+            last_name='Three',
+            role=User.Role.STUDENT,
+            school_id='2023003',
+            is_active=True,
+            is_verified=True,
+        )
+        EsiStudent.objects.create(
+            school_id='2023003',
+            first_name='Stud',
+            last_name='Three',
+            email='student3@test.local',
+            section='A',
+            group=1,
+            study_year='2CP',
+            status='inscrit',
+        )
+
+        self.assignment_with_submission = Assignment.objects.create(
+            professor=self.professor,
+            subject=self.subject,
+            title='NET HW 1',
+            description='Submitted one',
+            target_year='2CP',
+            target_sections=['A'],
+            target_groups=[],
+            deadline=timezone.now() + timedelta(days=2),
+            allow_late=False,
+        )
+        self.assignment_without_submission = Assignment.objects.create(
+            professor=self.professor,
+            subject=self.subject,
+            title='NET HW 2',
+            description='Not submitted yet',
+            target_year='2CP',
+            target_sections=['A'],
+            target_groups=[],
+            deadline=timezone.now() + timedelta(days=3),
+            allow_late=False,
+        )
+
+        AssignmentSubmission.objects.create(
+            assignment=self.assignment_with_submission,
+            student=self.student,
+            gcs_prefix='assignments/seed/prefix/',
+            is_late=False,
+        )
+
+    def test_student_list_includes_has_submitted_flag(self):
+        self.client.force_authenticate(user=self.student)
+        response = self.client.get(reverse('assignment-list-create'))
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        results_by_id = {item['id']: item for item in response.data['results']}
+
+        self.assertIn('has_submitted', results_by_id[self.assignment_with_submission.id])
+        self.assertTrue(results_by_id[self.assignment_with_submission.id]['has_submitted'])
+        self.assertFalse(results_by_id[self.assignment_without_submission.id]['has_submitted'])

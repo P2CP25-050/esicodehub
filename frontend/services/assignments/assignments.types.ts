@@ -15,6 +15,7 @@ export interface Assignment {
   deadline: string;
   allow_late: boolean;
   is_open: boolean;
+  has_submitted?: boolean;
   professor_name: string;
   submission_count: number;
   created_at: string;
