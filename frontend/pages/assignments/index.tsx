@@ -71,7 +71,7 @@ function AssignmentsContent() {
       */}
       <Header activePage="Assignments" />
 
-      <div className="max-w-[1200px] mx-auto px-4 sm:px-6 py-8 pb-20">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 py-8 pb-20">
 
         {/* ── Breadcrumb ── */}
         <nav className="flex items-center gap-2 text-sm mb-7">
@@ -101,7 +101,7 @@ function AssignmentsContent() {
               onClick={() => router.push("/assignments/new")}
               className="
                 px-5 py-3 rounded-xl text-sm font-bold text-white
-                bg-gradient-to-r from-blue-600 to-blue-700
+                bg-linear-to-r from-blue-600 to-blue-700
                 shadow-[0_4px_14px_rgba(29,110,245,0.35)]
                 hover:opacity-90 active:scale-95 transition-all
                 whitespace-nowrap
@@ -115,7 +115,7 @@ function AssignmentsContent() {
         {/* ── Controls: search + group filter ── */}
         <div className="flex flex-wrap gap-3 mb-7">
           {/* Search */}
-          <div className="relative flex-1 min-w-[200px]">
+          <div className="relative flex-1 min-w-50">
             <svg
               className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"
               width="16" height="16" viewBox="0 0 24 24"
@@ -146,7 +146,7 @@ function AssignmentsContent() {
                 setSelectedGroup(e.target.value ? Number(e.target.value) : undefined)
               }
               className="
-                min-w-[140px] px-3 py-2.5 rounded-xl border border-slate-200
+                min-w-35 px-3 py-2.5 rounded-xl border border-slate-200
                 bg-white text-sm text-[#1a2340]
                 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-400
                 cursor-pointer transition-all

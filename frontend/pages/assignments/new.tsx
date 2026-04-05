@@ -186,17 +186,30 @@ function NewAssignmentForm() {
 
   
   useEffect(() => {
+    let cancelled = false;
+
     listSubjects()
       .then((data) => {
+        if (cancelled) return;
         setSubjects(data);
         setSubjectsError(null);
       })
       .catch((err: unknown) => {
+        if (cancelled) return;
         setSubjects([]);
-        const message = err instanceof Error ? err.message : "Failed to load subjects.";
-        setSubjectsError(message);
+        setSubjectsError(
+          err instanceof Error && err.message.trim()
+            ? err.message
+            : "Failed to load subjects."
+        );
       })
-      .finally(() => setLoadingSubjects(false));
+      .finally(() => {
+        if (!cancelled) setLoadingSubjects(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   
@@ -360,17 +373,18 @@ function NewAssignmentForm() {
                   setErrors((prev) => ({ ...prev, subject: undefined }));
                 }}
                 disabled={loadingSubjects || submitting}
+                aria-busy={loadingSubjects}
               >
                 <option value="">
                   {loadingSubjects
                     ? "Loading subjects..."
                     : subjects.length > 0
-                      ? "Select a subject"
-                      : "No subjects available"}
+                    ? "Select a subject"
+                    : "No subjects available"}
                 </option>
                 {subjects.map((s) => (
                   <option key={s.id} value={String(s.id)}>
-                    {[s.code, s.name].filter(Boolean).join(" - ") || `Subject ${s.id}`}
+                    {s.code} - {s.name}
                   </option>
                 ))}
               </select>
@@ -378,7 +392,7 @@ function NewAssignmentForm() {
                 <div style={styles.fieldError}>{errors.subject}</div>
               )}
               {subjectsError && (
-                <div style={styles.fieldHintError}>{subjectsError}</div>
+                <div style={styles.fieldHelperError}>{subjectsError}</div>
               )}
             </Field>
 
@@ -777,7 +791,7 @@ const styles: Record<string, React.CSSProperties> = {
   errorIcon: { fontSize: 16, color: "#b45309" },
   errorMsg: { fontSize: 13, color: "#92400e", margin: "0 0 6px" },
   fieldError: { fontSize: 12, color: "#ef4444", marginTop: 6 },
-  fieldHintError: { fontSize: 12, color: "#b45309", marginTop: 6 },
+  fieldHelperError: { fontSize: 12, color: "#b45309", marginTop: 6 },
   previewCard: {
     background: "#fff",
     borderRadius: 16,
