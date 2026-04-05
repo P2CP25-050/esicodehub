@@ -180,7 +180,7 @@ class AssignmentCreateSerializer(serializers.ModelSerializer):
 class AssignmentSubmissionListSerializer(serializers.ModelSerializer):
     """
     Used for listing all submissions for an assignment (professor view).
-    Includes computed fields: student_name, file_count, has_reviews.
+    Includes computed fields: student_name, file_count, has_reviews, reviews_count.
     """
     # Full name of the student
     student_name = serializers.SerializerMethodField()
@@ -194,6 +194,9 @@ class AssignmentSubmissionListSerializer(serializers.ModelSerializer):
     # True if at least one review exists for this submission
     has_reviews = serializers.SerializerMethodField()
 
+    # Total number of reviews for this submission
+    reviews_count = serializers.SerializerMethodField()
+
     class Meta:
         model = AssignmentSubmission
         fields = [
@@ -204,6 +207,7 @@ class AssignmentSubmissionListSerializer(serializers.ModelSerializer):
             'is_late',
             'file_count',
             'has_reviews',
+            'reviews_count',
         ]
 
     def get_student_name(self, obj):
@@ -223,7 +227,13 @@ class AssignmentSubmissionListSerializer(serializers.ModelSerializer):
 
     def get_has_reviews(self, obj):
         """Return True if at least one review exists for this submission."""
-        return obj.reviews.exists()
+        return self.get_reviews_count(obj) > 0
+
+    def get_reviews_count(self, obj):
+        """Return the total number of reviews for this submission."""
+        if hasattr(obj, 'reviews_count'):
+            return obj.reviews_count
+        return obj.reviews.count()
 
 
 class SubmissionReviewSerializer(serializers.ModelSerializer):

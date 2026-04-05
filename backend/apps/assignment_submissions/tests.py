@@ -275,6 +275,24 @@ class SubmissionReviewApiTests(APITestCase):
         self.assertEqual(len(response.data), 1)
         self.assertEqual(response.data[0]['general_comment'], 'Solid work')
 
+    def test_professor_submission_list_exposes_reviews_count(self):
+        SubmissionReview.objects.create(
+            submission=self.submission,
+            professor=self.reviewer_professor,
+            general_comment='Count me',
+        )
+
+        self.client.force_authenticate(user=self.owner_professor)
+        response = self.client.get(
+            reverse('submission-list', kwargs={'pk': self.assignment.id})
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data['results']), 1)
+        item = response.data['results'][0]
+        self.assertEqual(item['reviews_count'], 1)
+        self.assertTrue(item['has_reviews'])
+
 
 class AssignmentListHasSubmittedTests(APITestCase):
     def setUp(self):

@@ -78,6 +78,7 @@ export interface AssignmentSubmission {
   is_late: boolean;
   file_count: number;
   has_reviews: boolean;
+  reviews_count: number;
   files?: AssignmentSubmissionFile[];
   reviews?: SubmissionReview[];
 }
