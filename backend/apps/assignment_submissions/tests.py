@@ -293,6 +293,27 @@ class SubmissionReviewApiTests(APITestCase):
         self.assertEqual(item['reviews_count'], 1)
         self.assertTrue(item['has_reviews'])
 
+    @patch('apps.assignment_submissions.views.get_file_content')
+    def test_file_content_accepts_text_plain(self, mock_get_file_content):
+        mock_get_file_content.return_value = 'print("hello")\n'
+
+        self.client.force_authenticate(user=self.owner_professor)
+        response = self.client.get(
+            reverse(
+                'file-content',
+                kwargs={
+                    'pk': self.assignment.id,
+                    'submission_id': self.submission.id,
+                    'file_id': self.submission_file.id,
+                },
+            ),
+            HTTP_ACCEPT='text/plain',
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIn('text/plain', response['Content-Type'])
+        self.assertEqual(response.content.decode('utf-8'), 'print("hello")\n')
+
 
 class AssignmentListHasSubmittedTests(APITestCase):
     def setUp(self):

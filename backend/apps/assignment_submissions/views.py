@@ -10,6 +10,7 @@ from django.utils import timezone
 from rest_framework import serializers, status
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.renderers import BaseRenderer, BrowsableAPIRenderer, JSONRenderer
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
@@ -534,6 +535,21 @@ class SubmissionFileContentView(APIView):
     """Return raw text content of a submission file. Any professor."""
 
     permission_classes = [IsAuthenticated]
+
+    class PlainTextRenderer(BaseRenderer):
+        media_type = 'text/plain'
+        format = 'txt'
+        charset = 'utf-8'
+        render_style = 'text'
+
+        def render(self, data, accepted_media_type=None, renderer_context=None):
+            if data is None:
+                return b''
+            if isinstance(data, bytes):
+                return data
+            return str(data).encode(self.charset)
+
+    renderer_classes = [PlainTextRenderer, JSONRenderer, BrowsableAPIRenderer]
 
     def get(self, request, pk, submission_id, file_id):
         if request.user.role != 'professor':
