@@ -606,7 +606,14 @@ function AssignmentDetailPageContent() {
                   <div className="mt-6 space-y-5">
                     {showSubmittedFiles ? (
                       <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                        <p className="text-sm font-semibold text-slate-900">Submitted files</p>
+                        <div className="flex flex-wrap items-center justify-between gap-2">
+                          <p className="text-sm font-semibold text-slate-900">Submitted files</p>
+                          {mySubmission?.is_late && (
+                            <span className="rounded-full bg-amber-50 px-3 py-1 text-xs font-bold text-amber-700">
+                              Late submission
+                            </span>
+                          )}
+                        </div>
                         <ul className="mt-3 space-y-2">
                           {submittedFiles.map((file) => (
                             <li
@@ -840,7 +847,7 @@ function AssignmentDetailPageContent() {
                             <th className="px-4 py-3 text-left font-semibold">Submitted at</th>
                             <th className="px-4 py-3 text-left font-semibold">Late</th>
                             <th className="px-4 py-3 text-left font-semibold">Files</th>
-                            <th className="px-4 py-3 text-left font-semibold">Reviews</th>
+                            <th className="px-4 py-3 text-left font-semibold">Reviews count</th>
                             <th className="px-4 py-3 text-left font-semibold">Action</th>
                           </tr>
                         </thead>
@@ -859,17 +866,8 @@ function AssignmentDetailPageContent() {
                                 )}
                               </td>
                               <td className="px-4 py-3 text-slate-600">{formatPlural(submission.file_count, 'file')}</td>
-                              <td className="px-4 py-3">
-                                <span
-                                  className={
-                                    'rounded-full px-3 py-1 text-xs font-bold ' +
-                                    (submission.has_reviews
-                                      ? 'bg-emerald-50 text-emerald-700'
-                                      : 'bg-slate-100 text-slate-600')
-                                  }
-                                >
-                                  {submission.has_reviews ? 'Reviewed' : 'Pending'}
-                                </span>
+                              <td className="px-4 py-3 text-slate-600">
+                                {submission.reviews_count}
                               </td>
                               <td className="px-4 py-3">
                                 <Link

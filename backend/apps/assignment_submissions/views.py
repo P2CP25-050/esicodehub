@@ -471,7 +471,8 @@ class ProfessorSubmissionListView(APIView):
 
         queryset = AssignmentSubmission.objects.filter(
             assignment=assignment,
-        ).select_related('student').prefetch_related('files', 'reviews')
+        ).select_related('student').prefetch_related(
+                'files', 'reviews').order_by('-submitted_at', '-id')
 
         # Optional group filter
         group_filter = request.query_params.get('group')
