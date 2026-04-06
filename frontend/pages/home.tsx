@@ -6,7 +6,7 @@ import UpcomingDeadlines from "../components/home/UpcomingDeadlines";
 import ForumPlaceholder from "../components/home/ForumPlaceholder";
 import QuickStats from "../components/home/QuickStats";
 // Fix error 1: ProtectedRoute uses a named export, not default
-import  ProtectedRoute  from "../components/ProtectedRoute";
+import { ProtectedRoute } from "../components/ProtectedRoute";
 import type { Assignment } from "../services/assignments/assignments.types";
 
 // ── Types ────────────────────────────────────────────────────────────────────
