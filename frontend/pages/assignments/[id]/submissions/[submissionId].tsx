@@ -33,6 +33,8 @@ const MonacoEditor = dynamic<EditorProps>(
   { ssr: false }
 );
 
+const COMMENT_BUTTON_SIZE_PX = 28;
+
 type ViewState = 'idle' | 'loading' | 'ready' | 'error';
 
 type TreeDirNode = {
@@ -520,10 +522,24 @@ function AssignmentSubmissionReviewPageContent() {
     return Array.from(unique).sort((a, b) => a - b);
   }, [pendingComments, selectedFileId]);
 
-  const computeLineTop = useCallback((lineNumber: number): number => {
+  const computeInlineCommentTop = useCallback((lineNumber: number): number => {
     const editor = editorRef.current;
     if (!editor || !Number.isFinite(lineNumber) || lineNumber <= 0) return 8;
     return Math.max(8, editor.getTopForLineNumber(lineNumber) - editor.getScrollTop() + 8);
+  }, []);
+
+  const computeHoverButtonTop = useCallback((lineNumber: number): number => {
+    const editor = editorRef.current;
+    if (!editor || !Number.isFinite(lineNumber) || lineNumber <= 0) return 4;
+
+    const lineTop = editor.getTopForLineNumber(lineNumber) - editor.getScrollTop();
+    const nextLineTop = editor.getTopForLineNumber(lineNumber + 1) - editor.getScrollTop();
+    const lineHeight = nextLineTop > lineTop ? nextLineTop - lineTop : 20;
+
+    return Math.max(
+      4,
+      lineTop + lineHeight / 2 - COMMENT_BUTTON_SIZE_PX / 2
+    );
   }, []);
 
   const refreshLineDecorations = useCallback(() => {
@@ -578,16 +594,16 @@ function AssignmentSubmissionReviewPageContent() {
 
       setLineSelectorValue(String(safeLine));
       setHoveredLine(safeLine);
-      setHoverButtonTop(computeLineTop(safeLine));
+      setHoverButtonTop(computeHoverButtonTop(safeLine));
 
       setInlineComment({
         lineNumber: safeLine,
         fileId: selectedFileId,
         content: '',
-        top: computeLineTop(safeLine),
+        top: computeInlineCommentTop(safeLine),
       });
     },
-    [computeLineTop, currentFileLineCount, selectedFileId]
+    [computeHoverButtonTop, computeInlineCommentTop, currentFileLineCount, selectedFileId]
   );
 
   const handleOpenSelectorComment = useCallback(() => {
@@ -756,11 +772,11 @@ function AssignmentSubmissionReviewPageContent() {
       prev
         ? {
             ...prev,
-            top: computeLineTop(prev.lineNumber),
+            top: computeInlineCommentTop(prev.lineNumber),
           }
         : prev
     );
-  }, [computeLineTop, inlineComment, selectedFileId]);
+  }, [computeInlineCommentTop, inlineComment, selectedFileId]);
 
   useEffect(() => {
     return () => {
@@ -803,7 +819,7 @@ function AssignmentSubmissionReviewPageContent() {
         clearHoverHideTimer();
 
         setHoveredLine(lineNumber);
-        setHoverButtonTop(computeLineTop(lineNumber));
+        setHoverButtonTop(computeHoverButtonTop(lineNumber));
       });
 
       const onMouseLeave = editor.onMouseLeave(() => {
@@ -829,13 +845,13 @@ function AssignmentSubmissionReviewPageContent() {
         if (!event.position?.lineNumber || !selectedFileId) return;
         clearHoverHideTimer();
         setHoveredLine(event.position.lineNumber);
-        setHoverButtonTop(computeLineTop(event.position.lineNumber));
+        setHoverButtonTop(computeHoverButtonTop(event.position.lineNumber));
         }
       );
 
       const onScroll = editor.onDidScrollChange(() => {
         if (hoveredLineRef.current) {
-          setHoverButtonTop(computeLineTop(hoveredLineRef.current));
+          setHoverButtonTop(computeHoverButtonTop(hoveredLineRef.current));
         }
 
         if (inlineDraftRef.current) {
@@ -843,7 +859,7 @@ function AssignmentSubmissionReviewPageContent() {
             prev
               ? {
                   ...prev,
-                  top: computeLineTop(prev.lineNumber),
+                  top: computeInlineCommentTop(prev.lineNumber),
                 }
               : prev
           );
@@ -862,7 +878,8 @@ function AssignmentSubmissionReviewPageContent() {
     },
     [
       clearHoverHideTimer,
-      computeLineTop,
+        computeHoverButtonTop,
+        computeInlineCommentTop,
       openInlineComment,
       refreshLineDecorations,
       scheduleHoverHide,

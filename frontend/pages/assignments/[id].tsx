@@ -586,6 +586,9 @@ function AssignmentDetailPageContent() {
   }
 
   const submittedFiles = mySubmission?.files ?? [];
+  const submittedFileLabelById = new Map<number, string>(
+    submittedFiles.map((file) => [file.id, file.file_path || file.file_name])
+  );
   const lineCommentsCount = getSubmissionLineCommentsCount(mySubmission);
   const targetSummary = getTargetingSummary(assignment);
   const groupOptions = assignment.target_groups.slice().sort((a, b) => a - b);
@@ -936,13 +939,34 @@ function AssignmentDetailPageContent() {
                             <p className="mt-3 text-sm leading-6 text-slate-700">
                               {review.general_comment || 'No general comment provided.'}
                             </p>
+
+                            {commentsCount > 0 ? (
+                              <div className="mt-4 space-y-2">
+                                <p className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">
+                                  Line comments
+                                </p>
+
+                                {review.comments?.map((comment) => (
+                                  <div
+                                    key={comment.id}
+                                    className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2"
+                                  >
+                                    <p className="text-xs font-semibold text-slate-500">
+                                      {submittedFileLabelById.get(comment.file) ?? `File #${comment.file}`} · Line {comment.line_number}
+                                    </p>
+                                    <p className="mt-1 text-sm leading-6 text-slate-700">
+                                      {comment.content}
+                                    </p>
+                                  </div>
+                                ))}
+                              </div>
+                            ) : (
+                              <p className="mt-4 text-xs text-slate-500">No line comments on this review.</p>
+                            )}
                           </article>
                         );
                       })}
                     </div>
-                    <p className="mt-4 text-xs text-slate-500">
-                      View full line comments by opening the submission.
-                    </p>
                   </div>
                 )}
               </section>
