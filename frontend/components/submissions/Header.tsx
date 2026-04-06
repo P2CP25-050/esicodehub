@@ -1,9 +1,11 @@
 import { useState, CSSProperties, useEffect } from "react";
 import Image from "next/image";
+import Link from "next/link";
 import { useRouter } from 'next/router';
 import { useAuth } from "@/hooks/useAuth";
 import { logout } from '@/services/auth';
 import { clearTokens } from '@/lib/tokens';
+import { nav } from "framer-motion/client";
 
 interface HeaderProps {
   activePage?: string;
@@ -158,8 +160,8 @@ export default function Header({ activePage = "" }: HeaderProps) {
         <div style={styles.headerInner}>
           {/* ── Left: logo + desktop nav ── */}
           <div style={styles.headerLeft}>
-            <link href="/" style={styles.logoLink} aria-label="Go to homepage">
-              <div style={styles.logo}>
+            <Link href="/" style={styles.logoLink}>
+              <span aria-label="Go to homepage" style={{ display: "flex", alignItems: "center" }}>
                 <Image
                   src="/esicodehub-logo.png"
                   alt="Logo"
@@ -168,15 +170,15 @@ export default function Header({ activePage = "" }: HeaderProps) {
                   className="object-contain"
                   priority
                 />
-              </div>
-            </link>
+              </span>
+            </Link>
 
             <nav style={styles.desktopNav} className="header-desktop-nav">
               {NAV_LINKS.map(({ label, href }) => {
                 const isActive = activePage === label;
                 const isHovered = hoveredNav === label;
                 return (
-                  <a
+                  <Link
                     key={label}
                     href={href}
                     className="nav-link"
@@ -190,7 +192,7 @@ export default function Header({ activePage = "" }: HeaderProps) {
                   >
                     {label}
                     {isActive && <span style={styles.navActiveBar} />}
-                  </a>
+                  </Link>
                 );
               })}
             </nav>
@@ -207,7 +209,7 @@ export default function Header({ activePage = "" }: HeaderProps) {
               Logout
             </button>
 
-            <a href="/profile" style={styles.profileBtn} aria-label="Go to profile">
+            <Link href="/profile" style={styles.profileBtn} aria-label="Go to profile">
               <div style={styles.profileIcon}>
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
                   <circle cx="12" cy="8" r="4" stroke="#c8d6f0" strokeWidth="2" />
@@ -218,9 +220,7 @@ export default function Header({ activePage = "" }: HeaderProps) {
                 <span style={styles.profileName}>{userName}</span>
                 <span style={styles.profileRole}>{userRole}</span>
               </div>
-            </a>
-
-            {/* Hamburger — mobile only */}
+            </Link>
             <button
               type="button"
               className="header-hamburger"
@@ -267,28 +267,28 @@ export default function Header({ activePage = "" }: HeaderProps) {
       >
         {/* Drawer header */}
         <div style={{ padding: "4px 24px 16px", borderBottom: "1px solid rgba(148,163,184,0.12)" }}>
-          <a href="/" aria-label="Go to homepage">
+          <Link href="/" aria-label="Go to homepage">
             <Image src="/esicodehub-logo.png" alt="Logo" width={52} height={28} className="object-contain" />
-          </a>
+          </Link>
         </div>
 
         {/* Nav links */}
         <div style={{ flex: 1, paddingTop: 8 }}>
           {NAV_LINKS.map(({ label, href }) => (
-            <a
+            <Link
               key={label}
               href={href}
               className={`drawer-nav-link${activePage === label ? " active" : ""}`}
             >
               {label}
-            </a>
+            </Link>
           ))}
         </div>
 
         {/* Divider + profile + logout */}
         <div className="drawer-divider" />
 
-        <a href="/profile" className="drawer-profile" aria-label="Go to profile">
+        <Link href="/profile" className="drawer-profile" aria-label="Go to profile">
           <div style={styles.profileIcon}>
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
               <circle cx="12" cy="8" r="4" stroke="#c8d6f0" strokeWidth="2" />
@@ -299,11 +299,8 @@ export default function Header({ activePage = "" }: HeaderProps) {
             <span style={styles.profileName}>{userName}</span>
             <span style={styles.profileRole}>{userRole}</span>
           </div>
-        </a>
-
-        <button type="button" className="drawer-logout-btn" onClick={handleLogout}>
+        </Link>
           Logout
-        </button>
       </nav>
     </>
   );
