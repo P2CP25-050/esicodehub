@@ -9,10 +9,11 @@ const SUBJECT_COLORS: string[] = [
 interface Assignment {
   id: string | number;
   title: string;
+  /** Flattened subject code string, e.g. "CS301" */
   subject?: string;
   deadline: string;
-  has_submitted?: boolean;
   is_open?: boolean;
+  has_submitted?: boolean;
   submission_count?: number;
 }
 

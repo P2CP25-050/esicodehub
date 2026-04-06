@@ -1,13 +1,13 @@
 import { useEffect, useState } from "react";
-import Header from "../components/submissions/Header";
-import GreetingBar from "../components/home/GreetingBar";
-import RecentSubmissions from "../components/home/RecentSubmissions";
-import UpcomingDeadlines from "../components/home/UpcomingDeadlines";
-import ForumPlaceholder from "../components/home/ForumPlaceholder";
-import QuickStats from "../components/home/QuickStats";
+import Header from "@/components/submissions/Header";
+import GreetingBar from "@/components/home/GreetingBar";
+import RecentSubmissions from "@/components/home/RecentSubmissions";
+import UpcomingDeadlines from "@/components/home/UpcomingDeadlines";
+import ForumPlaceholder from "@/components/home/ForumPlaceholder";
+import QuickStats from "@/components/home/QuickStats";
 // Fix error 1: ProtectedRoute uses a named export, not default
-import { ProtectedRoute } from "../components/ProtectedRoute";
-import type { Assignment } from "../services/assignments/assignments.types";
+import  ProtectedRoute  from "@/components/ProtectedRoute";
+import type { Assignment } from "@/services/assignments/assignments.types";
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -19,13 +19,18 @@ interface Submission {
   created_at: string;
 }
 
-
+// HomeAssignment is a slim adapter over the API Assignment type.
+// It flattens subject (object) → subject (string code) so UI components
+// don't need to know about the Subject shape.
 interface HomeAssignment {
   id: number;
   title: string;
-  subjectLabel: string;   // derived from Assignment.subject.code
+  /** Flattened from Assignment.subject.code */
+  subject: string;
   deadline: string;
   is_open: boolean;
+  /** Present when the API returns student-specific submission state */
+  has_submitted?: boolean;
   submission_count: number;
   professor_name: string;
 }
@@ -33,6 +38,7 @@ interface HomeAssignment {
 interface User {
   id: string | number;
   first_name: string;
+  last_name: string;
   role: "student" | "professor";
   initials: string;
 }
@@ -44,7 +50,8 @@ function toHomeAssignment(a: Assignment): HomeAssignment {
   return {
     id: a.id,
     title: a.title,
-    subjectLabel: typeof a.subject === "object" && a.subject !== null
+    // Flatten Subject object → its code string for display
+    subject: typeof a.subject === "object" && a.subject !== null
       ? a.subject.code
       : String(a.subject ?? ""),
     deadline: a.deadline,
@@ -60,10 +67,13 @@ function buildStats(
   assignments: Assignment[]
 ) {
   if (user.role === "professor") {
+  
+    // Match the same pattern used in assignments/[id].tsx.
+    const fullName = `${user.first_name} ${user.last_name}`.trim();
     const myAssignments = assignments.filter(
-      (a) => a.professor_name === user.first_name
+      (a) => a.professor_name === fullName
     );
-    const totalCreated = myAssignments.length;
+    const totalCreated  = myAssignments.length;
     const totalReceived = myAssignments.reduce(
       (sum, a) => sum + (a.submission_count ?? 0),
       0
@@ -73,8 +83,13 @@ function buildStats(
       { value: totalReceived, label: "Submissions Received", color: "#00b894" },
     ];
   }
-  // student — has_submitted is not on the API type; use is_open as proxy
-  const toComplete = assignments.filter((a) => a.is_open).length;
+
+
+  // assignments are not wrongly counted as "to complete".
+  const toComplete = assignments.filter(
+    (a) => a.is_open === true && (a as Assignment & { has_submitted?: boolean }).has_submitted === false
+  ).length;
+
   return [
     { value: submissionCount, label: "My Submissions", color: "#1d6ef5" },
     { value: toComplete,      label: "To Complete",    color: "#fd9644" },
@@ -94,6 +109,7 @@ function HomePageContent() {
   const [user, setUser] = useState<User>({
     id: "1",
     first_name: "User",
+    last_name: "",
     role: "student",
     initials: "U",
   });
@@ -132,6 +148,36 @@ function HomePageContent() {
       setAssignmentsLoading(false);
     }
 
+    async function loadUser() {
+      try {
+        const stored = localStorage.getItem("user");
+        if (stored) {
+          const parsed = JSON.parse(stored);
+
+        
+          // the ?? fallback won't fire. Trim and fall back to "U" explicitly.
+          const firstName: string = (parsed.first_name ?? parsed.name ?? "").trim() || "U";
+          const lastName: string  = (parsed.last_name  ?? "").trim();
+
+          // Only index [0] after we know the string is non-empty
+          const initials =
+            firstName[0].toUpperCase() +
+            (lastName.length > 0 ? lastName[0].toUpperCase() : "");
+
+          setUser({
+            id:         parsed.id ?? "1",
+            first_name: firstName,
+            last_name:  lastName,
+            role:       parsed.role === "professor" ? "professor" : "student",
+            initials,
+          });
+        }
+      } catch {
+        // keep default user
+      }
+    }
+
+    loadUser();
     fetchData();
   }, []);
 
@@ -152,8 +198,9 @@ function HomePageContent() {
         color: "#1a2340",
       }}
     >
-     
-      <Header activePage="Home" />
+      {/* 
+          the avatar through another mechanism. */}
+      <Header activePage="Home" userInitials={user.initials} />
 
       <main style={{ maxWidth: 1200, margin: "0 auto", padding: "32px 24px 64px" }}>
         {/* Greeting bar */}
