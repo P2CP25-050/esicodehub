@@ -1,6 +1,6 @@
 "use client";
 
-import { useState,/* useRef, useEffect ,useCallback */} from "react";
+import { useState } from "react";
 import { useRouter } from "next/router";
 import { login } from '@/services/auth';
 import { saveTokens } from '@/lib/tokens';
@@ -9,19 +9,23 @@ import { AxiosError } from 'axios';
 import Particles from "@/components/auth/Particles";
 import PillButton from "@/components/auth/PillButton";
 import InputRow from "@/components/auth/InputRow";
-
-import BackButton from "@/components/auth/BackButton"
+import BackButton from "@/components/auth/BackButton";
 import Logo from "@/components/auth/Logo";
 import { PublicRoute } from "@/components/PublicRoute";
+
 // ─── Types ───────────────────────────────────────────────
-type Page = "Login" ;
-//HOOK Width
-
-
-
+type Page = "Login";
 
 // ─── Ghost pill button ────────────────────────────────────
-function GhostButton({ children, onClick, delay = 0 }: { children: React.ReactNode; onClick: () => void; delay?: number }) {
+function GhostButton({
+  children,
+  onClick,
+  delay = 0,
+}: {
+  children: React.ReactNode;
+  onClick: () => void;
+  delay?: number;
+}) {
   const [hovered, setHovered] = useState(false);
   return (
     <button
@@ -53,15 +57,18 @@ function GhostButton({ children, onClick, delay = 0 }: { children: React.ReactNo
   );
 }
 
-
-
 // ─── Error / success message ──────────────────────────────
 function Message({ text, type }: { text: string; type: "error" | "success" }) {
   return (
     <div
       style={{
-        background: type === "error" ? "rgba(239,68,68,0.1)" : "rgba(34,197,94,0.1)",
-        border: `1px solid ${type === "error" ? "rgba(239,68,68,0.3)" : "rgba(34,197,94,0.3)"}`,
+        background:
+          type === "error" ? "rgba(239,68,68,0.1)" : "rgba(34,197,94,0.1)",
+        border: `1px solid ${
+          type === "error"
+            ? "rgba(239,68,68,0.3)"
+            : "rgba(34,197,94,0.3)"
+        }`,
         borderRadius: 8,
         padding: "9px 13px",
         color: type === "error" ? "#f87171" : "#4ade80",
@@ -77,16 +84,12 @@ function Message({ text, type }: { text: string; type: "error" | "success" }) {
   );
 }
 
-
-
-
 // ─── Main Component ───────────────────────────────────────
 function LoginPageContent() {
   const router = useRouter();
-  const [page/*, setPage*/] = useState<Page>("Login");
-  const [cardKey/*, setCardKey*/] = useState(0);
+  const [page] = useState<Page>("Login");
+  const [cardKey] = useState(0);
 
-  // Login
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [emailShake, setEmailShake] = useState(false);
@@ -94,55 +97,60 @@ function LoginPageContent() {
   const [loginError, setLoginError] = useState("");
   const [loginLoading, setLoginLoading] = useState(false);
 
- 
-
-
-
-
-  //@esi.dz domain check
-   const isEsiEmail = (v: string) => v.toLowerCase().endsWith("@esi.dz");
- //-------------------------------
-   /*const goTo = useCallback((p: Page) => {
-    setCardKey((k) => k + 1);
-    setPage(p);
-  }, []);*/
+  const isEsiEmail = (v: string) => v.toLowerCase().endsWith("@esi.dz");
 
   const shake = (setter: (v: boolean) => void) => {
     setter(true);
     setTimeout(() => setter(false), 600);
   };
 
-  // ── Login handler ──
- const handleLogin = async () => {
+  const handleLogin = async () => {
     setLoginError("");
     let EmailError = false;
     let PasswordError = false;
     let DomainError = false;
+
     if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      shake(setEmailShake); EmailError = true;
-    }else if (!isEsiEmail(email)) {
-      shake(setEmailShake); DomainError = true;
-    }if (!password || password.length < 8) {
-      shake(setPasswordShake); PasswordError = true;
+      shake(setEmailShake);
+      EmailError = true;
+    } else if (!isEsiEmail(email)) {
+      shake(setEmailShake);
+      DomainError = true;
     }
-    if (EmailError && (PasswordError || DomainError)) { setLoginError("Invalid email and password. Please try again."); return; }
-    else if (EmailError) { setLoginError("Invalid email. Please try again."); return; }
-    else if (DomainError) { setLoginError("Only @esi.dz email addresses are allowed."); return; }
-    else if (PasswordError) { setLoginError("Invalid password. At least 8 characters required."); return; }
+    if (!password || password.length < 8) {
+      shake(setPasswordShake);
+      PasswordError = true;
+    }
+
+    if (EmailError && (PasswordError || DomainError)) {
+      setLoginError("Invalid email and password. Please try again.");
+      return;
+    } else if (EmailError) {
+      setLoginError("Invalid email. Please try again.");
+      return;
+    } else if (DomainError) {
+      setLoginError("Only @esi.dz email addresses are allowed.");
+      return;
+    } else if (PasswordError) {
+      setLoginError("Invalid password. At least 8 characters required.");
+      return;
+    }
+
     setLoginLoading(true);
     try {
-      const res = await login({ email, password });
-      saveTokens(res.data);
+      const { data } = await login({ email, password });
+      saveTokens({ access: data.access, refresh: "" });
       router.push(
-        res.data.user.role === 'professor'
-          ? '/dashboard/professor'
-          : '/dashboard/student'
+        data.user.role === "professor"
+          ? "/dashboard/professor"
+          : "/dashboard/student"
       );
     } catch (error: unknown) {
       if (error instanceof AxiosError) {
         const status = error.response?.status;
         if (status === 401) setLoginError("Invalid email or password.");
-        else if (status === 403) setLoginError("Please verify your email first.");
+        else if (status === 403)
+          setLoginError("Please verify your email first.");
         else setLoginError("Something went wrong. Please try again.");
       }
       shake(setEmailShake);
@@ -151,10 +159,6 @@ function LoginPageContent() {
       setLoginLoading(false);
     }
   };
- 
-
-
-  // ── Card heights per page ──
 
   return (
     <>
@@ -171,10 +175,6 @@ function LoginPageContent() {
           from { opacity: 0; transform: translateY(12px); }
           to   { opacity: 1; transform: translateY(0); }
         }
-        @keyframes slideInLeft {
-          from { opacity: 0; transform: translateX(-16px); }
-          to   { opacity: 1; transform: translateX(0); }
-        }
         @keyframes pageSlide {
           from { opacity: 0; transform: translateX(22px); }
           to   { opacity: 1; transform: translateX(0); }
@@ -190,16 +190,6 @@ function LoginPageContent() {
           60%     { transform: translateX(-5px); }
           80%     { transform: translateX(5px); }
         }
-        @keyframes particleRise {
-          0%   { transform: translateY(100vh); opacity: 0; }
-          10%  { opacity: 0.6; }
-          90%  { opacity: 0.35; }
-          100% { transform: translateY(-80px); opacity: 0; }
-        }
-        @keyframes checkPop {
-          from { transform: scale(0) rotate(-90deg); opacity: 0; }
-          to   { transform: scale(1) rotate(0deg); opacity: 1; }
-        }
         @keyframes borderTrace {
           0%   { clip-path: inset(0 100% 98% 0); }
           25%  { clip-path: inset(0 0 98% 0); }
@@ -207,43 +197,59 @@ function LoginPageContent() {
           75%  { clip-path: inset(98% 0 0 0); }
           100% { clip-path: inset(0 100% 98% 0); }
         }
-        @keyframes spin {
-          to { transform: rotate(360deg); }
-        }
+        @keyframes spin { to { transform: rotate(360deg); } }
         @keyframes pulse {
           0%,100% { opacity: 1; }
           50% { opacity: 0.5; }
+        }
+
+        /* ── Responsive card ── */
+        .login-card {
+          background: #000;
+          border-radius: 18px;
+          width: min(380px, 100%);
+          padding: 36px 32px 32px;
+          position: relative;
+          overflow: hidden;
+          box-shadow: 0 0 0 1px rgba(59,130,246,0.16), 0 32px 64px rgba(0,0,0,0.85);
+          animation: cardIn 0.55s cubic-bezier(0.22,1,0.36,1) both;
+        }
+
+        /* Tighten padding on very small screens */
+        @media (max-width: 400px) {
+          .login-card {
+            padding: 28px 18px 24px;
+            border-radius: 14px;
+          }
+        }
+
+        /* Landscape phones: avoid card being taller than viewport */
+        @media (max-height: 620px) and (orientation: landscape) {
+          .login-outer {
+            align-items: flex-start;
+            padding: 16px 24px;
+          }
+          .login-card {
+            padding: 20px 28px 20px;
+          }
         }
       `}</style>
 
       <Particles />
 
       <div
+        className="login-outer"
         style={{
           minHeight: "100vh",
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          padding: 24,
+          padding: "24px 16px",
           position: "relative",
           zIndex: 1,
         }}
       >
-        <div
-          key={cardKey}
-          style={{
-            background: "#000",
-            borderRadius: 18,
-            width: 380,
-            height: 520 ,
-            padding: "36px 32px 32px",
-            position: "relative",
-            overflow: "hidden",
-            boxShadow: "0 0 0 1px rgba(59,130,246,0.16), 0 32px 64px rgba(0,0,0,0.85)",
-            animation: "cardIn 0.55s cubic-bezier(0.22,1,0.36,1) both",
-            transition: "height 0.4s cubic-bezier(0.22,1,0.36,1)",
-          }}
-        >
+        <div key={cardKey} className="login-card">
           {/* Scan line */}
           <div
             style={{
@@ -252,11 +258,13 @@ function LoginPageContent() {
               left: "-60%",
               width: "60%",
               height: 1,
-              background: "linear-gradient(90deg, transparent, #3b82f6, transparent)",
+              background:
+                "linear-gradient(90deg, transparent, #3b82f6, transparent)",
               animation: "scanLine 3s ease-in-out infinite",
               pointerEvents: "none",
             }}
           />
+
           {/* Border trace */}
           <div
             style={{
@@ -272,20 +280,31 @@ function LoginPageContent() {
 
           {/* ══ LOGIN PAGE ══ */}
           {page === "Login" && (
-            <div style={{ animation: "pageSlide 0.4s cubic-bezier(0.22,1,0.36,1) both" }}>
+            <div
+              style={{
+                animation: "pageSlide 0.4s cubic-bezier(0.22,1,0.36,1) both",
+              }}
+            >
               <BackButton onClick={() => router.back()} />
+
               {/* Logo */}
-              <div style={{ display: "flex", flexDirection: "column", alignItems: "center", marginBottom: 10, animation: "fadeUp 0.5s 0.1s both" }}>
-               <Logo>
-                
-               </Logo> 
+              <div
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "center",
+                  marginBottom: 10,
+                  animation: "fadeUp 0.5s 0.1s both",
+                }}
+              >
+                <Logo />
               </div>
 
               {/* Title */}
               <div
                 style={{
                   color: "#fff",
-                  fontSize: 22,
+                  fontSize: "clamp(17px, 4vw, 22px)",
                   fontWeight: 700,
                   textAlign: "center",
                   marginBottom: 22,
@@ -300,11 +319,22 @@ function LoginPageContent() {
               {loginError && <Message text={loginError} type="error" />}
 
               <InputRow
-                id="email" placeholder="Email address" type="email"
-                value={email} onChange={setEmail}
-                shake={emailShake} delay={0.18}
+                id="email"
+                placeholder="Email address"
+                type="email"
+                value={email}
+                onChange={setEmail}
+                shake={emailShake}
+                delay={0.18}
                 icon={
-                  <svg viewBox="0 0 24 24" fill="none" stroke="#555" strokeWidth="1.8" width={16} height={16}>
+                  <svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="#555"
+                    strokeWidth="1.8"
+                    width={16}
+                    height={16}
+                  >
                     <rect x="2" y="4" width="20" height="16" rx="2.5" />
                     <polyline points="2,4 12,13 22,4" />
                   </svg>
@@ -312,16 +342,27 @@ function LoginPageContent() {
               />
 
               <InputRow
-                id="password" placeholder="Password"
-                value={password} onChange={setPassword}
-                shake={passwordShake} delay={0.26} toggleable
+                id="password"
+                placeholder="Password"
+                value={password}
+                onChange={setPassword}
+                shake={passwordShake}
+                delay={0.26}
+                toggleable
               />
 
-              {/* Forgot password link */}
-              <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 18, animation: "fadeUp 0.5s 0.3s both" }}>
+              {/* Forgot password */}
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "flex-end",
+                  marginBottom: 18,
+                  animation: "fadeUp 0.5s 0.3s both",
+                }}
+              >
                 <button
                   type="button"
-                  onClick={() => router.push('/ForgotPassword')}
+                  onClick={() => router.push("/ForgotPassword")}
                   style={{
                     background: "none",
                     border: "none",
@@ -333,22 +374,36 @@ function LoginPageContent() {
                     padding: 0,
                     transition: "color 0.2s",
                   }}
-                  onMouseEnter={(e) => (e.currentTarget.style.color = "#3b82f6")}
+                  onMouseEnter={(e) =>
+                    (e.currentTarget.style.color = "#3b82f6")
+                  }
                   onMouseLeave={(e) => (e.currentTarget.style.color = "#555")}
                 >
                   Forgot password?
                 </button>
               </div>
 
-              <PillButton onClick={handleLogin} delay={0.38} loading={loginLoading}>
+              <PillButton
+                onClick={handleLogin}
+                delay={0.38}
+                loading={loginLoading}
+              >
                 Log in
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" width={17} height={17}>
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2.5"
+                  width={17}
+                  height={17}
+                >
                   <path d="M15 3h4a2 2 0 012 2v14a2 2 0 01-2 2h-4" />
                   <polyline points="10 17 15 12 10 7" />
                   <line x1="15" y1="12" x2="3" y2="12" />
                 </svg>
               </PillButton>
 
+              {/* Divider */}
               <div
                 style={{
                   display: "flex",
@@ -359,13 +414,30 @@ function LoginPageContent() {
                 }}
               >
                 <div style={{ flex: 1, height: 1, background: "#1e1e1e" }} />
-                <span style={{ color: "#444", fontSize: 12, fontFamily: "'Rajdhani', sans-serif", fontWeight: 600 }}>Don’t have an account? Sign up</span>
+                <span
+                  style={{
+                    color: "#444",
+                    fontSize: 12,
+                    fontFamily: "'Rajdhani', sans-serif",
+                    fontWeight: 600,
+                    whiteSpace: "nowrap",
+                  }}
+                >
+                  Don&apos;t have an account? Sign up
+                </span>
                 <div style={{ flex: 1, height: 1, background: "#1e1e1e" }} />
               </div>
 
-              {/* Create Account button */}
-              <GhostButton onClick={() => router.push('/register')} delay={0.48}>
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width={16} height={16}>
+              {/* Register button */}
+              <GhostButton onClick={() => router.push("/register")} delay={0.48}>
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  width={16}
+                  height={16}
+                >
                   <path d="M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2" />
                   <circle cx="9" cy="7" r="4" />
                   <line x1="19" y1="8" x2="19" y2="14" />
@@ -375,11 +447,6 @@ function LoginPageContent() {
               </GhostButton>
             </div>
           )}
-
-         
-         
-
-          
         </div>
       </div>
     </>
