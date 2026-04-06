@@ -5,9 +5,12 @@ import RecentSubmissions from "@/components/home/RecentSubmissions";
 import UpcomingDeadlines from "@/components/home/UpcomingDeadlines";
 import ForumPlaceholder from "@/components/home/ForumPlaceholder";
 import QuickStats from "@/components/home/QuickStats";
-// Fix error 1: ProtectedRoute uses a named export, not default
 import  ProtectedRoute  from "@/components/ProtectedRoute";
 import type { Assignment } from "@/services/assignments/assignments.types";
+// Use the project's existing auth hook — this is the single source of truth
+// for the logged-in user. The manual localStorage approach was reading a key
+// that doesn't exist in this app, leaving role permanently as "student".
+import { useAuth } from "@/hooks/useAuth";
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -35,14 +38,6 @@ interface HomeAssignment {
   professor_name: string;
 }
 
-interface User {
-  id: string | number;
-  first_name: string;
-  last_name: string;
-  role: "student" | "professor";
-  initials: string;
-}
-
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
 /** Map the API Assignment shape → the leaner HomeAssignment used by UI components */
@@ -62,13 +57,16 @@ function toHomeAssignment(a: Assignment): HomeAssignment {
 }
 
 function buildStats(
-  user: User,
+  user: ReturnType<typeof useAuth>["user"],
   submissionCount: number,
   assignments: Assignment[]
 ) {
-  if (user.role === "professor") {
-  
-    // Match the same pattern used in assignments/[id].tsx.
+  if (!user) return [];
+
+  const isProfessor = user.role === "professor";
+
+  if (isProfessor) {
+    // professor_name on the API is a full name string
     const fullName = `${user.first_name} ${user.last_name}`.trim();
     const myAssignments = assignments.filter(
       (a) => a.professor_name === fullName
@@ -84,8 +82,7 @@ function buildStats(
     ];
   }
 
-
-  // assignments are not wrongly counted as "to complete".
+  // student: use has_submitted to avoid counting already-submitted open assignments
   const toComplete = assignments.filter(
     (a) => a.is_open === true && (a as Assignment & { has_submitted?: boolean }).has_submitted === false
   ).length;
@@ -99,30 +96,25 @@ function buildStats(
 // ── Page Component ───────────────────────────────────────────────────────────
 
 function HomePageContent() {
+  // useAuth is the single source of truth — it reads from the same context
+  // that the Header and ProtectedRoute already use, so role is always correct.
+  const { user } = useAuth();
+
   const [submissionsLoading, setSubmissionsLoading] = useState(true);
   const [assignmentsLoading, setAssignmentsLoading] = useState(true);
-  const [submissionsError, setSubmissionsError] = useState(false);
-  const [assignmentsError, setAssignmentsError] = useState(false);
-  const [allSubmissions, setAllSubmissions] = useState<Submission[]>([]);
-  const [rawAssignments, setRawAssignments] = useState<Assignment[]>([]);
-  const [submissionCount, setSubmissionCount] = useState(0);
-  const [user, setUser] = useState<User>({
-    id: "1",
-    first_name: "User",
-    last_name: "",
-    role: "student",
-    initials: "U",
-  });
+  const [submissionsError,   setSubmissionsError]   = useState(false);
+  const [assignmentsError,   setAssignmentsError]   = useState(false);
+  const [allSubmissions,     setAllSubmissions]     = useState<Submission[]>([]);
+  const [rawAssignments,     setRawAssignments]     = useState<Assignment[]>([]);
+  const [submissionCount,    setSubmissionCount]    = useState(0);
 
   useEffect(() => {
-    // Import services dynamically to match the project structure
     async function fetchData() {
       const [subsResult, assignResult] = await Promise.allSettled([
         import("../services/submissions").then((m) => m.listSubmissions({ page: 1 })),
         import("../services/assignments").then((m) => m.listAssignments()),
       ]);
 
-      // Submissions
       if (subsResult.status === "fulfilled") {
         const data = subsResult.value;
         setAllSubmissions(Array.isArray(data?.results) ? data.results.slice(0, 3) : []);
@@ -133,7 +125,6 @@ function HomePageContent() {
       }
       setSubmissionsLoading(false);
 
-      // Assignments
       if (assignResult.status === "fulfilled") {
         const data = assignResult.value;
         const list: Assignment[] = Array.isArray(data?.results) ? data.results : [];
@@ -148,45 +139,21 @@ function HomePageContent() {
       setAssignmentsLoading(false);
     }
 
-    async function loadUser() {
-      try {
-        const stored = localStorage.getItem("user");
-        if (stored) {
-          const parsed = JSON.parse(stored);
-
-        
-          // the ?? fallback won't fire. Trim and fall back to "U" explicitly.
-          const firstName: string = (parsed.first_name ?? parsed.name ?? "").trim() || "U";
-          const lastName: string  = (parsed.last_name  ?? "").trim();
-
-          // Only index [0] after we know the string is non-empty
-          const initials =
-            firstName[0].toUpperCase() +
-            (lastName.length > 0 ? lastName[0].toUpperCase() : "");
-
-          setUser({
-            id:         parsed.id ?? "1",
-            first_name: firstName,
-            last_name:  lastName,
-            role:       parsed.role === "professor" ? "professor" : "student",
-            initials,
-          });
-        }
-      } catch {
-        // keep default user
-      }
-    }
-
-    loadUser();
     fetchData();
   }, []);
 
-  // Map raw API assignments → slim HomeAssignment, take first 3 for display
+  // Derive display values from the auth user
+  const role       = user?.role === "professor" ? "professor" : "student";
+  const firstName  = user?.first_name ?? "User";
+  const initials   = [user?.first_name, user?.last_name]
+    .map((s) => (s?.trim() ? s.trim()[0].toUpperCase() : ""))
+    .join("");
+
   const homeAssignments: HomeAssignment[] = rawAssignments
     .slice(0, 3)
     .map(toHomeAssignment);
 
-  const stats = buildStats(user, submissionCount, rawAssignments);
+  const stats       = buildStats(user ?? null, submissionCount, rawAssignments);
   const statsLoading = submissionsLoading || assignmentsLoading;
 
   return (
@@ -198,13 +165,10 @@ function HomePageContent() {
         color: "#1a2340",
       }}
     >
-      {/* 
-          the avatar through another mechanism. */}
-      <Header activePage="Home" userInitials={user.initials} />
+      <Header activePage="Home" userInitials={initials || "U"} />
 
       <main style={{ maxWidth: 1200, margin: "0 auto", padding: "32px 24px 64px" }}>
-        {/* Greeting bar */}
-        <GreetingBar firstName={user.first_name} role={user.role} />
+        <GreetingBar firstName={firstName} role={role} />
 
         {/* Three-column grid */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
@@ -229,7 +193,7 @@ function HomePageContent() {
               assignments={homeAssignments}
               loading={assignmentsLoading}
               error={assignmentsError}
-              role={user.role}
+              role={role}
             />
           </div>
 
