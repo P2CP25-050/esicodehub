@@ -140,11 +140,7 @@ function LoginPageContent() {
     try {
       const { data } = await login({ email, password });
       saveTokens({ access: data.access, refresh: "" });
-      router.push(
-        data.user.role === "professor"
-          ? "/dashboard/professor"
-          : "/dashboard/student"
-      );
+      router.push("/");
     } catch (error: unknown) {
       if (error instanceof AxiosError) {
         const status = error.response?.status;
