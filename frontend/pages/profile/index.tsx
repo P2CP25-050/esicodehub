@@ -353,7 +353,7 @@ function ProfilePage() {
                   disabled={avatarUploading}
                   title="Upload a profile photo"
                 >
-                  {avatarUploading ? "Uploading…" : "📷 Upload photo"}
+                  {avatarUploading ? "Uploading…" : "Upload photo"}
                 </button>
                 {avatarError && (
                   <p style={s.inlineError}>{avatarError}</p>
@@ -442,7 +442,7 @@ function ProfilePage() {
             {/* Stats */}
             <div className="pf-card">
               <h2 style={s.sectionTitle}>
-                {role === "professor" ? "📊 Your Impact" : "📊 Your Activity"}
+                {role === "professor" ? "Your Impact" : "Your Activity"}
               </h2>
 
               {loading ? (
@@ -453,14 +453,14 @@ function ProfilePage() {
                     const ps = stats as import("@/services/profile/api").ProfessorStats;
                     return (
                       <>
-                        <StatTile icon="📝" value={ps.total_assignments ?? 0} label="Assignments Created" />
-                        <StatTile icon="📥" value={ps.total_submissions_received ?? 0} label="Submissions Received" />
+                        <StatTile icon="" value={ps.total_assignments ?? 0} label="Assignments Created" />
+                        <StatTile icon="" value={ps.total_submissions_received ?? 0} label="Submissions Received" />
                         {ps.total_reviews_given !== undefined ? (
-                          <StatTile icon="✅" value={ps.total_reviews_given} label="Reviews Given" />
+                          <StatTile icon="" value={ps.total_reviews_given} label="Reviews Given" />
                         ) : (
                           <div style={{ ...s.todoTile }}>
                             {/* TODO: total reviews given endpoint not yet available */}
-                            <span style={{ fontSize: 20 }}>✅</span>
+                            <span style={{ fontSize: 20 }}></span>
                             <span style={{ fontSize: 12, color: "#94a3b8" }}>Reviews given — coming soon</span>
                           </div>
                         )}
@@ -470,9 +470,9 @@ function ProfilePage() {
                     const ss = stats as import("@/services/profile/api").StudentStats;
                     return (
                       <>
-                        <StatTile icon="📤" value={ss.total_personal_submissions ?? 0} label="Personal Submissions" />
-                        <StatTile icon="🎯" value={ss.total_assignment_submissions ?? 0} label="Assignment Submissions" />
-                        <StatTile icon="✅" value={ss.assignments_completed ?? 0} label="Assignments Completed" />
+                        <StatTile icon="" value={ss.total_personal_submissions ?? 0} label="Personal Submissions" />
+                        <StatTile icon="" value={ss.total_assignment_submissions ?? 0} label="Assignment Submissions" />
+                        <StatTile icon="" value={ss.assignments_completed ?? 0} label="Assignments Completed" />
                       </>
                     );
                   })()}
@@ -484,7 +484,7 @@ function ProfilePage() {
 
             {/* Recent Activity */}
             <div className="pf-card">
-              <h2 style={s.sectionTitle}>🕒 Recent Activity</h2>
+              <h2 style={s.sectionTitle}>Recent Activity</h2>
 
               {loading ? (
                 <div style={{ color: "#94a3b8", fontSize: 14 }}>Loading activity…</div>
