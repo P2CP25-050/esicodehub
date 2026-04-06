@@ -1,4 +1,4 @@
-import { useState, CSSProperties, ChangeEvent } from "react";
+import { useState, CSSProperties, ChangeEvent, useEffect } from "react";
 import { useRouter } from "next/router";
 import axios from "axios";
 import Header from "@/components/submissions/Header";
@@ -46,8 +46,117 @@ const getApiErrorMessage = (err: unknown, fallback: string): string => {
   return fallback;
 };
 
+const RESPONSIVE_CSS = `
+  .ns-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 32px 24px 64px;
+  }
+  .ns-layout {
+    display: grid;
+    grid-template-columns: 1fr 320px;
+    gap: 28px;
+    align-items: start;
+  }
+  .ns-form-card {
+    background: #fff;
+    border-radius: 16px;
+    padding: 36px 40px;
+    box-shadow: 0 4px 24px rgba(30,60,120,0.08);
+    border: 1px solid #e2e8f6;
+  }
+  .ns-row2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+  }
+  .ns-actions {
+    display: flex;
+    gap: 12px;
+    justify-content: flex-end;
+    margin-top: 10px;
+  }
+  .ns-btn-primary {
+    padding: 12px 28px;
+    background: linear-gradient(135deg, #1d6ef5, #1558d4);
+    color: #fff;
+    border: none;
+    border-radius: 10px;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    box-shadow: 0 4px 14px rgba(29,110,245,0.35);
+  }
+  .ns-btn-outline {
+    padding: 12px 24px;
+    background: #fff;
+    color: #374151;
+    border: 1.5px solid #d1d9e6;
+    border-radius: 10px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .ns-error-actions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  @media (max-width: 900px) {
+    .ns-layout {
+      grid-template-columns: 1fr;
+    }
+    .ns-form-card {
+      padding: 28px 24px;
+    }
+  }
+
+  @media (max-width: 600px) {
+    .ns-container {
+      padding: 16px 12px 48px;
+    }
+    .ns-form-card {
+      padding: 20px 16px;
+      border-radius: 12px;
+    }
+    .ns-row2 {
+      grid-template-columns: 1fr;
+      gap: 0;
+    }
+    .ns-actions {
+      flex-direction: column-reverse;
+      gap: 10px;
+    }
+    .ns-btn-primary,
+    .ns-btn-outline {
+      width: 100%;
+      text-align: center;
+      padding: 14px;
+    }
+    .ns-error-actions {
+      flex-direction: column;
+    }
+    .ns-error-actions button {
+      width: 100%;
+    }
+  }
+`;
+
 function NewSubmissionForm() {
   const router = useRouter();
+
+  useEffect(() => {
+    if (typeof document !== "undefined") {
+      const id = "ns-responsive-styles";
+      if (!document.getElementById(id)) {
+        const tag = document.createElement("style");
+        tag.id = id;
+        tag.textContent = RESPONSIVE_CSS;
+        document.head.appendChild(tag);
+      }
+    }
+  }, []);
 
   const [title, setTitle]              = useState<string>("");
   const [language, setLanguage]        = useState<Language | "">("");
@@ -154,7 +263,7 @@ function NewSubmissionForm() {
     <div style={styles.page}>
       <Header activePage="Submissions" />
 
-      <div style={styles.container}>
+      <div className="ns-container">
         {/* Breadcrumb */}
         <div style={styles.breadcrumb}>
           <span style={styles.breadcrumbLink}>Submissions</span>
@@ -162,9 +271,9 @@ function NewSubmissionForm() {
           <span style={styles.breadcrumbCurrent}>New Submission</span>
         </div>
 
-        <div style={styles.layout}>
+        <div className="ns-layout">
           {/* Form Card */}
-          <form style={styles.formCard} onSubmit={handleSubmit}>
+          <form className="ns-form-card" onSubmit={handleSubmit}>
             <h2 style={styles.formTitle}>New Submission</h2>
             <p style={styles.formSubtitle}>
               Share your code, request help, or contribute an educational resource.
@@ -182,7 +291,7 @@ function NewSubmissionForm() {
                   Your submission was created (ID&nbsp;#{phase.submissionId}) but the files were
                   not attached. You can retry the upload or discard and start over.
                 </p>
-                <div style={styles.errorActions}>
+                <div className="ns-error-actions">
                   <button
                     type="button"
                     style={styles.btnRetry}
@@ -212,7 +321,7 @@ function NewSubmissionForm() {
               />
             </Field>
 
-            <div style={styles.row2}>
+            <div className="ns-row2">
               <Field label="Language" required>
                 <select
                   style={styles.select}
@@ -282,10 +391,10 @@ function NewSubmissionForm() {
               </div>
             )}
 
-            <div style={styles.actions}>
+            <div className="ns-actions">
               <button
                 type="button"
-                style={styles.btnOutline}
+                className="ns-btn-outline"
                 disabled={isSubmitting}
                 onClick={resetForm}
               >
@@ -293,7 +402,8 @@ function NewSubmissionForm() {
               </button>
               <button
                 type="submit"
-                style={{ ...styles.btnPrimary, ...(isSubmitting ? styles.btnDisabled : {}) }}
+                className="ns-btn-primary"
+                style={isSubmitting ? styles.btnDisabled : undefined}
                 disabled={isSubmitting}
               >
                 {isSubmitting ? "Uploading…" : "Upload Submission +"}

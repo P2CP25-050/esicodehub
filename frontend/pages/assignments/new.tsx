@@ -1,5 +1,5 @@
+"use client";
 import { useState, useEffect, ChangeEvent } from "react";
-import Link from "next/link";
 import { useRouter } from "next/router";
 import Header from "@/components/submissions/Header";
 import Field from "@/components/submissions/Field";
@@ -161,10 +161,108 @@ function Chip({ label, selected, onClick, disabled }: ChipProps) {
 
 // Main form 
 
+const RESPONSIVE_CSS = `
+  .assignment-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 32px 24px 64px;
+  }
+  .assignment-layout {
+    display: grid;
+    grid-template-columns: 1fr 320px;
+    gap: 28px;
+    align-items: start;
+  }
+  .assignment-form-card {
+    background: #fff;
+    border-radius: 16px;
+    padding: 36px 40px;
+    box-shadow: 0 4px 24px rgba(30,60,120,0.08);
+    border: 1px solid #e2e8f6;
+  }
+  .assignment-actions {
+    display: flex;
+    gap: 12px;
+    justify-content: flex-end;
+    margin-top: 10px;
+  }
+  .assignment-btn-primary {
+    padding: 12px 28px;
+    background: linear-gradient(135deg, #1d6ef5, #1558d4);
+    color: #fff;
+    border: none;
+    border-radius: 10px;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    box-shadow: 0 4px 14px rgba(29,110,245,0.35);
+  }
+  .assignment-btn-outline {
+    padding: 12px 24px;
+    background: #fff;
+    color: #374151;
+    border: 1.5px solid #d1d9e6;
+    border-radius: 10px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .assignment-subsection-row {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 12px;
+    flex-wrap: wrap;
+  }
+
+  @media (max-width: 900px) {
+    .assignment-layout {
+      grid-template-columns: 1fr;
+    }
+    .assignment-form-card {
+      padding: 28px 24px;
+    }
+  }
+
+  @media (max-width: 600px) {
+    .assignment-container {
+      padding: 16px 12px 48px;
+    }
+    .assignment-form-card {
+      padding: 20px 16px;
+      border-radius: 12px;
+    }
+    .assignment-actions {
+      flex-direction: column-reverse;
+      gap: 10px;
+    }
+    .assignment-btn-primary,
+    .assignment-btn-outline {
+      width: 100%;
+      text-align: center;
+      padding: 14px;
+    }
+    .assignment-subsection-row {
+      gap: 8px;
+    }
+  }
+`;
+
 function NewAssignmentForm() {
   const router = useRouter();
 
-  
+  useEffect(() => {
+    if (typeof document !== "undefined") {
+      const id = "assignment-responsive-styles";
+      if (!document.getElementById(id)) {
+        const tag = document.createElement("style");
+        tag.id = id;
+        tag.textContent = RESPONSIVE_CSS;
+        document.head.appendChild(tag);
+      }
+    }
+  }, []);
+
   // Subject is stored as a string from  <select> ; 
   const [subject, setSubject] = useState("");
   const [title, setTitle] = useState("");
@@ -179,37 +277,16 @@ function NewAssignmentForm() {
   
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [loadingSubjects, setLoadingSubjects] = useState(true);
-  const [subjectsError, setSubjectsError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [errors, setErrors] = useState<FormErrors>({});
   const [submitError, setSubmitError] = useState<string | null>(null);
 
   
   useEffect(() => {
-    let cancelled = false;
-
     listSubjects()
-      .then((data) => {
-        if (cancelled) return;
-        setSubjects(data);
-        setSubjectsError(null);
-      })
-      .catch((err: unknown) => {
-        if (cancelled) return;
-        setSubjects([]);
-        setSubjectsError(
-          err instanceof Error && err.message.trim()
-            ? err.message
-            : "Failed to load subjects."
-        );
-      })
-      .finally(() => {
-        if (!cancelled) setLoadingSubjects(false);
-      });
-
-    return () => {
-      cancelled = true;
-    };
+      .then(setSubjects)
+      .catch(() => setSubjects([]))
+      .finally(() => setLoadingSubjects(false));
   }, []);
 
   
@@ -291,15 +368,12 @@ function NewAssignmentForm() {
     setSubmitting(true);
 
     try {
-      const sendSections =
-        targetSections.length > 0 && targetGroups.length === 0;
-
       const assignment = await createAssignment({
         subject: Number(subject),                                      
         title: title.trim(),
         description: description.trim() || undefined,
         target_year: year as AcademicYear,                            
-        target_sections: sendSections ? targetSections : undefined,
+        target_sections: targetSections.length > 0 ? targetSections : undefined, 
         target_groups: targetGroups.length > 0 ? targetGroups : undefined,       
         deadline: new Date(deadline).toISOString(),
         allow_late: allowLate,                                         
@@ -332,22 +406,22 @@ function NewAssignmentForm() {
     <div style={styles.page}>
       <Header activePage="Assignments" />
 
-      <div style={styles.container}>
+      <div className="assignment-container">
         {/* Breadcrumb */}
         <div style={styles.breadcrumb}>
-          <Link
-            href="/assignments"
+          <span
             style={styles.breadcrumbLink}
+            onClick={() => router.push("/assignments")}
           >
             Assignments
-          </Link>
+          </span>
           <span style={styles.breadcrumbSep}>/</span>
           <span style={styles.breadcrumbCurrent}>New Assignment</span>
         </div>
 
-        <div style={styles.layout}>
+        <div className="assignment-layout">
           {/* Form Card */}
-          <form style={styles.formCard} onSubmit={handleSubmit}>
+          <form className="assignment-form-card" onSubmit={handleSubmit}>
             <h2 style={styles.formTitle}>New Assignment</h2>
             <p style={styles.formSubtitle}>
               Create an assignment for your students. Define targeting and deadlines.
@@ -373,26 +447,18 @@ function NewAssignmentForm() {
                   setErrors((prev) => ({ ...prev, subject: undefined }));
                 }}
                 disabled={loadingSubjects || submitting}
-                aria-busy={loadingSubjects}
               >
                 <option value="">
-                  {loadingSubjects
-                    ? "Loading subjects..."
-                    : subjects.length > 0
-                    ? "Select a subject"
-                    : "No subjects available"}
+                  {loadingSubjects ? "Loading subjects…" : "Select a subject"}
                 </option>
                 {subjects.map((s) => (
                   <option key={s.id} value={String(s.id)}>
-                    {s.code} - {s.name}
+                    {s.code} — {s.name}
                   </option>
                 ))}
               </select>
               {errors.subject && (
                 <div style={styles.fieldError}>{errors.subject}</div>
-              )}
-              {subjectsError && (
-                <div style={styles.fieldHelperError}>{subjectsError}</div>
               )}
             </Field>
 
@@ -467,7 +533,7 @@ function NewAssignmentForm() {
                 {isSpecialityYear && targetSections.length > 0 && (
                   <Field label="Section" hint="Optional — 2 per speciality">
                     {targetSections.map((spec) => (
-                      <div key={spec} style={styles.subsectionRow}>
+                      <div key={spec} className="assignment-subsection-row">
                         <span style={styles.subsectionLabel}>{spec}</span>
                         <div style={styles.chipGroup}>
                           {SPECIALITY_SUBSECTIONS.map((sub) => {
@@ -562,10 +628,10 @@ function NewAssignmentForm() {
               </div>
             )}
 
-            <div style={styles.actions}>
+            <div className="assignment-actions">
               <button
                 type="button"
-                style={styles.btnOutline}
+                className="assignment-btn-outline"
                 disabled={submitting}
                 onClick={() => router.back()}
               >
@@ -573,10 +639,8 @@ function NewAssignmentForm() {
               </button>
               <button
                 type="submit"
-                style={{
-                  ...styles.btnPrimary,
-                  ...(submitting ? styles.btnDisabled : {}),
-                }}
+                className={`assignment-btn-primary${submitting ? " assignment-btn-disabled" : ""}`}
+                style={submitting ? styles.btnDisabled : undefined}
                 disabled={submitting}
               >
                 {submitting ? "Creating…" : "Create Assignment"}
@@ -603,9 +667,16 @@ function NewAssignmentForm() {
 
 export default function NewAssignmentPage() {
   return (
-    <ProtectedRoute allowedRole="professor">
-      <NewAssignmentForm />
+  
+    <ProtectedRoute>
+
+    <NewAssignmentForm /> ;
+
     </ProtectedRoute>
+
+  
+
+  
   );
 }
 
@@ -791,7 +862,6 @@ const styles: Record<string, React.CSSProperties> = {
   errorIcon: { fontSize: 16, color: "#b45309" },
   errorMsg: { fontSize: 13, color: "#92400e", margin: "0 0 6px" },
   fieldError: { fontSize: 12, color: "#ef4444", marginTop: 6 },
-  fieldHelperError: { fontSize: 12, color: "#b45309", marginTop: 6 },
   previewCard: {
     background: "#fff",
     borderRadius: 16,
