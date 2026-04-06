@@ -153,7 +153,7 @@ function HomePageContent() {
       }}
     >
      
-      <Header activePage="Home" userInitials={user.initials} />
+      <Header activePage="Home" />
 
       <main style={{ maxWidth: 1200, margin: "0 auto", padding: "32px 24px 64px" }}>
         {/* Greeting bar */}
