@@ -115,6 +115,26 @@ const getTargetingSummary = (assignment: Assignment): string[] => {
   return parts;
 };
 
+const getReviewNotificationStorageKey = (submissionId: number): string =>
+  `assignment-review:last-seen:${submissionId}`;
+
+const buildReviewSignature = (submission?: AssignmentSubmission | null): string => {
+  if (!submission || !submission.has_reviews) return 'none';
+
+  const reviews = (submission.reviews ?? []).slice().sort((a, b) => a.id - b.id);
+  if (reviews.length === 0) {
+    return `count:${submission.reviews_count}`;
+  }
+
+  return reviews
+    .map((review) => {
+      const commentCount = review.comments?.length ?? 0;
+      const gradeLabel = review.grade == null ? 'null' : String(review.grade);
+      return `${review.id}:${review.updated_at}:${gradeLabel}:${commentCount}`;
+    })
+    .join('|');
+};
+
 function LoadingSkeleton() {
   return (
     <div className="min-h-screen bg-[#f0f4ff] text-[#1a2340]">
@@ -159,9 +179,24 @@ function AssignmentDetailPageContent() {
   const [showUploadZone, setShowUploadZone] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState(false);
-  const [toast, setToast] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+  const [toast, setToast] = useState<{ type: 'success' | 'error' | 'info'; message: string } | null>(null);
   const [fileInputKey, setFileInputKey] = useState(0);
   const hasLoadedRoleDataRef = useRef(false);
+  const reviewNotificationReadyRef = useRef(false);
+  const latestReviewSignatureRef = useRef('none');
+
+  const persistReviewSignature = (submissionId: number, signature: string) => {
+    if (typeof window === 'undefined') return;
+
+    try {
+      window.localStorage.setItem(
+        getReviewNotificationStorageKey(submissionId),
+        signature
+      );
+      window.dispatchEvent(new Event('assignment-review-signature-updated'));
+    } catch {
+    }
+  };
 
   const isStudent = user?.role === 'student';
   const isProfessor = user?.role === 'professor';
@@ -306,6 +341,122 @@ function AssignmentDetailPageContent() {
       cancelled = true;
     };
   }, [assignment, assignmentId, isStudent, selectedGroup, user]);
+
+  useEffect(() => {
+    reviewNotificationReadyRef.current = false;
+    latestReviewSignatureRef.current = 'none';
+  }, [assignmentId, isStudent]);
+
+  useEffect(() => {
+    if (!isStudent || !mySubmission) return;
+
+    const signature = buildReviewSignature(mySubmission);
+    latestReviewSignatureRef.current = signature;
+
+    if (typeof window === 'undefined') {
+      reviewNotificationReadyRef.current = true;
+      return;
+    }
+
+    const storageKey = getReviewNotificationStorageKey(mySubmission.id);
+    let previousSignature: string | null = null;
+
+    try {
+      previousSignature = window.localStorage.getItem(storageKey);
+    } catch {
+      previousSignature = null;
+    }
+
+    const hasSignatureChange = previousSignature !== signature;
+    if (!reviewNotificationReadyRef.current) {
+      if (hasSignatureChange) {
+        if (previousSignature === null && signature !== 'none') {
+          setToast({
+            type: 'info',
+            message: 'Your professor sent a new review on this assignment.',
+          });
+        } else if (previousSignature === 'none' && signature !== 'none') {
+          setToast({
+            type: 'info',
+            message: 'Your professor sent a new review on this assignment.',
+          });
+        } else if (previousSignature && previousSignature !== 'none' && signature !== 'none') {
+          setToast({
+            type: 'info',
+            message: 'Your professor updated a previous review on this assignment.',
+          });
+        }
+      }
+
+      persistReviewSignature(mySubmission.id, signature);
+
+      reviewNotificationReadyRef.current = true;
+      return;
+    }
+
+    if (!hasSignatureChange) return;
+
+    if (previousSignature === 'none' && signature !== 'none') {
+      setToast({
+        type: 'info',
+        message: 'Your professor sent a new review on this assignment.',
+      });
+    } else if (previousSignature && previousSignature !== 'none' && signature !== 'none') {
+      setToast({
+        type: 'info',
+        message: 'Your professor updated a previous review on this assignment.',
+      });
+    }
+
+    persistReviewSignature(mySubmission.id, signature);
+  }, [isStudent, mySubmission]);
+
+  useEffect(() => {
+    if (!isStudent || assignmentId == null || !mySubmission) return;
+
+    let cancelled = false;
+
+    const syncStudentSubmission = async () => {
+      try {
+        const latestSubmission = await getMySubmission(assignmentId);
+        if (cancelled) return;
+
+        const latestSignature = buildReviewSignature(latestSubmission);
+        if (
+          latestSignature !== latestReviewSignatureRef.current ||
+          latestSubmission.reviews_count !== mySubmission.reviews_count
+        ) {
+          latestReviewSignatureRef.current = latestSignature;
+          setMySubmission(latestSubmission);
+        }
+      } catch (error: unknown) {
+        if (cancelled) return;
+        if (axios.isAxiosError(error) && error.response?.status === 404) {
+          setMySubmission(null);
+        }
+      }
+    };
+
+    const interval = window.setInterval(() => {
+      if (!uploading) {
+        void syncStudentSubmission();
+      }
+    }, 20000);
+
+    const onVisibilityChange = () => {
+      if (document.visibilityState === 'visible' && !uploading) {
+        void syncStudentSubmission();
+      }
+    };
+
+    document.addEventListener('visibilitychange', onVisibilityChange);
+
+    return () => {
+      cancelled = true;
+      window.clearInterval(interval);
+      document.removeEventListener('visibilitychange', onVisibilityChange);
+    };
+  }, [assignmentId, isStudent, mySubmission, uploading]);
 
   useEffect(() => {
     if (!assignment) return;
@@ -454,10 +605,18 @@ function AssignmentDetailPageContent() {
             'fixed right-4 top-4 z-50 rounded-2xl border px-4 py-3 shadow-lg backdrop-blur ' +
             (toast.type === 'success'
               ? 'border-emerald-200 bg-emerald-50 text-emerald-900'
-              : 'border-rose-200 bg-rose-50 text-rose-900')
+              : toast.type === 'error'
+                ? 'border-rose-200 bg-rose-50 text-rose-900'
+                : 'border-blue-200 bg-blue-50 text-blue-900')
           }
         >
-          <p className="text-sm font-semibold">{toast.type === 'success' ? 'Success' : 'Error'}</p>
+          <p className="text-sm font-semibold">
+            {toast.type === 'success'
+              ? 'Success'
+              : toast.type === 'error'
+                ? 'Error'
+                : 'Notification'}
+          </p>
           <p className="mt-1 text-sm">{toast.message}</p>
         </div>
       )}
@@ -840,7 +999,7 @@ function AssignmentDetailPageContent() {
                 ) : (
                   <div className="mt-5 overflow-hidden rounded-2xl border border-slate-200">
                     <div className="overflow-x-auto">
-                      <table className="min-w-full divide-y divide-slate-200 text-sm">
+                      <table className="min-w-190 w-full divide-y divide-slate-200 text-sm">
                         <thead className="bg-slate-50 text-xs uppercase tracking-[0.16em] text-slate-500">
                           <tr>
                             <th className="px-4 py-3 text-left font-semibold">Student name</th>
@@ -848,12 +1007,14 @@ function AssignmentDetailPageContent() {
                             <th className="px-4 py-3 text-left font-semibold">Late</th>
                             <th className="px-4 py-3 text-left font-semibold">Files</th>
                             <th className="px-4 py-3 text-left font-semibold">Reviews count</th>
-                            <th className="px-4 py-3 text-left font-semibold">Action</th>
+                            <th className="sticky right-0 z-10 bg-slate-50 px-4 py-3 text-left font-semibold shadow-[-1px_0_0_0_#e2e8f0]">
+                              Action
+                            </th>
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-200 bg-white">
                           {submissions.map((submission) => (
-                            <tr key={submission.id} className="hover:bg-slate-50/80">
+                            <tr key={submission.id} className="group hover:bg-slate-50/80">
                               <td className="px-4 py-3 font-semibold text-slate-900">{submission.student_name}</td>
                               <td className="px-4 py-3 text-slate-600">{formatDateTime(submission.submitted_at)}</td>
                               <td className="px-4 py-3">
@@ -869,10 +1030,10 @@ function AssignmentDetailPageContent() {
                               <td className="px-4 py-3 text-slate-600">
                                 {submission.reviews_count}
                               </td>
-                              <td className="px-4 py-3">
+                              <td className="sticky right-0 bg-white px-4 py-3 shadow-[-1px_0_0_0_#e2e8f0] group-hover:bg-slate-50/80">
                                 <Link
                                   href={`/assignments/${assignment.id}/submissions/${submission.id}`}
-                                  className="rounded-lg bg-blue-600 px-3 py-2 text-xs font-bold text-white transition-colors hover:bg-blue-700"
+                                  className="inline-block whitespace-nowrap rounded-lg bg-blue-600 px-3 py-2 text-xs font-bold text-white transition-colors hover:bg-blue-700"
                                 >
                                   Review
                                 </Link>

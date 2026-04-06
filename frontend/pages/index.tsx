@@ -101,11 +101,6 @@ export default function LandingPage() {
       <Head>
         <title>ESICodeHub — The code platform built for ESI</title>
         <meta name="description" content="Share code, submit assignments, and collaborate transparently under academic supervision at École Supérieure d'Informatique." />
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link
-          href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Outfit:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap"
-          rel="stylesheet"
-        />
       </Head>
 
       <style jsx global>{`
@@ -333,7 +328,7 @@ export default function LandingPage() {
                 animation: 'fadeUp .5s ease both',
               }}>
                 <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#3b82f6', display: 'inline-block', boxShadow: '0 0 8px #3b82f6' }} />
-                École Supérieure d'Informatique · Algiers
+                  École Supérieure d&apos;Informatique · Algiers
               </div>
 
               {/* Headline */}
@@ -497,7 +492,7 @@ export default function LandingPage() {
         }}>
           <div style={{ textAlign: 'center', marginBottom: '3.5rem' }}>
             <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '.72rem', color: '#3b82f6', letterSpacing: '.15em', textTransform: 'uppercase', marginBottom: 12 }}>
-              // why it exists
+                {'// why it exists'}
             </div>
             <h2 style={{ fontFamily: "'Instrument Serif', serif", fontSize: 'clamp(1.9rem, 3vw, 2.75rem)', fontWeight: 400, color: '#0f172a', lineHeight: 1.2 }}>
               The problem with code at ESI
@@ -578,7 +573,7 @@ export default function LandingPage() {
           }}>
             <div>
               <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '.72rem', color: '#3b82f6', letterSpacing: '.15em', textTransform: 'uppercase', marginBottom: 12 }}>
-                // the solution
+                  {'// the solution'}
               </div>
               <h3 style={{ fontFamily: "'Outfit', sans-serif", fontSize: '1.75rem', fontWeight: 400, color: '#f1f5f9', lineHeight: 1.3, marginBottom: 16 }}>
                 A supervised academic code platform, built exclusively for ESI.
@@ -616,10 +611,10 @@ export default function LandingPage() {
         }}>
           <div style={{ textAlign: 'center', marginBottom: '3.5rem' }}>
             <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '.72rem', color: '#3b82f6', letterSpacing: '.15em', textTransform: 'uppercase', marginBottom: 12 }}>
-              // features
+                {'// features'}
             </div>
             <h2 style={{ fontFamily: "'Outfit', sans-serif", fontSize: 'clamp(1.9rem, 3vw, 2.75rem)', fontWeight: 400, color: '#f1f5f9', lineHeight: 1.2 }}>
-              Everything you need, nothing you don't
+                Everything you need, nothing you don&apos;t
             </h2>
           </div>
 
@@ -754,7 +749,7 @@ export default function LandingPage() {
             <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(ellipse at 50% 0%, rgba(59,130,246,.12), transparent 65%)', pointerEvents: 'none' }} />
             <div style={{ position: 'relative' }}>
               <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '.72rem', color: '#3b82f6', letterSpacing: '.15em', textTransform: 'uppercase', marginBottom: 16 }}>
-                // ready to start?
+                  {'// ready to start?'}
               </div>
               <h2 style={{ fontFamily: "'Outfit', sans-serif", fontSize: 'clamp(1.75rem, 3vw, 2.5rem)', fontWeight: 400, color: '#f1f5f9', lineHeight: 1.2, marginBottom: 14 }}>
                 Join the ESI academic<br />code community

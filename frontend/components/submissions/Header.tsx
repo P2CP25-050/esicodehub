@@ -1,10 +1,12 @@
-import { useState, CSSProperties } from "react";
+import { useEffect, useState, CSSProperties } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from 'next/router';
 import { useAuth } from "@/hooks/useAuth";
 import { logout } from '@/services/auth';
 import { clearTokens } from '@/lib/tokens';
+import { listAssignments, getMySubmission } from '@/services/assignments';
+import type { AssignmentSubmission } from '@/services/assignments';
 
 interface HeaderProps {
   activePage?: string;
@@ -17,13 +19,129 @@ const NAV_LINKS = [
   { label: "Insights",    href: "/insights" },
 ];
 
+const REVIEW_SIGNATURE_UPDATED_EVENT = 'assignment-review-signature-updated';
+
+const getReviewNotificationStorageKey = (submissionId: number): string =>
+  `assignment-review:last-seen:${submissionId}`;
+
+const buildReviewSignature = (submission?: AssignmentSubmission | null): string => {
+  if (!submission || !submission.has_reviews) return 'none';
+
+  const reviews = (submission.reviews ?? []).slice().sort((a, b) => a.id - b.id);
+  if (reviews.length === 0) {
+    return `count:${submission.reviews_count}`;
+  }
+
+  return reviews
+    .map((review) => {
+      const commentCount = review.comments?.length ?? 0;
+      const gradeLabel = review.grade == null ? 'null' : String(review.grade);
+      return `${review.id}:${review.updated_at}:${gradeLabel}:${commentCount}`;
+    })
+    .join('|');
+};
+
 export default function Header({ activePage = "New Submission" }: HeaderProps) {
   const [hoveredNav, setHoveredNav] = useState<string | null>(null);
+  const [assignmentReviewAlerts, setAssignmentReviewAlerts] = useState(0);
   const router = useRouter();
   const { user } = useAuth();
 
   const userName = user ? `${user.first_name} ${user.last_name}` : "—";
   const userRole = user?.role ?? "student";
+
+  useEffect(() => {
+    if (user?.role !== 'student') {
+      setAssignmentReviewAlerts(0);
+      return;
+    }
+
+    let cancelled = false;
+    let syncing = false;
+
+    const refreshAssignmentsBadge = async () => {
+      if (syncing) return;
+      syncing = true;
+
+      try {
+        const response = await listAssignments();
+        const submittedAssignments = response.results.filter((assignment) =>
+          Boolean(assignment.has_submitted)
+        );
+
+        if (submittedAssignments.length === 0) {
+          if (!cancelled) setAssignmentReviewAlerts(0);
+          return;
+        }
+
+        let unseenCount = 0;
+
+        for (const assignment of submittedAssignments) {
+          try {
+            const submission = await getMySubmission(assignment.id);
+            const signature = buildReviewSignature(submission);
+            if (signature === 'none') continue;
+
+            let previousSignature: string | null = null;
+            try {
+              previousSignature = window.localStorage.getItem(
+                getReviewNotificationStorageKey(submission.id)
+              );
+            } catch {
+              previousSignature = null;
+            }
+
+            if (previousSignature !== signature) {
+              unseenCount += 1;
+            }
+          } catch {
+          }
+        }
+
+        if (!cancelled) {
+          setAssignmentReviewAlerts(unseenCount);
+        }
+      } catch {
+        if (!cancelled) {
+          setAssignmentReviewAlerts(0);
+        }
+      } finally {
+        syncing = false;
+      }
+    };
+
+    void refreshAssignmentsBadge();
+
+    const interval = window.setInterval(() => {
+      void refreshAssignmentsBadge();
+    }, 30000);
+
+    const onVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        void refreshAssignmentsBadge();
+      }
+    };
+
+    const onFocus = () => {
+      void refreshAssignmentsBadge();
+    };
+
+    const onReviewSignatureUpdated = () => {
+      void refreshAssignmentsBadge();
+    };
+
+    document.addEventListener('visibilitychange', onVisibilityChange);
+    window.addEventListener('focus', onFocus);
+    window.addEventListener(REVIEW_SIGNATURE_UPDATED_EVENT, onReviewSignatureUpdated);
+
+    return () => {
+      cancelled = true;
+      window.clearInterval(interval);
+      document.removeEventListener('visibilitychange', onVisibilityChange);
+      window.removeEventListener('focus', onFocus);
+      window.removeEventListener(REVIEW_SIGNATURE_UPDATED_EVENT, onReviewSignatureUpdated);
+    };
+  }, [user?.role]);
 
   const handleLogout = async () => {
     try {
@@ -56,6 +174,11 @@ export default function Header({ activePage = "New Submission" }: HeaderProps) {
             {NAV_LINKS.map(({ label, href }) => {
               const isActive = activePage === label;
               const isHovered = hoveredNav === label;
+              const showReviewBadge =
+                userRole === 'student' &&
+                label === 'Assignments' &&
+                assignmentReviewAlerts > 0;
+
               return (
                 <a
                   key={label}
@@ -68,7 +191,15 @@ export default function Header({ activePage = "New Submission" }: HeaderProps) {
                   onMouseEnter={() => setHoveredNav(label)}
                   onMouseLeave={() => setHoveredNav(null)}
                 >
-                  {label}
+                  <span>{label}</span>
+                  {showReviewBadge && (
+                    <span
+                      style={styles.navBadge}
+                      aria-label={`${assignmentReviewAlerts} unseen review notification${assignmentReviewAlerts > 1 ? 's' : ''}`}
+                    >
+                      {assignmentReviewAlerts > 9 ? '9+' : assignmentReviewAlerts}
+                    </span>
+                  )}
                   {isActive && <span style={styles.navActiveBar} />}
                 </a>
               );
@@ -152,6 +283,22 @@ const styles: Record<string, CSSProperties> = {
   },
   navLinkHover: { color: "#e2e8f0", background: "rgba(148,163,184,0.08)" },
   navLinkActive: { color: "#ffffff", fontWeight: 700 },
+  navBadge: {
+    position: 'absolute',
+    top: -3,
+    right: -4,
+    minWidth: 18,
+    height: 18,
+    borderRadius: 999,
+    background: '#ef4444',
+    color: '#fff',
+    fontSize: 10,
+    fontWeight: 700,
+    lineHeight: '18px',
+    textAlign: 'center',
+    padding: '0 5px',
+    boxShadow: '0 0 0 2px #0d1b2a',
+  },
   navActiveBar: {
     position: "absolute",
     bottom: -1,

@@ -404,6 +404,7 @@ function AssignmentSubmissionReviewPageContent() {
   const [inlineComment, setInlineComment] = useState<InlineCommentDraft | null>(null);
   const [expandedOtherIds, setExpandedOtherIds] = useState<Set<number>>(new Set<number>());
   const [removingCommentKeys, setRemovingCommentKeys] = useState<Set<string>>(new Set<string>());
+  const [lineSelectorValue, setLineSelectorValue] = useState('1');
 
   const [toast, setToast] = useState<ToastState>(null);
 
@@ -411,10 +412,30 @@ function AssignmentSubmissionReviewPageContent() {
   const monacoRef = useRef<typeof import('monaco-editor') | null>(null);
   const editorDisposablesRef = useRef<IDisposable[]>([]);
   const decorationIdsRef = useRef<string[]>([]);
+  const hoverHideTimerRef = useRef<number | null>(null);
+  const hoverButtonInteractingRef = useRef(false);
 
   const hoveredLineRef = useRef<number | null>(null);
   const inlineDraftRef = useRef<InlineCommentDraft | null>(null);
   const fileCacheRef = useRef<Map<number, string>>(new Map());
+
+  const clearHoverHideTimer = useCallback(() => {
+    if (hoverHideTimerRef.current == null || typeof window === 'undefined') return;
+    window.clearTimeout(hoverHideTimerRef.current);
+    hoverHideTimerRef.current = null;
+  }, []);
+
+  const scheduleHoverHide = useCallback(() => {
+    if (typeof window === 'undefined') return;
+
+    clearHoverHideTimer();
+    hoverHideTimerRef.current = window.setTimeout(() => {
+      if (!hoverButtonInteractingRef.current && !inlineDraftRef.current) {
+        setHoveredLine(null);
+      }
+      hoverHideTimerRef.current = null;
+    }, 180);
+  }, [clearHoverHideTimer]);
 
   useEffect(() => {
     hoveredLineRef.current = hoveredLine;
@@ -476,6 +497,16 @@ function AssignmentSubmissionReviewPageContent() {
     [selectedFileId, submission?.files]
   );
 
+  const currentFileLineCount = useMemo(() => {
+    if (!selectedFileId) return 0;
+
+    const modelLineCount = editorRef.current?.getModel()?.getLineCount();
+    if (modelLineCount && modelLineCount > 0) return modelLineCount;
+
+    if (!editorValue) return 1;
+    return Math.max(1, editorValue.split(/\r?\n/).length);
+  }, [editorValue, selectedFileId]);
+
   const commentLinesForSelectedFile = useMemo(() => {
     if (!selectedFileId) return [];
 
@@ -520,18 +551,62 @@ function AssignmentSubmissionReviewPageContent() {
     refreshLineDecorations();
   }, [refreshLineDecorations]);
 
+  useEffect(() => {
+    if (!selectedFileId) {
+      setLineSelectorValue('1');
+      return;
+    }
+
+    setLineSelectorValue((prev) => {
+      const parsed = Number(prev);
+      if (!Number.isInteger(parsed) || parsed < 1) return '1';
+      return String(Math.min(parsed, Math.max(1, currentFileLineCount)));
+    });
+  }, [currentFileLineCount, selectedFileId]);
+
   const openInlineComment = useCallback(
     (lineNumber: number) => {
       if (!selectedFileId || lineNumber <= 0) return;
+
+      const editor = editorRef.current;
+      const modelLineCount = editor?.getModel()?.getLineCount();
+      const maxLine = Math.max(1, modelLineCount ?? currentFileLineCount ?? 1);
+      const safeLine = Math.min(Math.max(1, Math.floor(lineNumber)), maxLine);
+
+      editor?.setPosition({ lineNumber: safeLine, column: 1 });
+      editor?.revealLineInCenter(safeLine);
+
+      setLineSelectorValue(String(safeLine));
+      setHoveredLine(safeLine);
+      setHoverButtonTop(computeLineTop(safeLine));
+
       setInlineComment({
-        lineNumber,
+        lineNumber: safeLine,
         fileId: selectedFileId,
         content: '',
-        top: computeLineTop(lineNumber),
+        top: computeLineTop(safeLine),
       });
     },
-    [computeLineTop, selectedFileId]
+    [computeLineTop, currentFileLineCount, selectedFileId]
   );
+
+  const handleOpenSelectorComment = useCallback(() => {
+    if (!selectedFileId) return;
+
+    const requestedLine = Number(lineSelectorValue);
+    const modelLineCount = editorRef.current?.getModel()?.getLineCount();
+    const maxLine = Math.max(1, modelLineCount ?? currentFileLineCount ?? 1);
+
+    if (!Number.isInteger(requestedLine) || requestedLine < 1 || requestedLine > maxLine) {
+      setToast({
+        type: 'error',
+        message: `Select a line between 1 and ${maxLine}.`,
+      });
+      return;
+    }
+
+    openInlineComment(requestedLine);
+  }, [currentFileLineCount, lineSelectorValue, openInlineComment, selectedFileId]);
 
   const removePendingComment = useCallback((key: string) => {
     setRemovingCommentKeys((prev) => new Set(prev).add(key));
@@ -689,10 +764,11 @@ function AssignmentSubmissionReviewPageContent() {
 
   useEffect(() => {
     return () => {
+      clearHoverHideTimer();
       editorDisposablesRef.current.forEach((disposable) => disposable.dispose());
       editorDisposablesRef.current = [];
     };
-  }, []);
+  }, [clearHoverHideTimer]);
 
   const handleEditorMount: EditorProps['onMount'] = useCallback(
     (
@@ -714,20 +790,28 @@ function AssignmentSubmissionReviewPageContent() {
           targetType === monaco.editor.MouseTargetType.CONTENT_EMPTY ||
           targetType === monaco.editor.MouseTargetType.GUTTER_LINE_NUMBERS;
 
-        if (!allowedTarget || !lineNumber || !selectedFileId) {
+        if (!selectedFileId) {
           setHoveredLine(null);
           return;
         }
+
+        if (!allowedTarget || !lineNumber) {
+          scheduleHoverHide();
+          return;
+        }
+
+        clearHoverHideTimer();
 
         setHoveredLine(lineNumber);
         setHoverButtonTop(computeLineTop(lineNumber));
       });
 
       const onMouseLeave = editor.onMouseLeave(() => {
-        setHoveredLine(null);
+        scheduleHoverHide();
       });
 
       const onMouseDown = editor.onMouseDown((event: MonacoEditorNS.IEditorMouseEvent) => {
+        clearHoverHideTimer();
         const targetType = event.target.type;
         const lineNumber = event.target.position?.lineNumber;
 
@@ -743,6 +827,7 @@ function AssignmentSubmissionReviewPageContent() {
       const onCursorChange = editor.onDidChangeCursorPosition(
         (event: MonacoEditorNS.ICursorPositionChangedEvent) => {
         if (!event.position?.lineNumber || !selectedFileId) return;
+        clearHoverHideTimer();
         setHoveredLine(event.position.lineNumber);
         setHoverButtonTop(computeLineTop(event.position.lineNumber));
         }
@@ -775,7 +860,14 @@ function AssignmentSubmissionReviewPageContent() {
 
       refreshLineDecorations();
     },
-    [computeLineTop, openInlineComment, refreshLineDecorations, selectedFileId]
+    [
+      clearHoverHideTimer,
+      computeLineTop,
+      openInlineComment,
+      refreshLineDecorations,
+      scheduleHoverHide,
+      selectedFileId,
+    ]
   );
 
   const handleToggleDir = useCallback((path: string) => {
@@ -1057,6 +1149,14 @@ function AssignmentSubmissionReviewPageContent() {
                   <button
                     type="button"
                     onClick={() => openInlineComment(hoveredLine)}
+                    onMouseEnter={() => {
+                      hoverButtonInteractingRef.current = true;
+                      clearHoverHideTimer();
+                    }}
+                    onMouseLeave={() => {
+                      hoverButtonInteractingRef.current = false;
+                      scheduleHoverHide();
+                    }}
                     style={{ top: hoverButtonTop }}
                     className="absolute right-3 z-10 inline-flex h-7 w-7 items-center justify-center rounded-full border border-yellow-300 bg-yellow-200/90 text-base font-bold text-yellow-900 shadow transition-all duration-200 hover:scale-105 hover:bg-yellow-100"
                     title={`Add line comment at line ${hoveredLine}`}
@@ -1068,7 +1168,7 @@ function AssignmentSubmissionReviewPageContent() {
                 {inlineComment ? (
                   <div
                     style={{ top: inlineComment.top }}
-                    className="absolute right-4 z-20 w-[320px] rounded-xl border border-slate-200 bg-white p-3 shadow-lg animate-[fadeUp_0.18s_ease]"
+                    className="absolute left-4 right-4 z-20 w-auto rounded-xl border border-slate-200 bg-white p-3 shadow-lg animate-[fadeUp_0.18s_ease] sm:left-auto sm:right-4 sm:w-[320px]"
                   >
                     <p className="text-xs font-semibold text-slate-700">
                       Add comment at line {inlineComment.lineNumber}
@@ -1201,24 +1301,47 @@ function AssignmentSubmissionReviewPageContent() {
             <div className="mt-5 rounded-xl border border-slate-200 bg-slate-50 p-4">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <h4 className="text-sm font-semibold text-slate-800">Pending line comments</h4>
-                <button
-                  type="button"
-                  disabled={!selectedFileId}
-                  onClick={() => {
-                    if (!selectedFileId) return;
-                    const line = hoveredLine && hoveredLine > 0 ? hoveredLine : 1;
-                    openInlineComment(line);
-                  }}
-                  className="inline-flex items-center gap-1 rounded-lg border border-blue-200 bg-blue-50 px-3 py-1.5 text-xs font-semibold text-blue-700 transition-all duration-200 hover:border-blue-300 hover:bg-blue-100 disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  <span className="text-sm leading-none">+</span>
-                  Add line comment
-                </button>
+                <div className="flex flex-wrap items-center gap-2">
+                  <label
+                    htmlFor="line-selector"
+                    className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-700"
+                  >
+                    <span>Line</span>
+                    <input
+                      id="line-selector"
+                      type="number"
+                      min={1}
+                      max={Math.max(1, currentFileLineCount)}
+                      step={1}
+                      value={lineSelectorValue}
+                      onChange={(event) => setLineSelectorValue(event.target.value)}
+                      onKeyDown={(event) => {
+                        if (event.key === 'Enter') {
+                          event.preventDefault();
+                          handleOpenSelectorComment();
+                        }
+                      }}
+                      disabled={!selectedFileId}
+                      className="w-20 rounded-md border border-slate-200 bg-slate-50 px-2 py-1 text-xs font-semibold text-slate-700 outline-none focus:border-blue-300 focus:bg-white focus:ring-2 focus:ring-blue-200/70 disabled:cursor-not-allowed disabled:opacity-50"
+                    />
+                    <span className="text-[11px] text-slate-500">/ {Math.max(1, currentFileLineCount)}</span>
+                  </label>
+
+                  <button
+                    type="button"
+                    disabled={!selectedFileId}
+                    onClick={handleOpenSelectorComment}
+                    className="inline-flex items-center gap-1 rounded-lg border border-blue-200 bg-blue-50 px-3 py-1.5 text-xs font-semibold text-blue-700 transition-all duration-200 hover:border-blue-300 hover:bg-blue-100 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    <span className="text-sm leading-none">+</span>
+                    Add line comment
+                  </button>
+                </div>
               </div>
 
               {pendingComments.length === 0 ? (
                 <p className="mt-3 text-sm text-slate-500">
-                  No line comments yet. Click a line number (or hover and use +) in the editor.
+                  No line comments yet. Use the line selector or click a line number in the editor.
                 </p>
               ) : (
                 <div className="mt-3 space-y-2">
