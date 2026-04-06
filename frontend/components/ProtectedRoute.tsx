@@ -23,9 +23,9 @@ export const ProtectedRoute = ({
     // Still checking session — don't redirect yet
     if (isLoading) return;
 
-    // Not logged in => send to login
+    // Not logged in => send to landing page
     if (!isAuthenticated) {
-      router.replace('/login');
+      router.replace('/');
       return;
     }
 

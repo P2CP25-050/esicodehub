@@ -80,7 +80,7 @@ describe('ProtectedRoute', () => {
 
   // ── Unauthenticated ────────────────────────────────────────────────────────
 
-  it('redirects to /login when not authenticated', async () => {
+  it('redirects to / when not authenticated', async () => {
     mockAuth({ isLoading: false, isAuthenticated: false });
 
     render(
@@ -89,9 +89,7 @@ describe('ProtectedRoute', () => {
       </ProtectedRoute>
     );
 
-    await waitFor(() =>
-      expect(mockReplace).toHaveBeenCalledWith('/login')
-    );
+    await waitFor(() => expect(mockReplace).toHaveBeenCalledWith('/'));
   });
 
   it('does NOT render children when not authenticated', async () => {
