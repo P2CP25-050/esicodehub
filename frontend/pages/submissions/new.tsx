@@ -1,5 +1,6 @@
 import { useState, CSSProperties, ChangeEvent } from "react";
 import { useRouter } from "next/router";
+import axios from "axios";
 import Header from "@/components/submissions/Header";
 import Field from "@/components/submissions/Field";
 import FileUpload from "@/components/submissions/FileUpload";
@@ -28,6 +29,22 @@ type UploadPhase =
   | { status: "idle" }
   | { status: "creating" }
   | { status: "upload_failed"; submissionId: number; error: string };
+
+const getApiErrorMessage = (err: unknown, fallback: string): string => {
+  if (axios.isAxiosError(err)) {
+    const detail = err.response?.data?.detail;
+    if (typeof detail === "string" && detail.trim().length > 0) {
+      return detail;
+    }
+    if (typeof err.message === "string" && err.message.trim().length > 0) {
+      return err.message;
+    }
+  }
+  if (err instanceof Error && err.message.trim().length > 0) {
+    return err.message;
+  }
+  return fallback;
+};
 
 function NewSubmissionForm() {
   const router = useRouter();
@@ -69,7 +86,7 @@ function NewSubmissionForm() {
         description: description !== "" ? description : undefined,
       });
     } catch (err: unknown) {
-      const detail = err instanceof Error ? err.message : "Failed to create submission. Please try again.";
+      const detail = getApiErrorMessage(err, "Failed to create submission. Please try again.");
       setPhase({ status: "idle" });
       alert(detail);
       return;
@@ -84,7 +101,7 @@ function NewSubmissionForm() {
           files.map((e) => e.relativePath),
         );
       } catch (err: unknown) {
-        const detail = err instanceof Error ? err.message : "File upload failed.";
+        const detail = getApiErrorMessage(err, "File upload failed.");
         setPhase({
           status: "upload_failed",
           submissionId: submission.id,
@@ -111,7 +128,7 @@ function NewSubmissionForm() {
       );
       router.push(`/submissions/${submissionId}`);
     } catch (err: unknown) {
-      const detail = err instanceof Error ? err.message : "File upload failed again.";
+      const detail = getApiErrorMessage(err, "File upload failed again.");
       setPhase({
         status: "upload_failed",
         submissionId,

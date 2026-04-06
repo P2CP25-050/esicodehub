@@ -162,7 +162,7 @@ describe('ProtectedRoute', () => {
 
   // ── Wrong role ─────────────────────────────────────────────────────────────
 
-  it('redirects professor to /dashboard/professor when accessing student page', async () => {
+  it('redirects professor to /assignments when accessing student page', async () => {
     mockAuth({ isLoading: false, isAuthenticated: true, user: professorUser });
 
     render(
@@ -171,13 +171,12 @@ describe('ProtectedRoute', () => {
       </ProtectedRoute>
     );
 
-    // ✅ fixed: /dashboard/professor not /dashboard/teacher
     await waitFor(() =>
-      expect(mockReplace).toHaveBeenCalledWith('/dashboard/professor')
+      expect(mockReplace).toHaveBeenCalledWith('/assignments')
     );
   });
 
-  it('redirects student to /dashboard/student when accessing professor page', async () => {
+  it('redirects student to /assignments when accessing professor page', async () => {
     mockAuth({ isLoading: false, isAuthenticated: true, user: studentUser });
 
     render(
@@ -187,7 +186,7 @@ describe('ProtectedRoute', () => {
     );
 
     await waitFor(() =>
-      expect(mockReplace).toHaveBeenCalledWith('/dashboard/student')
+      expect(mockReplace).toHaveBeenCalledWith('/assignments')
     );
   });
 

@@ -20,6 +20,7 @@ import {
 
 // ─── Token storage utility ────────────────────────────────
 import { saveTokens } from "@/lib/tokens";
+import { PublicRoute } from "@/components/PublicRoute";
 
 // ─── Types ────────────────────────────────────────────────
 type Page = "register" | "verify" | "success";
@@ -85,7 +86,7 @@ function BackButton({ onClick }: { onClick: () => void }) {
 // ─────────────────────────────────────────────────────────
 // MAIN PAGE
 // ─────────────────────────────────────────────────────────
-export default function RegisterPage() {
+function RegisterPageContent() {
   const router = useRouter();
   const width  = useWindowWidth();
 
@@ -594,5 +595,13 @@ export default function RegisterPage() {
         </div>
       </div>
     </>
+  );
+}
+
+export default function RegisterPage() {
+  return (
+    <PublicRoute>
+      <RegisterPageContent />
+    </PublicRoute>
   );
 }

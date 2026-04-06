@@ -1,11 +1,76 @@
+import os
+import json
+
 from google.cloud import storage
 from django.conf import settings
+from django.core.exceptions import ImproperlyConfigured
+
+
+def _get_credentials_path() -> str:
+    credentials_path = (
+        getattr(settings, 'GCS_CREDENTIALS_PATH', None)
+        or getattr(settings, 'GS_CREDENTIALS', None)
+        or os.getenv('GOOGLE_APPLICATION_CREDENTIALS')
+    )
+
+    if not credentials_path:
+        raise ImproperlyConfigured(
+            'GCS credentials are not configured. Set GCS_CREDENTIALS_PATH '
+            '(recommended) or GOOGLE_APPLICATION_CREDENTIALS.'
+        )
+
+    # Common misconfiguration in Docker on Windows is passing a host path
+    # instead of a container path.
+    if '\\' in credentials_path and not credentials_path.startswith('/'):
+        raise ImproperlyConfigured(
+            'GCS_CREDENTIALS_PATH appears to be a host path. In Docker, use '
+            'the in-container path (for example /app/gcs-credentials.json) '
+            'and ensure the file is mounted.'
+        )
+
+    return credentials_path
+
+
+def validate_gcs_configuration() -> list[str]:
+    issues = []
+
+    if not settings.GS_BUCKET_NAME:
+        issues.append('GCS_BUCKET_NAME is not set.')
+
+    credentials_path = None
+    try:
+        credentials_path = _get_credentials_path()
+    except ImproperlyConfigured as exc:
+        issues.append(str(exc))
+
+    if credentials_path:
+        if not os.path.exists(credentials_path):
+            issues.append(
+                f'GCS credentials file not found at: {credentials_path}. '
+                'Ensure docker-compose volume mapping is correct.'
+            )
+        else:
+            try:
+                with open(credentials_path, 'r', encoding='utf-8') as handle:
+                    json.load(handle)
+            except Exception as exc:
+                issues.append(f'GCS credentials file is not valid JSON: {exc}')
+
+    return issues
 
 
 def get_gcs_client():
-    return storage.Client.from_service_account_json(
-        settings.GS_CREDENTIALS
-    )
+    issues = validate_gcs_configuration()
+    if issues:
+        raise ImproperlyConfigured(' '.join(issues))
+
+    credentials_path = _get_credentials_path()
+    try:
+        return storage.Client.from_service_account_json(credentials_path)
+    except Exception as exc:
+        raise ImproperlyConfigured(
+            f'Failed to initialize Google Cloud Storage client: {exc}'
+        ) from exc
 
 
 def upload_file(file_obj, gcs_path: str) -> str:

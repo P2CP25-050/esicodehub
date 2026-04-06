@@ -29,13 +29,9 @@ export const ProtectedRoute = ({
       return;
     }
 
-    // Logged in but wrong role → send to their own dashboard
+    // Logged in but wrong role -> send to a valid app page.
     if (allowedRole && user?.role !== allowedRole) {
-      router.replace(
-        user?.role === 'professor'
-          ? '/dashboard/professor'
-          : '/dashboard/student'
-      );
+      router.replace('/assignments');
     }
   }, [isLoading, isAuthenticated, user, allowedRole, router]);
 
