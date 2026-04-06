@@ -423,7 +423,7 @@ function LoginPageContent() {
                     whiteSpace: "nowrap",
                   }}
                 >
-                  Don't have an account? Sign up
+                  Don&apos;t have an account? Sign up
                 </span>
                 <div style={{ flex: 1, height: 1, background: "#1e1e1e" }} />
               </div>
