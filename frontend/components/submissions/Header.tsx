@@ -5,7 +5,6 @@ import { useRouter } from 'next/router';
 import { useAuth } from "@/hooks/useAuth";
 import { logout } from '@/services/auth';
 import { clearTokens } from '@/lib/tokens';
-import { nav } from "framer-motion/client";
 
 interface HeaderProps {
   activePage?: string;
@@ -300,7 +299,10 @@ export default function Header({ activePage = "" }: HeaderProps) {
             <span style={styles.profileRole}>{userRole}</span>
           </div>
         </Link>
+
+        <button type="button" className="drawer-logout-btn" onClick={handleLogout}>
           Logout
+        </button>
       </nav>
     </>
   );
