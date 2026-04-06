@@ -4,8 +4,8 @@ import { useRouter } from "next/router";
 import Header from "@/components/submissions/Header";
 import Field from "@/components/submissions/Field";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
-import { listSubjects, createAssignment } from "@/services/assignments";
-import type { Subject } from "@/services/assignments";
+import { listSubjects, createAssignment } from "@/services/assignement/api";
+import type { Subject } from "@/services/assignement/types";
 
 // Types & constants 
 
