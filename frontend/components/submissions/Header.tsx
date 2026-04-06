@@ -158,7 +158,7 @@ export default function Header({ activePage = "" }: HeaderProps) {
         <div style={styles.headerInner}>
           {/* ── Left: logo + desktop nav ── */}
           <div style={styles.headerLeft}>
-            <a href="/" style={styles.logoLink} aria-label="Go to homepage">
+            <link href="/" style={styles.logoLink} aria-label="Go to homepage">
               <div style={styles.logo}>
                 <Image
                   src="/esicodehub-logo.png"
@@ -169,7 +169,7 @@ export default function Header({ activePage = "" }: HeaderProps) {
                   priority
                 />
               </div>
-            </a>
+            </link>
 
             <nav style={styles.desktopNav} className="header-desktop-nav">
               {NAV_LINKS.map(({ label, href }) => {
