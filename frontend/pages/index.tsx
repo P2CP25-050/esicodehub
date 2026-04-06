@@ -305,11 +305,12 @@ export default function LandingPage() {
 
   useEffect(() => {
     if (typeof window === 'undefined' || !('IntersectionObserver' in window)) {
-      setVisibleSteps(HOW_IT_WORKS.map(() => true));
       return;
     }
 
-    setObserverReady(true);
+    const frameId = window.requestAnimationFrame(() => {
+      setObserverReady(true);
+    });
 
     const observer = new IntersectionObserver(
       (entries) => {
@@ -342,7 +343,10 @@ export default function LandingPage() {
       if (node) observer.observe(node);
     });
 
-    return () => observer.disconnect();
+    return () => {
+      window.cancelAnimationFrame(frameId);
+      observer.disconnect();
+    };
   }, []);
 
   const scrollToFeatures = () => {
