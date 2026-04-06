@@ -187,7 +187,7 @@ function memberSince(dateStr: string): string {
 // ─── Profile Page ─────────────────────────────────────────────────────────────
 function ProfilePage() {
   const { user } = useAuth();
-  const router = useRouter();
+
 
   const [bio, setBio] = useState<string>("");
   const [savedBio, setSavedBio] = useState<string>("");
@@ -296,12 +296,12 @@ function ProfilePage() {
 
   if (!user) return null;
 
-  const role = (user as any).role ?? "student";
-  const firstName = (user as any).first_name ?? "";
-  const lastName = (user as any).last_name ?? "";
-  const email = (user as any).email ?? "";
-  const schoolId = (user as any).school_id ?? (user as any).student_id ?? "";
-  const createdAt = (user as any).created_at ?? "";
+  const role = (user as unknown).role ?? "student";
+  const firstName = (user as unknown).first_name ?? "";
+  const lastName = (user as unknown).last_name ?? "";
+  const email = (user as unknown).email ?? "";
+  const schoolId = (user as unknown).school_id ?? (user as any).student_id ?? "";
+  const createdAt = (user as unknown).created_at ?? "";
 
   return (
     <div style={s.page}>
