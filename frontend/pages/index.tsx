@@ -1,750 +1,813 @@
 import { useEffect, useRef, useState } from 'react';
-import type { CSSProperties } from 'react';
+import Head from 'next/head';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
-import {
-  AlertTriangle,
-  ArrowRight,
-  BarChart3,
-  Calendar,
-  CheckCircle2,
-  Code2,
-  Lock,
-  MessageCircle,
-  MessageSquareText,
-  PlusCircle,
-  Shield,
-  UploadCloud,
-  Users,
-} from 'lucide-react';
+import { useAuth } from '@/hooks/useAuth';
 
-import { useAuth } from '../hooks/useAuth';
+// ─── Animated counter hook ───────────────────────────────────────────────────
+function useCounter(target: number, duration = 1800) {
+  const [count, setCount] = useState(0);
+  const [started, setStarted] = useState(false);
 
-const HERO_DOT_PATTERN =
-  'url("data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 width=%2724%27 height=%2724%27 viewBox=%270 0 24 24%27%3E%3Ccircle cx=%272%27 cy=%272%27 r=%271.15%27 fill=%27%23ffffff%27 fill-opacity=%270.04%27/%3E%3C/svg%3E")';
+  useEffect(() => {
+    if (!started) return;
+    let start: number | null = null;
+    const step = (timestamp: number) => {
+      if (!start) start = timestamp;
+      const progress = Math.min((timestamp - start) / duration, 1);
+      const ease = 1 - Math.pow(1 - progress, 3);
+      setCount(Math.floor(ease * target));
+      if (progress < 1) requestAnimationFrame(step);
+      else setCount(target);
+    };
+    requestAnimationFrame(step);
+  }, [started, target, duration]);
 
-const HERO_CODE = `01 class ESIKernel:
-02     def validate_submission(self, user):
-03         if user.domain != "esi.dz":
-04             raise DomainError()
-05         return self.audit_code(user.payload)`;
+  return { count, start: () => setStarted(true) };
+}
 
-type IconType = React.ComponentType<{ className?: string; strokeWidth?: number }>;
+// ─── Intersection observer hook ──────────────────────────────────────────────
+function useInView(threshold = 0.15) {
+  const ref = useRef<HTMLDivElement>(null);
+  const [inView, setInView] = useState(false);
 
-type Feature = {
-  icon: IconType;
-  tag: string;
-  title: string;
-  description: string;
-};
-
-type Stat = {
-  value: string;
-  label: string;
-};
-
-type Step = {
-  icon: IconType;
-  title: string;
-  detail: string;
-};
-
-type HowItWorksStepProps = {
-  step: Step;
-  index: number;
-  observerReady: boolean;
-  isVisible: boolean;
-  registerRef: (node: HTMLDivElement | null) => void;
-};
-
-const STATS: Stat[] = [
-  { value: '100%', label: '@esi.dz accounts only' },
-  { value: 'AST', label: 'Similarity detection engine' },
-  { value: '< 30s', label: 'Average submission flow' },
-  { value: 'Trace', label: 'Audit history retained' },
-];
-
-const SOCIAL_PROOF_STATS: Stat[] = [
-  { value: 'Median 42s', label: 'Submission workflow completion' },
-  { value: 'AST-based', label: 'Structural similarity analysis engine' },
-  { value: 'Audit-ready', label: 'Every submission attributed and timestamped' },
-];
-
-const FEATURES: Feature[] = [
-  {
-    icon: Code2,
-    tag: 'Core',
-    title: 'Code Sharing',
-    description:
-      'Upload and share source code with syntax highlighting and controlled visibility for coursework review.',
-  },
-  {
-    icon: Calendar,
-    tag: 'Assignments',
-    title: 'Submission Tracking',
-    description:
-      'Submit to professor-created assignments with deadline awareness and timestamped version history.',
-  },
-  {
-    icon: Shield,
-    tag: 'Integrity',
-    title: 'Plagiarism Detection',
-    description:
-      'Automated AST-based structural similarity analysis supports evidence-based academic decisions.',
-  },
-  {
-    icon: MessageSquareText,
-    tag: 'Feedback',
-    title: 'Peer Review',
-    description:
-      'Inline comments and structured review threads keep professor guidance attached to each submission.',
-  },
-];
-
-const HOW_IT_WORKS: Step[] = [
-  {
-    icon: PlusCircle,
-    title: 'Create Assignment Scope',
-    detail:
-      'Define assignment requirements, constraints, and deadlines before publication to students.',
-  },
-  {
-    icon: UploadCloud,
-    title: 'Upload Submission Files',
-    detail:
-      'Students submit source files and metadata with timestamped attribution preserved automatically.',
-  },
-  {
-    icon: BarChart3,
-    title: 'Run Similarity Analysis',
-    detail:
-      'AST comparison highlights structural overlaps so faculty can review suspicious pairs quickly.',
-  },
-  {
-    icon: MessageCircle,
-    title: 'Deliver Review Feedback',
-    detail:
-      'Structured comments remain attached to each submission, enabling accountable academic follow-up.',
-  },
-];
-
-function HeroTerminal() {
-  const lines = HERO_CODE.split('\n');
-
-  const getLineStyle = (line: string): CSSProperties => {
-    if (line.startsWith('class ') || line.startsWith('def ')) return { color: '#93c5fd' };
-    if (line.startsWith('if ')) return { color: '#c4b5fd' };
-    if (line.startsWith('raise ')) return { color: '#fca5a5' };
-    if (line.startsWith('return ')) return { color: '#86efac' };
-    if (line.startsWith('+')) return { color: '#86efac' };
-    if (line.startsWith('-')) return { color: '#fca5a5' };
-    if (line.startsWith('diff') || line.startsWith('@@')) return { color: '#93c5fd' };
-    return { color: '#94a3b8' };
-  };
-
-  const renderCodeLine = (line: string) => {
-    const numberedLine = line.match(/^(\d{2})(\s+)(.*)$/);
-
-    if (!numberedLine) {
-      return <span style={getLineStyle(line)}>{line || '\u00a0'}</span>;
-    }
-
-    const [, lineNumber, spacing, code] = numberedLine;
-
-    return (
-      <>
-        <span style={{ color: '#64748b' }}>{lineNumber}</span>
-        {spacing}
-        <span style={getLineStyle(code)}>{code || '\u00a0'}</span>
-      </>
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => { if (entry.isIntersecting) { setInView(true); observer.disconnect(); } },
+      { threshold }
     );
-  };
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [threshold]);
 
-  return (
-    <div
-      className="rounded-xl border border-white/10 bg-slate-900/65 shadow-[0_20px_50px_rgba(2,8,23,0.35)] backdrop-blur-sm"
-      style={{ fontFamily: 'JetBrains Mono, monospace' }}
-    >
-      <div className="flex items-center gap-1.5 border-b border-white/10 px-4 py-3">
-        <span className="h-3 w-3 rounded-full bg-red-400/70" />
-        <span className="h-3 w-3 rounded-full bg-yellow-400/70" />
-        <span className="h-3 w-3 rounded-full bg-green-400/70" />
-        <span className="ml-auto text-xs text-slate-500">submissions.py - ESIcodeHub</span>
-      </div>
-      <div className="overflow-hidden p-5 text-xs leading-relaxed">
-        {lines.map((line, index) => (
-          <div key={index}>
-            {renderCodeLine(line)}
-          </div>
-        ))}
-      </div>
-    </div>
-  );
+  return { ref, inView };
 }
 
-function StatStrip() {
-  return (
-    <section className="border-y border-white/8 bg-[#0d1b2a]">
-      <div className="mx-auto max-w-6xl">
-        <div className="grid grid-cols-2 gap-px bg-white/5 md:grid-cols-4">
-          {STATS.map((stat) => (
-            <div key={stat.label} className="bg-[#0d1b2a] px-6 py-6 text-center">
-              <p className="mono-heading text-2xl font-extrabold text-white md:text-3xl">
-                {stat.value}
-              </p>
-              <p className="mt-1 text-xs uppercase tracking-widest text-slate-500">
-                {stat.label}
-              </p>
-            </div>
-          ))}
-        </div>
-      </div>
-    </section>
-  );
-}
+// ─── Static code snippet for hero mockup ─────────────────────────────────────
+const CODE_LINES = [
+  { tokens: [{ t: 'kw', v: 'def ' }, { t: 'fn', v: 'merge_sort' }, { t: 'tx', v: '(arr):' }] },
+  { tokens: [{ t: 'tx', v: '    ' }, { t: 'kw', v: 'if ' }, { t: 'fn', v: 'len' }, { t: 'tx', v: '(arr) <= ' }, { t: 'nu', v: '1' }, { t: 'tx', v: ':' }] },
+  { tokens: [{ t: 'tx', v: '        ' }, { t: 'kw', v: 'return ' }, { t: 'tx', v: 'arr' }] },
+  { tokens: [{ t: 'tx', v: '    mid = ' }, { t: 'fn', v: 'len' }, { t: 'tx', v: '(arr) // ' }, { t: 'nu', v: '2' }] },
+  { tokens: [{ t: 'tx', v: '    left  = ' }, { t: 'fn', v: 'merge_sort' }, { t: 'tx', v: '(arr[:mid])' }] },
+  { tokens: [{ t: 'tx', v: '    right = ' }, { t: 'fn', v: 'merge_sort' }, { t: 'tx', v: '(arr[mid:])' }] },
+  { tokens: [{ t: 'kw', v: '    return ' }, { t: 'fn', v: 'merge' }, { t: 'tx', v: '(left, right)' }] },
+  { tokens: [] },
+  { tokens: [{ t: 'cm', v: '# ✓ Submitted · Prof. Amrani · 3 comments' }] },
+];
 
-function FeatureCard({ feature }: { feature: Feature }) {
-  const Icon = feature.icon;
-
-  return (
-    <article className="feature-card group relative flex flex-col gap-4 overflow-hidden rounded-2xl border border-slate-200 bg-white p-7 shadow-sm">
-      <div
-        aria-hidden
-        className="feature-hover-overlay pointer-events-none absolute inset-0 rounded-2xl bg-[linear-gradient(135deg,rgba(37,99,235,0.04)_0%,transparent_60%)] opacity-0"
-      />
-      <div className="relative flex items-start justify-between">
-        <div className="feature-icon-shell flex h-10 w-10 items-center justify-center rounded-xl border border-blue-100 bg-blue-50 text-blue-600">
-          <Icon className="h-5 w-5" strokeWidth={1.8} />
-        </div>
-        <span className="rounded-full bg-slate-100 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-widest text-slate-500">
-          {feature.tag}
-        </span>
-      </div>
-      <div className="relative">
-        <h3 className="text-lg font-bold text-slate-900">{feature.title}</h3>
-        <p className="mt-2 text-sm leading-relaxed text-slate-600">{feature.description}</p>
-      </div>
-    </article>
-  );
-}
-
-function HowItWorksStep({
-  step,
-  index,
-  observerReady,
-  isVisible,
-  registerRef,
-}: HowItWorksStepProps) {
-  const Icon = step.icon;
-
-  return (
-    <article
-      ref={registerRef}
-      data-step-index={index}
-      className={`how-step rounded-2xl border border-slate-200 bg-white p-6 shadow-sm ${
-        observerReady && !isVisible ? 'how-step-hidden' : 'how-step-visible'
-      }`}
-      style={observerReady ? { transitionDelay: `${index * 100}ms` } : undefined}
-    >
-      <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-blue-100 bg-blue-50 text-blue-700">
-        <Icon className="h-5 w-5" strokeWidth={1.8} />
-      </div>
-      <h3 className="mt-4 text-lg font-bold text-slate-900">{step.title}</h3>
-      <p className="mt-2 text-sm leading-relaxed text-slate-600">{step.detail}</p>
-    </article>
-  );
-}
-
-function SocialProofStrip() {
-  return (
-    <section className="bg-[#0a1520] px-6 py-10 md:px-10">
-      <div className="mx-auto max-w-6xl">
-        <div className="mx-auto max-w-xl rounded-xl border border-white/10 bg-white/3 p-4 text-center">
-          {SOCIAL_PROOF_STATS.map((stat, index) => (
-            <div
-              key={stat.label}
-              className={`py-3 ${
-                index !== SOCIAL_PROOF_STATS.length - 1 ? 'border-b border-white/10' : ''
-              }`}
-            >
-              <p className="mono-heading text-lg font-semibold text-white">{stat.value}</p>
-              <p className="mt-1 text-xs uppercase tracking-[0.14em] text-slate-300">
-                {stat.label}
-              </p>
-            </div>
-          ))}
-        </div>
-      </div>
-    </section>
-  );
-}
+const TOKEN_COLORS: Record<string, string> = {
+  kw: '#818cf8', fn: '#34d399', nu: '#c084fc',
+  cm: '#475569', tx: '#cbd5e1',
+};
 
 export default function LandingPage() {
   const router = useRouter();
   const { isAuthenticated, isLoading } = useAuth();
-  const [hasScrolled, setHasScrolled] = useState(false);
-  const [observerReady, setObserverReady] = useState(false);
-  const [visibleSteps, setVisibleSteps] = useState<boolean[]>(() =>
-    HOW_IT_WORKS.map(() => false)
-  );
-  const stepRefs = useRef<Array<HTMLDivElement | null>>([]);
 
+  const featuresRef = useRef<HTMLElement>(null);
+
+  // Auth redirect
   useEffect(() => {
     if (!isLoading && isAuthenticated) {
-      router.replace('/home');
+      void router.replace('/home');
     }
   }, [isAuthenticated, isLoading, router]);
 
-  useEffect(() => {
-    const onScroll = () => setHasScrolled(window.scrollY > 8);
-    onScroll();
-    window.addEventListener('scroll', onScroll, { passive: true });
-    return () => window.removeEventListener('scroll', onScroll);
-  }, []);
-
-  useEffect(() => {
-    if (typeof window === 'undefined' || !('IntersectionObserver' in window)) {
-      return;
-    }
-
-    const frameId = window.requestAnimationFrame(() => {
-      setObserverReady(true);
-    });
-
-    const observer = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          if (!entry.isIntersecting) return;
-
-          const indexRaw = (entry.target as HTMLElement).dataset.stepIndex;
-          if (!indexRaw) return;
-
-          const index = Number(indexRaw);
-          if (Number.isNaN(index)) return;
-
-          setVisibleSteps((previous) => {
-            if (previous[index]) return previous;
-            const next = [...previous];
-            next[index] = true;
-            return next;
-          });
-
-          observer.unobserve(entry.target);
-        });
-      },
-      {
-        threshold: 0.2,
-        rootMargin: '0px 0px -10% 0px',
-      }
-    );
-
-    stepRefs.current.forEach((node) => {
-      if (node) observer.observe(node);
-    });
-
-    return () => {
-      window.cancelAnimationFrame(frameId);
-      observer.disconnect();
-    };
-  }, []);
-
   const scrollToFeatures = () => {
-    document.getElementById('features')?.scrollIntoView({ behavior: 'smooth' });
+    featuresRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
 
+  // Stats counters
+  const students  = useCounter(1240);
+  const snippets  = useCounter(18700);
+  const professors = useCounter(87);
+
+  const statsRef = useInView();
+  useEffect(() => {
+    if (statsRef.inView) {
+      students.start();
+      snippets.start();
+      professors.start();
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [statsRef.inView]);
+
   return (
-    <div className="min-h-screen bg-white text-slate-900">
-      <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700;800&family=DM+Sans:wght@400;500;600;700&display=swap');
+    <>
+      <Head>
+        <title>ESICodeHub — The code platform built for ESI</title>
+        <meta name="description" content="Share code, submit assignments, and collaborate transparently under academic supervision at École Supérieure d'Informatique." />
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link
+          href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Outfit:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap"
+          rel="stylesheet"
+        />
+      </Head>
 
-        :root {
-          --bg-dark: #0d1b2a;
-          --accent: #2563eb;
-          --text-muted: #64748b;
+      <style jsx global>{`
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        html { scroll-behavior: smooth; }
+        body { font-family: 'Outfit', sans-serif; background: #0d1b2a; color: #e2e8f0; overflow-x: hidden; }
+
+        @keyframes fadeUp {
+          from { opacity: 0; transform: translateY(24px); }
+          to   { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes fadeIn {
+          from { opacity: 0; }
+          to   { opacity: 1; }
+        }
+        @keyframes gridPulse {
+          0%, 100% { opacity: .045; }
+          50%       { opacity: .08; }
+        }
+        @keyframes floatCode {
+          0%, 100% { transform: translateY(0px) rotate(-1deg); }
+          50%       { transform: translateY(-12px) rotate(-1deg); }
+        }
+        @keyframes scanline {
+          0%   { top: -2px; }
+          100% { top: 100%; }
+        }
+        @keyframes blink {
+          0%, 100% { opacity: 1; }
+          50%       { opacity: 0; }
+        }
+        @keyframes slideIn {
+          from { opacity: 0; transform: translateX(-16px); }
+          to   { opacity: 1; transform: translateX(0); }
         }
 
-        html {
-          scroll-behavior: smooth;
+        .reveal {
+          opacity: 0;
+          transform: translateY(28px);
+          transition: opacity .65s ease, transform .65s ease;
+        }
+        .reveal.visible {
+          opacity: 1;
+          transform: translateY(0);
         }
 
-        body {
-          font-family: 'DM Sans', sans-serif;
+        .hero-grid {
+          position: absolute;
+          inset: 0;
+          background-image:
+            linear-gradient(rgba(59,130,246,.055) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(59,130,246,.055) 1px, transparent 1px);
+          background-size: 52px 52px;
+          animation: gridPulse 6s ease-in-out infinite;
         }
 
-        .mono-heading {
-          font-family: 'JetBrains Mono', monospace;
-          letter-spacing: -0.02em;
+        .noise {
+          position: absolute;
+          inset: 0;
+          background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='.035'/%3E%3C/svg%3E");
+          pointer-events: none;
         }
 
-        @media (prefers-reduced-motion: no-preference) {
-          @keyframes fade-slide-up {
-            from {
-              opacity: 0;
-              transform: translateY(16px);
-            }
-            to {
-              opacity: 1;
-              transform: translateY(0);
-            }
-          }
+        .code-window {
+          animation: floatCode 7s ease-in-out infinite;
+        }
+        .code-window::after {
+          content: '';
+          position: absolute;
+          left: 0; right: 0; height: 2px;
+          background: linear-gradient(90deg, transparent, rgba(99,102,241,.7), transparent);
+          animation: scanline 4s linear infinite;
+        }
 
-          .hero-fade-item {
-            animation: fade-slide-up 560ms cubic-bezier(0.22, 1, 0.36, 1) both;
-          }
+        .cursor-blink {
+          display: inline-block;
+          width: 2px;
+          height: 1em;
+          background: #60a5fa;
+          margin-left: 2px;
+          vertical-align: text-bottom;
+          animation: blink 1s step-end infinite;
+        }
 
-          .hero-delay-0 {
-            animation-delay: 0ms;
-          }
+        .feature-card:hover .feature-icon-wrap {
+          transform: scale(1.1) rotate(-4deg);
+        }
 
-          .hero-delay-1 {
-            animation-delay: 80ms;
-          }
+        .problem-card {
+          transition: transform .25s ease, box-shadow .25s ease;
+        }
+        .problem-card:hover {
+          transform: translateY(-4px);
+          box-shadow: 0 20px 60px rgba(0,0,0,.3);
+        }
 
-          .hero-delay-2 {
-            animation-delay: 160ms;
-          }
+        .nav-link {
+          position: relative;
+          color: #94a3b8;
+          font-size: .875rem;
+          font-weight: 500;
+          text-decoration: none;
+          transition: color .2s;
+        }
+        .nav-link::after {
+          content: '';
+          position: absolute;
+          bottom: -2px; left: 0; right: 100%;
+          height: 1.5px;
+          background: #60a5fa;
+          transition: right .25s ease;
+        }
+        .nav-link:hover { color: #e2e8f0; }
+        .nav-link:hover::after { right: 0; }
 
-          .hero-delay-3 {
-            animation-delay: 240ms;
-          }
+        .btn-primary {
+          display: inline-flex;
+          align-items: center;
+          gap: 8px;
+          padding: .75rem 1.75rem;
+          background: #2563eb;
+          color: #fff;
+          font-weight: 700;
+          font-size: .9375rem;
+          border-radius: 10px;
+          border: none;
+          cursor: pointer;
+          text-decoration: none;
+          transition: background .2s, transform .2s, box-shadow .2s;
+          box-shadow: 0 0 0 0 rgba(59,130,246,0);
+        }
+        .btn-primary:hover {
+          background: #1d4ed8;
+          transform: translateY(-2px);
+          box-shadow: 0 8px 28px rgba(59,130,246,.45);
+        }
 
-          .section-fade {
-            animation: fade-slide-up 460ms ease-out both;
-          }
-
-          .section-delay-1 {
-            animation-delay: 70ms;
-          }
-
-          .section-delay-2 {
-            animation-delay: 130ms;
-          }
-
-          .feature-card {
-            transition: transform 180ms ease-out, box-shadow 180ms ease-out,
-              border-color 180ms ease-out;
-          }
-
-          .feature-card:hover {
-            transform: translateY(-4px);
-            box-shadow: 0 18px 32px rgba(15, 23, 42, 0.12);
-            border-color: rgba(37, 99, 235, 0.25);
-          }
-
-          .feature-icon-shell {
-            transition: transform 150ms ease-out, background-color 150ms ease-out,
-              color 150ms ease-out, border-color 150ms ease-out;
-          }
-
-          .feature-card:hover .feature-icon-shell {
-            transform: scale(1.06);
-            background-color: rgba(37, 99, 235, 0.16);
-            color: rgb(29, 78, 216);
-            border-color: rgba(37, 99, 235, 0.35);
-          }
-
-          .feature-hover-overlay {
-            transition: opacity 150ms ease-out;
-          }
-
-          .feature-card:hover .feature-hover-overlay {
-            opacity: 1;
-          }
-
-          .hero-cta-glow {
-            transition: opacity 150ms ease-out;
-          }
-
-          .hero-primary-group:hover .hero-cta-glow {
-            opacity: 1;
-          }
-
-          .how-step {
-            transition: opacity 500ms ease-out, transform 500ms ease-out,
-              box-shadow 180ms ease-out;
-          }
-
-          .how-step:hover {
-            box-shadow: 0 12px 24px rgba(15, 23, 42, 0.08);
-          }
-
-          .how-step-hidden {
-            opacity: 0;
-            transform: translateY(20px);
-          }
-
-          .how-step-visible {
-            opacity: 1;
-            transform: translateY(0);
-          }
+        .btn-secondary {
+          display: inline-flex;
+          align-items: center;
+          gap: 8px;
+          padding: .75rem 1.75rem;
+          background: transparent;
+          color: #94a3b8;
+          font-weight: 600;
+          font-size: .9375rem;
+          border-radius: 10px;
+          border: 1.5px solid rgba(148,163,184,.25);
+          cursor: pointer;
+          text-decoration: none;
+          transition: all .2s;
+        }
+        .btn-secondary:hover {
+          color: #e2e8f0;
+          border-color: rgba(148,163,184,.55);
+          transform: translateY(-2px);
         }
       `}</style>
 
-      <header
-        className={`fixed top-0 z-50 w-full transition-all duration-300 ${
-          hasScrolled
-            ? 'border-b border-white/10 bg-[#0d1b2a]/95 backdrop-blur-md'
-            : 'bg-transparent'
-        }`}
-      >
-        <nav className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4 md:px-10">
-          <Link href="/" className="inline-flex items-center gap-2.5 text-white">
-            <Image
-              src="/esicodehub-logo.png"
-              alt="ESIcodeHub"
-              width={80}
-              height={21}
-              priority
-            />
+      <div style={{ minHeight: '100vh', background: '#0d1b2a' }}>
 
-          </Link>
-
-          <Link
-            href="/login"
-            className="rounded-full border border-white/25 px-4 py-2 text-sm font-semibold text-white transition-all duration-200 hover:-translate-y-0.5 hover:border-white/60 hover:bg-white/10"
-          >
-            Sign in
-          </Link>
-        </nav>
-      </header>
-
-      <main>
-        <section className="relative min-h-screen overflow-hidden bg-[#0d1b2a] px-6 pb-20 pt-32 text-white md:px-10 md:pt-36">
-          <div
-            aria-hidden
-            className="pointer-events-none absolute inset-0"
-            style={{ backgroundImage: HERO_DOT_PATTERN }}
-          />
-          <div
-            aria-hidden
-            className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_60%_55%_at_50%_20%,rgba(37,99,235,0.22),transparent_70%)]"
-          />
-
-          <div className="relative mx-auto grid max-w-6xl items-center gap-12 md:grid-cols-2 md:gap-16">
-            <div>
-              <div className="hero-fade-item hero-delay-0 mb-5 inline-flex items-center gap-2 rounded-full border border-blue-500/30 bg-blue-500/10 px-3.5 py-1.5 text-xs font-semibold uppercase tracking-[0.16em] text-blue-200">
-                ESI Algiers - Academic Platform
-              </div>
-
-              <h1 className="mono-heading hero-fade-item hero-delay-1 text-4xl font-extrabold leading-[1.08] text-white sm:text-5xl lg:text-6xl">
-                The code platform built for ESI.
-              </h1>
-
-              <p className="hero-fade-item hero-delay-2 mt-6 text-lg leading-relaxed text-slate-300 md:text-xl">
-                A dedicated academic environment for supervised code sharing,
-                assignment workflows, and transparent departmental oversight.
-              </p>
-
-              <div className="hero-fade-item hero-delay-3 mt-9 flex flex-wrap items-center gap-3">
-                <span className="hero-primary-group relative inline-flex">
-                  <span
-                    aria-hidden
-                    className="hero-cta-glow pointer-events-none absolute inset-x-6 -bottom-1 h-3 rounded-full bg-blue-500/40 opacity-0 blur-md"
-                  />
-                  <Link
-                    href="/login"
-                    className="relative inline-flex items-center gap-2 rounded-full bg-blue-600 px-6 py-3 text-sm font-semibold text-white transition-all duration-200 hover:-translate-y-0.5 hover:bg-blue-500"
-                  >
-                    Sign in with ESI email
-                    <ArrowRight className="h-4 w-4" strokeWidth={1.8} />
-                  </Link>
-                </span>
-                <button
-                  type="button"
-                  onClick={scrollToFeatures}
-                  className="inline-flex items-center gap-2 rounded-full border border-white/20 px-6 py-3 text-sm font-semibold text-white transition-all duration-200 hover:-translate-y-0.5 hover:border-white/40 hover:bg-white/5"
-                >
-                  Learn more
-                </button>
-              </div>
+        {/* ════════════════ NAV ════════════════ */}
+        <nav style={{
+          position: 'fixed', top: 0, left: 0, right: 0, zIndex: 100,
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          padding: '0 max(1.5rem, calc(50% - 680px))',
+          height: 64,
+          borderBottom: '1px solid rgba(255,255,255,.06)',
+          background: 'rgba(13,27,42,.85)',
+          backdropFilter: 'blur(16px)',
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <div style={{ width: 32, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <Image
+                src="/esicodehub-logo.png"
+                alt="ESICodeHub Logo"
+                width={32}
+                height={32}
+                style={{ objectFit: 'contain' }}
+                priority
+              />
             </div>
-
-            <div className="hidden md:block">
-              <HeroTerminal />
-            </div>
+            <span style={{ fontFamily: "'JetBrains Mono', monospace", fontWeight: 700, fontSize: '.9rem', color: '#e2e8f0' }}>
+              ESICodeHub
+            </span>
           </div>
-        </section>
 
-        <div className="section-fade section-delay-1">
-          <StatStrip />
-        </div>
-
-        <section className="section-fade section-delay-1 bg-slate-50 px-6 py-24 md:px-10">
-          <div className="mx-auto max-w-6xl">
-            <div className="mb-4 text-xs font-bold uppercase tracking-widest text-blue-600">
-              Why ESIcodeHub
-            </div>
-            <h2 className="mono-heading max-w-2xl text-3xl font-extrabold tracking-tight text-slate-900 md:text-4xl">
-              Reliable infrastructure for academic code review.
-            </h2>
-
-            <div className="mt-14 grid gap-6 md:grid-cols-3">
-              <article className="rounded-2xl border border-red-100 border-t-2 border-t-red-500 bg-red-50/60 p-7">
-                <div className="mb-4 inline-flex h-11 w-11 items-center justify-center rounded-lg border border-red-200 bg-white text-red-700">
-                  <AlertTriangle className="h-6 w-6" strokeWidth={1.8} />
-                </div>
-                <h3 className="text-lg font-bold text-slate-900">
-                  Professors can&apos;t trust what they grade.
-                </h3>
-                <p className="mt-3 text-sm leading-relaxed text-slate-600">
-                  Investigating AI-generated code consumes hours that should go toward
-                  feedback. There is no audit trail, no history, and no context.
-                </p>
-              </article>
-
-              <article className="rounded-2xl border border-amber-100 border-t-2 border-t-amber-500 bg-amber-50/60 p-7">
-                <div className="mb-4 inline-flex h-11 w-11 items-center justify-center rounded-lg border border-amber-200 bg-white text-amber-700">
-                  <Users className="h-6 w-6" strokeWidth={1.8} />
-                </div>
-                <h3 className="text-lg font-bold text-slate-900">
-                  Students need safe collaboration channels.
-                </h3>
-                <p className="mt-3 text-sm leading-relaxed text-slate-600">
-                  Work-sharing often happens off-platform and without supervision,
-                  making legitimate collaboration difficult to distinguish from misuse.
-                </p>
-              </article>
-
-              <article className="rounded-2xl border border-emerald-100 border-t-2 border-t-emerald-500 bg-emerald-50/60 p-7">
-                <div className="mb-4 inline-flex h-11 w-11 items-center justify-center rounded-lg border border-emerald-200 bg-white text-emerald-700">
-                  <CheckCircle2 className="h-6 w-6" strokeWidth={1.8} />
-                </div>
-                <h3 className="text-lg font-bold text-slate-900">ESIcodeHub closes both gaps.</h3>
-                <p className="mt-3 text-sm leading-relaxed text-slate-600">
-                  Full visibility for professors, with a legitimate and supervised
-                  collaboration space for students.
-                </p>
-              </article>
-            </div>
-          </div>
-        </section>
-
-        <section id="features" className="section-fade section-delay-2 bg-white px-6 py-24 md:px-10">
-          <div className="mx-auto max-w-6xl">
-            <div className="mb-4 text-xs font-bold uppercase tracking-widest text-blue-600">
-              Features
-            </div>
-            <div className="flex flex-col items-start justify-between gap-4 md:flex-row md:items-end">
-              <h2 className="mono-heading max-w-xl text-3xl font-extrabold tracking-tight text-slate-900 md:text-4xl">
-                Everything the department needs.
-              </h2>
-              <p className="max-w-sm text-sm leading-relaxed text-slate-500 md:text-right">
-                Built specifically for the ESI academic workflow, not a generic code-hosting platform.
-              </p>
-            </div>
-
-            <div className="mt-12 grid gap-5 sm:grid-cols-2">
-              {FEATURES.map((feature) => (
-                <FeatureCard key={feature.title} feature={feature} />
-              ))}
-            </div>
-          </div>
-        </section>
-
-        <div className="section-fade section-delay-2">
-          <SocialProofStrip />
-        </div>
-
-        <section className="bg-slate-50 px-6 py-24 md:px-10">
-          <div className="mx-auto max-w-6xl">
-            <div className="mb-4 text-xs font-bold uppercase tracking-widest text-blue-600">
-              How it works
-            </div>
-            <h2 className="mono-heading mb-14 max-w-xl text-3xl font-extrabold tracking-tight text-slate-900 md:text-4xl">
-              From assignment to feedback, one platform.
-            </h2>
-
-            <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-4">
-              {HOW_IT_WORKS.map((step, index) => (
-                <HowItWorksStep
-                  key={step.title}
-                  step={step}
-                  index={index}
-                  observerReady={observerReady}
-                  isVisible={visibleSteps[index]}
-                  registerRef={(node) => {
-                    stepRefs.current[index] = node;
-                  }}
-                />
-              ))}
-            </div>
-          </div>
-        </section>
-
-        <section className="bg-[#0d1b2a] px-6 py-20 text-center md:px-10">
-          <div className="relative mx-auto max-w-2xl">
-            <div
-              aria-hidden
-              className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_70%_60%_at_50%_50%,rgba(37,99,235,0.18),transparent_70%)]"
-            />
-            <p className="relative mono-heading text-xs font-semibold uppercase tracking-widest text-blue-400">
-              ESIcodeHub - @esi.dz only
-            </p>
-            <h2 className="relative mono-heading mt-5 text-3xl font-extrabold tracking-tight text-white md:text-4xl">
-              Ready to submit your first assignment?
-            </h2>
-            <p className="relative mt-4 text-base leading-relaxed text-slate-400">
-              Use your institutional email to sign in and start submitting under supervised academic workflow.
-            </p>
-            <Link
-              href="/login"
-              className="relative mt-8 inline-flex items-center gap-2 rounded-full bg-blue-600 px-8 py-3.5 text-sm font-semibold text-white transition-all duration-200 hover:-translate-y-0.5 hover:bg-blue-500"
-            >
-              Sign in with ESI email
-              <ArrowRight className="h-4 w-4" strokeWidth={1.8} />
+          <div style={{ display: 'flex', alignItems: 'center', gap: 32 }}>
+            <a href="#features" className="nav-link">Features</a>
+            <Link href="/register" className="nav-link">Sign up</Link>
+            <Link href="/login" className="btn-primary" style={{ padding: '.45rem 1.25rem', fontSize: '.875rem' }}>
+              Sign in
             </Link>
           </div>
-        </section>
+        </nav>
 
-        <section className="bg-[#0a1520] px-6 py-3.5 md:px-10">
-          <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-center gap-3">
-            <span className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-3 py-1.5 text-xs font-semibold text-slate-100">
-              <Lock className="h-4 w-4" strokeWidth={1.8} />
-              Restricted to @esi.dz
-            </span>
-            <span className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-3 py-1.5 text-xs font-semibold text-slate-100">
-              <Code2 className="h-4 w-4" strokeWidth={1.8} />
-              Built by ESI students
-            </span>
-            <span className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-3 py-1.5 text-xs font-semibold text-slate-100">
-              <Calendar className="h-4 w-4" strokeWidth={1.8} />
-              Academic year 2025-2026
-            </span>
-          </div>
-        </section>
-      </main>
+        {/* ════════════════ HERO ════════════════ */}
+        <section style={{
+          minHeight: '100vh',
+          display: 'flex', alignItems: 'center',
+          padding: '0 max(1.5rem, calc(50% - 680px))',
+          paddingTop: 64,
+          position: 'relative',
+          overflow: 'hidden',
+          background: 'linear-gradient(160deg, #0d1b2a 0%, #0f2035 60%, #0d1b2a 100%)',
+        }}>
+          <div className="hero-grid" />
+          <div className="noise" />
 
-      <footer className="border-t border-white/5 bg-[linear-gradient(to_bottom,#0a1520,#0d1b2a)] px-6 py-10 md:px-10">
-        <div className="mx-auto max-w-6xl">
-          <div className="flex flex-col gap-8 sm:flex-row sm:items-start sm:justify-between">
+          {/* Radial glows */}
+          <div style={{ position: 'absolute', top: '15%', left: '5%', width: 500, height: 500, background: 'radial-gradient(circle, rgba(37,99,235,.12) 0%, transparent 65%)', pointerEvents: 'none' }} />
+          <div style={{ position: 'absolute', bottom: '10%', right: '10%', width: 400, height: 400, background: 'radial-gradient(circle, rgba(79,70,229,.1) 0%, transparent 65%)', pointerEvents: 'none' }} />
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4rem', alignItems: 'center', width: '100%', paddingTop: '3rem', paddingBottom: '4rem' }}>
+
+            {/* Left — copy */}
             <div>
-              <Link href="/" className="inline-flex items-center gap-2.5 text-white">
-                <Image
-                  src="/esicodehub-logo.png"
-                  alt="ESIcodeHub"
-                  width={100}
-                  height={26}
-                />
-                <span className="mono-heading text-sm font-semibold">ESIcodeHub</span>
-              </Link>
-              <p className="mt-4 text-xs text-slate-400">ESIcodeHub © 2026 ESI</p>
+              {/* ESI badge */}
+              <div style={{
+                display: 'inline-flex', alignItems: 'center', gap: 8,
+                background: 'rgba(37,99,235,.1)', border: '1px solid rgba(37,99,235,.3)',
+                borderRadius: 100, padding: '5px 14px 5px 8px',
+                fontFamily: "'JetBrains Mono', monospace", fontSize: '.72rem', color: '#60a5fa',
+                marginBottom: '1.5rem',
+                animation: 'fadeUp .5s ease both',
+              }}>
+                <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#3b82f6', display: 'inline-block', boxShadow: '0 0 8px #3b82f6' }} />
+                École Supérieure d'Informatique · Algiers
+              </div>
+
+              {/* Headline */}
+              <h1 style={{
+                fontFamily: "'Outfit', sans-serif",
+                fontSize: 'clamp(2.8rem, 4.5vw, 4rem)',
+                fontWeight: 400,
+                lineHeight: 1.1,
+                letterSpacing: '-.02em',
+                color: '#f1f5f9',
+                marginBottom: '1.25rem',
+                animation: 'fadeUp .6s ease .08s both',
+              }}>
+                The code platform<br />
+                <em style={{ fontStyle: 'italic', color: '#93c5fd' }}>built for ESI.</em>
+              </h1>
+
+              {/* Subheadline */}
+              <p style={{
+                fontSize: '1.1rem',
+                color: '#64748b',
+                lineHeight: 1.75,
+                maxWidth: 460,
+                marginBottom: '2rem',
+                animation: 'fadeUp .6s ease .16s both',
+              }}>
+                Share code, submit assignments, and collaborate transparently under academic supervision — all in one place built exclusively for{' '}
+                <span style={{ color: '#94a3b8', fontWeight: 600 }}>@esi.dz</span> accounts.
+              </p>
+
+              {/* CTAs */}
+              <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', marginBottom: '2.5rem', animation: 'fadeUp .6s ease .24s both' }}>
+                <Link href="/login" className="btn-primary">
+                  Sign in with ESI email
+                  <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
+                    <path d="M3.75 2h3.5a.75.75 0 0 1 0 1.5h-3.5a.25.25 0 0 0-.25.25v8.5c0 .138.112.25.25.25h8.5a.25.25 0 0 0 .25-.25v-3.5a.75.75 0 0 1 1.5 0v3.5A1.75 1.75 0 0 1 12.25 14h-8.5A1.75 1.75 0 0 1 2 12.25v-8.5C2 2.784 2.784 2 3.75 2Zm6.854-1h4.146a.25.25 0 0 1 .25.25v4.146a.25.25 0 0 1-.427.177L13.03 4.03 9.28 7.78a.751.751 0 0 1-1.042-.018.751.751 0 0 1-.018-1.042l3.75-3.75-1.543-1.543A.25.25 0 0 1 10.604 1Z"/>
+                  </svg>
+                </Link>
+                <button onClick={scrollToFeatures} className="btn-secondary">
+                  Learn more
+                  <svg width="13" height="13" viewBox="0 0 16 16" fill="currentColor">
+                    <path d="M8 2a.75.75 0 0 1 .75.75v8.69l3.22-3.22a.749.749 0 1 1 1.06 1.06l-4.5 4.5a.749.749 0 0 1-1.06 0l-4.5-4.5a.749.749 0 1 1 1.06-1.06l3.22 3.22V2.75A.75.75 0 0 1 8 2Z"/>
+                  </svg>
+                </button>
+              </div>
+
+              {/* Trust signals */}
+              <div style={{ display: 'flex', gap: '1.5rem', flexWrap: 'wrap', animation: 'fadeUp .6s ease .32s both' }}>
+                {[
+                  { icon: '🔒', label: '@esi.dz only' },
+                  { icon: '🎓', label: 'Academic use' },
+                  { icon: '⚡', label: 'Free to use' },
+                ].map(item => (
+                  <div key={item.label} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: '.8125rem', color: '#475569' }}>
+                    <span>{item.icon}</span>
+                    <span>{item.label}</span>
+                  </div>
+                ))}
+              </div>
             </div>
 
-            <div className="flex gap-12 text-sm">
-              <div className="flex flex-col gap-3">
-                <p className="text-xs font-semibold uppercase tracking-widest text-slate-600">Platform</p>
-                <Link href="/submissions" className="text-slate-300 transition hover:text-white">
-                  Submissions
-                </Link>
-                <Link href="/login" className="text-slate-300 transition hover:text-white">
-                  Sign in
-                </Link>
+            {/* Right — code mockup */}
+            <div style={{ animation: 'fadeIn .8s ease .3s both', position: 'relative' }}>
+              <div className="code-window" style={{
+                background: 'rgba(9,15,32,.96)',
+                border: '1px solid rgba(59,130,246,.2)',
+                borderRadius: 14,
+                overflow: 'hidden',
+                boxShadow: '0 0 0 1px rgba(59,130,246,.06), 0 32px 80px rgba(0,0,0,.6), 0 0 60px rgba(59,130,246,.08)',
+                position: 'relative',
+              }}>
+                {/* Titlebar */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '12px 16px', borderBottom: '1px solid rgba(59,130,246,.08)', background: 'rgba(6,12,26,.8)' }}>
+                  {['#ff5f57','#febc2e','#28c840'].map(c => <div key={c} style={{ width: 11, height: 11, borderRadius: '50%', background: c }} />)}
+                  <span style={{ marginLeft: 10, fontFamily: "'JetBrains Mono', monospace", fontSize: '.7rem', color: '#334155' }}>
+                    merge_sort.py — ESICodeHub
+                  </span>
+                </div>
+
+                {/* Code body */}
+                <div style={{ padding: '1.25rem 1.5rem', fontFamily: "'JetBrains Mono', monospace", fontSize: '.78rem', lineHeight: 1.9 }}>
+                  {CODE_LINES.map((line, li) => (
+                    <div key={li} style={{ display: 'flex', alignItems: 'baseline' }}>
+                      <span style={{ width: 28, color: '#1e3a5f', fontSize: '.7rem', userSelect: 'none', flexShrink: 0 }}>{li + 1}</span>
+                      <span>
+                        {line.tokens.map((tok, ti) => (
+                          <span key={ti} style={{ color: TOKEN_COLORS[tok.t] ?? '#cbd5e1' }}>{tok.v}</span>
+                        ))}
+                        {li === CODE_LINES.length - 1 && <span className="cursor-blink" />}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Status bar */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 16px', background: 'rgba(6,12,26,.7)', borderTop: '1px solid rgba(59,130,246,.06)', fontFamily: "'JetBrains Mono', monospace", fontSize: '.65rem', color: '#1e3a5f' }}>
+                  <span>Python · UTF-8</span>
+                  <span style={{ color: '#22c55e' }}>● Reviewed · Grade: 17/20</span>
+                </div>
+              </div>
+
+              {/* Floating badges */}
+              <div style={{
+                position: 'absolute', top: -16, right: -16,
+                background: 'rgba(34,197,94,.12)', border: '1px solid rgba(34,197,94,.3)',
+                borderRadius: 10, padding: '8px 14px',
+                fontFamily: "'JetBrains Mono', monospace", fontSize: '.72rem', color: '#4ade80',
+                backdropFilter: 'blur(8px)',
+                animation: 'slideIn .5s ease .6s both',
+              }}>
+                ✓ Submitted on time
+              </div>
+              <div style={{
+                position: 'absolute', bottom: 40, left: -20,
+                background: 'rgba(99,102,241,.12)', border: '1px solid rgba(99,102,241,.3)',
+                borderRadius: 10, padding: '8px 14px',
+                fontFamily: "'JetBrains Mono', monospace", fontSize: '.72rem', color: '#a5b4fc',
+                backdropFilter: 'blur(8px)',
+                animation: 'slideIn .5s ease .75s both',
+              }}>
+                3 inline comments
               </div>
             </div>
           </div>
+        </section>
+
+        {/* ════════════════ STATS STRIP ════════════════ */}
+        <div ref={statsRef.ref} style={{
+          borderTop: '1px solid rgba(255,255,255,.06)',
+          borderBottom: '1px solid rgba(255,255,255,.06)',
+          background: 'rgba(255,255,255,.02)',
+          padding: '2.5rem max(1.5rem, calc(50% - 680px))',
+          display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)',
+          gap: '2rem',
+        }}>
+          {[
+            { value: students.count, suffix: '+', label: 'ESI students' },
+            { value: snippets.count, suffix: '+', label: 'Code snippets shared' },
+            { value: professors.count, suffix: '', label: 'Professors active' },
+          ].map(stat => (
+            <div key={stat.label} style={{ textAlign: 'center' }}>
+              <div style={{
+                fontFamily: "'Instrument Serif', serif",
+                fontSize: 'clamp(2.2rem, 3vw, 3rem)',
+                fontWeight: 400,
+                background: 'linear-gradient(135deg, #93c5fd, #818cf8)',
+                WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
+                backgroundClip: 'text',
+              }}>
+                {stat.value.toLocaleString()}{stat.suffix}
+              </div>
+              <div style={{ fontSize: '.85rem', color: '#475569', marginTop: 4 }}>{stat.label}</div>
+            </div>
+          ))}
         </div>
-      </footer>
-    </div>
+
+        {/* ════════════════ PROBLEM / SOLUTION ════════════════ */}
+        <section style={{
+          padding: '6rem max(1.5rem, calc(50% - 680px))',
+          background: '#f8fafc',
+        }}>
+          <div style={{ textAlign: 'center', marginBottom: '3.5rem' }}>
+            <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '.72rem', color: '#3b82f6', letterSpacing: '.15em', textTransform: 'uppercase', marginBottom: 12 }}>
+              // why it exists
+            </div>
+            <h2 style={{ fontFamily: "'Instrument Serif', serif", fontSize: 'clamp(1.9rem, 3vw, 2.75rem)', fontWeight: 400, color: '#0f172a', lineHeight: 1.2 }}>
+              The problem with code at ESI
+            </h2>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1.5rem' }}>
+            {[
+              {
+                icon: (
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+                    <line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+                  </svg>
+                ),
+                color: '#ef4444',
+                title: 'No visibility',
+                body: "Professors receive assignments as email attachments or through ad-hoc tools. There's no history, no version tracking, and no structured way to give line-by-line feedback.",
+              },
+              {
+                icon: (
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <circle cx="12" cy="12" r="10"/>
+                    <path d="M8 12s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/>
+                  </svg>
+                ),
+                color: '#f59e0b',
+                title: 'AI-generated code',
+                body: 'Without a structured submission system, detecting AI-generated or copied code is manual and time-consuming — professors spend hours investigating instead of teaching.',
+              },
+              {
+                icon: (
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+                    <circle cx="9" cy="7" r="4"/>
+                    <path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/>
+                  </svg>
+                ),
+                color: '#3b82f6',
+                title: 'Isolated students',
+                body: "Students have no shared space to learn from each other's code under academic supervision. Collaboration happens informally, without structure or accountability.",
+              },
+            ].map(card => (
+              <div key={card.title} className="problem-card" style={{
+                background: '#fff',
+                border: '1px solid #e2e8f0',
+                borderRadius: 16,
+                padding: '2rem',
+                borderTop: `3px solid ${card.color}`,
+              }}>
+                <div style={{ color: card.color, marginBottom: 16 }}>{card.icon}</div>
+                <h3 style={{ fontWeight: 700, fontSize: '1rem', color: '#0f172a', marginBottom: 10 }}>{card.title}</h3>
+                <p style={{ fontSize: '.875rem', color: '#64748b', lineHeight: 1.7 }}>{card.body}</p>
+              </div>
+            ))}
+          </div>
+
+          {/* Arrow pointing down to solution */}
+          <div style={{ textAlign: 'center', margin: '2.5rem 0' }}>
+            <div style={{ display: 'inline-flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
+              <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '.75rem', color: '#94a3b8', letterSpacing: '.1em' }}>ESICodeHub solves this</span>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M12 5v14M5 12l7 7 7-7"/>
+              </svg>
+            </div>
+          </div>
+
+          {/* Solution card */}
+          <div style={{
+            background: 'linear-gradient(135deg, #0f172a, #1e293b)',
+            border: '1px solid rgba(59,130,246,.2)',
+            borderRadius: 20,
+            padding: '2.5rem 3rem',
+            display: 'grid',
+            gridTemplateColumns: '1fr 1fr',
+            gap: '3rem',
+            alignItems: 'center',
+          }}>
+            <div>
+              <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '.72rem', color: '#3b82f6', letterSpacing: '.15em', textTransform: 'uppercase', marginBottom: 12 }}>
+                // the solution
+              </div>
+              <h3 style={{ fontFamily: "'Outfit', sans-serif", fontSize: '1.75rem', fontWeight: 400, color: '#f1f5f9', lineHeight: 1.3, marginBottom: 16 }}>
+                A supervised academic code platform, built exclusively for ESI.
+              </h3>
+              <p style={{ color: '#64748b', fontSize: '.9rem', lineHeight: 1.75 }}>
+                ESICodeHub gives professors structured visibility into every submission, automated plagiarism detection, and inline feedback tools — while giving students a space to share, learn, and collaborate under real academic supervision.
+              </p>
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+              {[
+                { label: 'Structured submissions', icon: '📋' },
+                { label: 'AST plagiarism detection', icon: '🔍' },
+                { label: 'Inline code review', icon: '✏️' },
+                { label: 'Full audit trail', icon: '🗂️' },
+              ].map(item => (
+                <div key={item.label} style={{
+                  background: 'rgba(255,255,255,.04)',
+                  border: '1px solid rgba(255,255,255,.07)',
+                  borderRadius: 12,
+                  padding: '1rem',
+                  textAlign: 'center',
+                }}>
+                  <div style={{ fontSize: '1.5rem', marginBottom: 8 }}>{item.icon}</div>
+                  <div style={{ fontSize: '.8rem', color: '#94a3b8', lineHeight: 1.4 }}>{item.label}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* ════════════════ FEATURES ════════════════ */}
+        <section ref={featuresRef as React.RefObject<HTMLElement>} id="features" style={{
+          padding: '6rem max(1.5rem, calc(50% - 680px))',
+          background: '#0d1b2a',
+        }}>
+          <div style={{ textAlign: 'center', marginBottom: '3.5rem' }}>
+            <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '.72rem', color: '#3b82f6', letterSpacing: '.15em', textTransform: 'uppercase', marginBottom: 12 }}>
+              // features
+            </div>
+            <h2 style={{ fontFamily: "'Outfit', sans-serif", fontSize: 'clamp(1.9rem, 3vw, 2.75rem)', fontWeight: 400, color: '#f1f5f9', lineHeight: 1.2 }}>
+              Everything you need, nothing you don't
+            </h2>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '1.5rem' }}>
+            {[
+              {
+                icon: (
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/>
+                  </svg>
+                ),
+                color: '#3b82f6', colorBg: 'rgba(59,130,246,.1)',
+                title: 'Code Sharing',
+                desc: 'Upload and share source code with syntax highlighting across 20+ languages. Set visibility to public for the community or private for personal use.',
+                tag: 'For everyone',
+              },
+              {
+                icon: (
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                    <polyline points="14 2 14 8 20 8"/>
+                    <line x1="16" y1="13" x2="8" y2="13"/>
+                    <line x1="16" y1="17" x2="8" y2="17"/>
+                  </svg>
+                ),
+                color: '#10b981', colorBg: 'rgba(16,185,129,.1)',
+                title: 'Assignment Submissions',
+                desc: 'Professors create structured assignments with deadlines. Students submit code directly — with version history, late submission tracking, and per-assignment targeting by year and section.',
+                tag: 'Students + Professors',
+              },
+              {
+                icon: (
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                    <line x1="11" y1="8" x2="11" y2="14"/><line x1="8" y1="11" x2="14" y2="11"/>
+                  </svg>
+                ),
+                color: '#f59e0b', colorBg: 'rgba(245,158,11,.1)',
+                title: 'Plagiarism Detection',
+                desc: 'Automated AST-based similarity analysis powered by MOSS. Professors get detailed reports comparing all submissions for a given assignment — in seconds, not hours.',
+                tag: 'For professors',
+              },
+              {
+                icon: (
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+                  </svg>
+                ),
+                color: '#8b5cf6', colorBg: 'rgba(139,92,246,.1)',
+                title: 'Peer & Professor Review',
+                desc: 'Inline line-by-line comments directly on code, structured grading with grade/20, and general feedback — all visible to the student in one clean interface.',
+                tag: 'For professors',
+              },
+            ].map(feat => (
+              <div key={feat.title} className="feature-card" style={{
+                background: 'rgba(255,255,255,.03)',
+                border: '1px solid rgba(255,255,255,.07)',
+                borderRadius: 16,
+                padding: '2rem',
+                transition: 'border-color .25s, background .25s',
+                cursor: 'default',
+              }}
+                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = 'rgba(59,130,246,.3)'; (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,.05)'; }}
+                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = 'rgba(255,255,255,.07)'; (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,.03)'; }}
+              >
+                <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 16 }}>
+                  <div className="feature-icon-wrap" style={{
+                    width: 48, height: 48, borderRadius: 12,
+                    background: feat.colorBg,
+                    color: feat.color,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    transition: 'transform .25s ease',
+                    flexShrink: 0,
+                  }}>
+                    {feat.icon}
+                  </div>
+                  <span style={{
+                    fontFamily: "'JetBrains Mono', monospace",
+                    fontSize: '.65rem', color: '#475569',
+                    background: 'rgba(255,255,255,.04)',
+                    border: '1px solid rgba(255,255,255,.07)',
+                    borderRadius: 6, padding: '3px 8px',
+                  }}>
+                    {feat.tag}
+                  </span>
+                </div>
+                <h3 style={{ fontWeight: 700, fontSize: '1.05rem', color: '#f1f5f9', marginBottom: 10 }}>{feat.title}</h3>
+                <p style={{ fontSize: '.875rem', color: '#475569', lineHeight: 1.7 }}>{feat.desc}</p>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        {/* ════════════════ TRUST STRIP ════════════════ */}
+        <div style={{
+          borderTop: '1px solid rgba(255,255,255,.06)',
+          borderBottom: '1px solid rgba(255,255,255,.06)',
+          background: 'rgba(255,255,255,.015)',
+          padding: '1.25rem max(1.5rem, calc(50% - 680px))',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          gap: '2.5rem', flexWrap: 'wrap',
+        }}>
+          {[
+            'Restricted to @esi.dz accounts',
+            'Built by ESI students',
+            'Academic year 2025–2026',
+          ].map((item, i) => (
+            <div key={item} style={{ display: 'flex', alignItems: 'center', gap: i > 0 ? '2.5rem' : 0 }}>
+              {i > 0 && <span style={{ color: '#1e3a5f', fontSize: '.75rem' }}>·</span>}
+              <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '.75rem', color: '#334155', letterSpacing: '.05em' }}>
+                {item}
+              </span>
+            </div>
+          ))}
+        </div>
+
+        {/* ════════════════ CTA SECTION ════════════════ */}
+        <section style={{
+          padding: '6rem max(1.5rem, calc(50% - 680px))',
+          background: '#0d1b2a',
+          textAlign: 'center',
+        }}>
+          <div style={{
+            maxWidth: 600, margin: '0 auto',
+            background: 'linear-gradient(135deg, rgba(37,99,235,.08), rgba(79,70,229,.08))',
+            border: '1px solid rgba(59,130,246,.18)',
+            borderRadius: 24,
+            padding: '3.5rem 2.5rem',
+            position: 'relative',
+            overflow: 'hidden',
+          }}>
+            <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(ellipse at 50% 0%, rgba(59,130,246,.12), transparent 65%)', pointerEvents: 'none' }} />
+            <div style={{ position: 'relative' }}>
+              <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '.72rem', color: '#3b82f6', letterSpacing: '.15em', textTransform: 'uppercase', marginBottom: 16 }}>
+                // ready to start?
+              </div>
+              <h2 style={{ fontFamily: "'Outfit', sans-serif", fontSize: 'clamp(1.75rem, 3vw, 2.5rem)', fontWeight: 400, color: '#f1f5f9', lineHeight: 1.2, marginBottom: 14 }}>
+                Join the ESI academic<br />code community
+              </h2>
+              <p style={{ color: '#475569', fontSize: '.9375rem', lineHeight: 1.7, marginBottom: '2rem', maxWidth: 420, margin: '0 auto 2rem' }}>
+                Sign in with your ESI email to access submissions, assignments, and collaboration tools designed for your academic environment.
+              </p>
+              <Link href="/login" className="btn-primary" style={{ fontSize: '1rem', padding: '.85rem 2.25rem' }}>
+                Sign in with ESI email →
+              </Link>
+            </div>
+          </div>
+        </section>
+
+        {/* ════════════════ FOOTER ════════════════ */}
+        <footer style={{
+          borderTop: '1px solid rgba(255,255,255,.06)',
+          padding: '2rem max(1.5rem, calc(50% - 680px))',
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          flexWrap: 'wrap', gap: '1rem',
+          background: 'rgba(0,0,0,.2)',
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <div style={{ width: 24, height: 24, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <Image
+                src="/esicodehub-logo.png"
+                alt="ESICodeHub Logo"
+                width={24}
+                height={24}
+                style={{ objectFit: 'contain' }}
+              />
+            </div>
+            <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '.8rem', color: '#334155' }}>
+              ESICodeHub © {new Date().getFullYear()}
+            </span>
+          </div>
+
+          <div style={{ display: 'flex', gap: '1.5rem' }}>
+            {[
+              { label: 'Submissions', href: '/submissions' },
+              { label: 'Sign in', href: '/login' },
+            ].map(link => (
+              <Link key={link.href} href={link.href} style={{ fontSize: '.8125rem', color: '#334155', textDecoration: 'none', transition: 'color .15s' }}
+                onMouseEnter={e => (e.currentTarget.style.color = '#94a3b8')}
+                onMouseLeave={e => (e.currentTarget.style.color = '#334155')}
+              >
+                {link.label}
+              </Link>
+            ))}
+          </div>
+        </footer>
+
+      </div>
+    </>
   );
 }
