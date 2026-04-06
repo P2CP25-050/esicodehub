@@ -132,28 +132,6 @@ function HomePageContent() {
       setAssignmentsLoading(false);
     }
 
-    async function loadUser() {
-      try {
-        const stored = localStorage.getItem("user");
-        if (stored) {
-          const parsed = JSON.parse(stored);
-         
-          const firstName: string = parsed.first_name ?? parsed.name ?? "U";
-          const lastName: string  = parsed.last_name  ?? "";
-          const initials = firstName[0].toUpperCase() + (lastName[0] ?? "").toUpperCase();
-          setUser({
-            id:         parsed.id   ?? "1",
-            first_name: firstName,
-            role:       parsed.role === "professor" ? "professor" : "student",
-            initials,
-          });
-        }
-      } catch {
-        // keep default user
-      }
-    }
-
-    loadUser();
     fetchData();
   }, []);
 
