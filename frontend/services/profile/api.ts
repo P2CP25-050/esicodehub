@@ -129,7 +129,7 @@ export async function getStudentStats(): Promise<StudentStats> {
       axios.get("/api/assignments/", { params: { has_submitted: true, page_size: 1 } }),
     ]);
 
-    const count = (res: PromiseSettledResult<any>): number => {
+    const count = (res: PromiseSettledResult<unknown>): number => {
       if (res.status === "fulfilled") {
         const d = res.value.data;
         if (typeof d?.count === "number") return d.count;
@@ -236,7 +236,6 @@ export async function getRecentActivity(): Promise<ActivityItem[]> {
   //   const { data } = await axios.get("/api/assignment-submissions/", {
   //     params: { mine: true, page_size: 10, ordering: "-created_at" },
   //   });
-  //   ...push items with icon "🎯" and label `Submitted to "${assignment.title}"`
   // } catch {}
 
   return items
