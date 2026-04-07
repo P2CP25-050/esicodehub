@@ -12,16 +12,32 @@ function useCounter(target: number, duration = 1800) {
 
   useEffect(() => {
     if (!started) return;
+
     let start: number | null = null;
+    let cancelled = false;
+    let frameId: number | null = null;
+
     const step = (timestamp: number) => {
+      if (cancelled) return;
       if (!start) start = timestamp;
+
       const progress = Math.min((timestamp - start) / duration, 1);
       const ease = 1 - Math.pow(1 - progress, 3);
       setCount(Math.floor(ease * target));
-      if (progress < 1) requestAnimationFrame(step);
-      else setCount(target);
+
+      if (progress < 1) {
+        frameId = requestAnimationFrame(step);
+      } else if (!cancelled) {
+        setCount(target);
+      }
     };
-    requestAnimationFrame(step);
+
+    frameId = requestAnimationFrame(step);
+
+    return () => {
+      cancelled = true;
+      if (frameId !== null) cancelAnimationFrame(frameId);
+    };
   }, [started, target, duration]);
 
   return { count, start: () => setStarted(true) };
