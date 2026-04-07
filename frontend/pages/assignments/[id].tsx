@@ -1023,7 +1023,7 @@ function AssignmentDetailPageContent() {
                 ) : (
                   <div className="mt-5 overflow-hidden rounded-2xl border border-slate-200">
                     <div className="overflow-x-auto">
-                      <table className="min-w-190 w-full divide-y divide-slate-200 text-sm">
+                      <table className="min-w-[190px] w-full divide-y divide-slate-200 text-sm">
                         <thead className="bg-slate-50 text-xs uppercase tracking-[0.16em] text-slate-500">
                           <tr>
                             <th className="px-4 py-3 text-left font-semibold">Student name</th>
