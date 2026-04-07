@@ -39,6 +39,10 @@ class PersonalSubmissionListCreateView(APIView):
             | Q(owner=request.user)
         )
 
+        mine = request.query_params.get('mine')
+        if mine and mine.strip().lower() in {'1', 'true', 'yes'}:
+            queryset = queryset.filter(owner=request.user)
+
         language = request.query_params.get('language')
         submission_type = request.query_params.get('type')
         course = request.query_params.get('course')

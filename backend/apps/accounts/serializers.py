@@ -1,5 +1,7 @@
 from rest_framework import serializers
 
+from .models import Profile, Subject, User
+
 
 class RegisterSerializer(serializers.Serializer):
     email = serializers.EmailField()
@@ -39,3 +41,51 @@ class LoginSerializer(serializers.Serializer):
     def validate_email(self, value):
         """convert email to lowercase."""
         return value.lower()
+
+
+class SubjectSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Subject
+        fields = ['id', 'name', 'code']
+
+
+class ProfileSerializer(serializers.ModelSerializer):
+    avatar = serializers.SerializerMethodField()
+    subjects = SubjectSerializer(many=True, read_only=True)
+
+    class Meta:
+        model = Profile
+        fields = ['avatar', 'bio', 'subjects']
+
+    def get_avatar(self, obj):
+        if not obj.avatar:
+            return None
+
+        url = obj.avatar.url
+        request = self.context.get('request')
+        if request:
+            return request.build_absolute_uri(url)
+        return url
+
+
+class UserProfileSerializer(serializers.ModelSerializer):
+    profile = ProfileSerializer(read_only=True)
+
+    class Meta:
+        model = User
+        fields = [
+            'id',
+            'first_name',
+            'last_name',
+            'email',
+            'role',
+            'school_id',
+            'created_at',
+            'profile',
+        ]
+
+
+class ProfileUpdateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Profile
+        fields = ['bio', 'avatar']

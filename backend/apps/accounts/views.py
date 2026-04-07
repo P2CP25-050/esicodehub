@@ -8,12 +8,14 @@ from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.serializers import TokenRefreshSerializer
 
-from apps.accounts.models import User, EmailVerification
+from apps.accounts.models import User, EmailVerification, Profile
 from apps.accounts.serializers import (
     RegisterSerializer,
     VerifyEmailSerializer,
     ResendVerificationSerializer,
-    LoginSerializer
+    LoginSerializer,
+    ProfileUpdateSerializer,
+    UserProfileSerializer,
 )
 from apps.esi_db.models import EsiStudent, EsiProfessor
 
@@ -311,6 +313,26 @@ def me(request):
         'last_name': user.last_name,
         'role': user.role,
     })
+
+
+@api_view(['GET', 'PATCH'])
+@permission_classes([IsAuthenticated])
+def profile(request):
+    """Return and update authenticated user profile (bio/avatar on Profile model)."""
+    profile_obj, _ = Profile.objects.get_or_create(user=request.user)
+
+    if request.method == 'PATCH':
+        update_serializer = ProfileUpdateSerializer(
+            profile_obj,
+            data=request.data,
+            partial=True,
+        )
+        update_serializer.is_valid(raise_exception=True)
+        update_serializer.save()
+        request.user.refresh_from_db()
+
+    serializer = UserProfileSerializer(request.user, context={'request': request})
+    return Response(serializer.data)
 
 
 @api_view(['GET'])

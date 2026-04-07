@@ -15,7 +15,27 @@ import {
 import type {
   ProfileStats,
   ActivityItem,
+  UserProfile,
 } from "@/services/profile/api";
+
+const PROFILE_AVATAR_KEY = "profile_avatar_url";
+const AVATAR_UPDATED_EVENT = "profile-avatar-updated";
+
+const syncAvatarForHeader = (avatar: string | null) => {
+  if (typeof window === "undefined") return;
+
+  if (avatar) {
+    window.localStorage.setItem(PROFILE_AVATAR_KEY, avatar);
+  } else {
+    window.localStorage.removeItem(PROFILE_AVATAR_KEY);
+  }
+
+  window.dispatchEvent(
+    new CustomEvent(AVATAR_UPDATED_EVENT, {
+      detail: { avatarUrl: avatar },
+    }),
+  );
+};
 
 // ─── Responsive CSS ──────────────────────────────────────────────────────────
 const RESPONSIVE_CSS = `
@@ -202,6 +222,7 @@ function ProfilePage() {
 
   const [stats, setStats] = useState<ProfileStats | null>(null);
   const [activity, setActivity] = useState<ActivityItem[]>([]);
+  const [profileData, setProfileData] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
 
   // Inject styles
@@ -234,7 +255,10 @@ function ProfilePage() {
         setBio(profile.profile?.bio ?? "");
         setSavedBio(profile.profile?.bio ?? "");
         // Django ImageField serializes to an absolute URL string
-        setAvatarUrl(profile.profile?.avatar ?? null);
+        const loadedAvatar = profile.profile?.avatar ?? null;
+        setAvatarUrl(loadedAvatar);
+        syncAvatarForHeader(loadedAvatar);
+        setProfileData(profile);
         setStats(statsData);
         setActivity(activityData);
       } catch {
@@ -284,7 +308,9 @@ function ProfilePage() {
     try {
       const result = await uploadAvatar(file);
       // avatar field is the ImageField name on the Profile model
-      setAvatarUrl(result.avatar);
+      const newAvatar = result.avatar || null;
+      setAvatarUrl(newAvatar);
+      syncAvatarForHeader(newAvatar);
     } catch (err: unknown) {
       setAvatarError(err instanceof Error ? err.message : "Avatar upload failed.");
     } finally {
@@ -296,12 +322,12 @@ function ProfilePage() {
 
   if (!user) return null;
 
-  const role = (user as unknown).role ?? "student";
-  const firstName = (user as unknown).first_name ?? "";
-  const lastName = (user as unknown).last_name ?? "";
-  const email = (user as unknown).email ?? "";
-  const schoolId = (user as unknown).school_id ?? (user as unknown).student_id ?? "";
-  const createdAt = (user as unknown).created_at ?? "";
+  const role = profileData?.role ?? user.role ?? "student";
+  const firstName = profileData?.first_name ?? user.first_name ?? "";
+  const lastName = profileData?.last_name ?? user.last_name ?? "";
+  const email = profileData?.email ?? user.email ?? "";
+  const schoolId = profileData?.school_id ?? "";
+  const createdAt = profileData?.created_at ?? "";
 
   return (
     <div style={s.page}>
@@ -330,7 +356,7 @@ function ProfilePage() {
                       <Spinner size={28} />
                     </div>
                   ) : avatarUrl ? (
-                    <image
+                    <img
                       src={avatarUrl}
                       alt="Avatar"
                       style={{ width: 96, height: 96, borderRadius: "50%", objectFit: "cover", border: "3px solid #e2e8f6" }}

@@ -1,4 +1,5 @@
 import axios from "axios";
+import apiClient from "@/lib/axios";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -49,26 +50,61 @@ export interface ActivityItem {
 
 const getApiErrorMessage = (err: unknown, fallback: string): string => {
   if (axios.isAxiosError(err)) {
-    const detail = err.response?.data?.detail;
+    const data = err.response?.data;
+    const detail = data?.detail;
     if (typeof detail === "string" && detail.trim().length > 0) return detail;
+
+    // Handle DRF field errors, e.g. { avatar: ["Upload a valid image..."] }
+    if (data && typeof data === "object") {
+      const values = Object.values(data as Record<string, unknown>);
+      for (const value of values) {
+        if (Array.isArray(value) && typeof value[0] === "string" && value[0].trim().length > 0) {
+          return value[0];
+        }
+        if (typeof value === "string" && value.trim().length > 0) {
+          return value;
+        }
+      }
+    }
+
     if (typeof err.message === "string" && err.message.trim().length > 0) return err.message;
   }
   if (err instanceof Error && err.message.trim().length > 0) return err.message;
   return fallback;
 };
 
+const getListData = <T>(data: unknown): T[] => {
+  if (Array.isArray(data)) return data as T[];
+
+  if (typeof data === "object" && data !== null && "results" in data) {
+    const results = (data as { results?: unknown }).results;
+    if (Array.isArray(results)) return results as T[];
+  }
+
+  return [];
+};
+
+const getCountData = (data: unknown, fallbackLength: number): number => {
+  if (typeof data === "object" && data !== null && "count" in data) {
+    const count = (data as { count?: unknown }).count;
+    if (typeof count === "number") return count;
+  }
+
+  return fallbackLength;
+};
+
 // ─── Profile ─────────────────────────────────────────────────────────────────
 
 /**
  * Fetch the current user's full profile.
- * GET /api/auth/profile/
+ * GET /auth/profile/
  *
  * The serializer must nest the related Profile model under the "profile" key,
  * e.g. using a ProfileSerializer with fields: avatar, bio, subjects.
  */
 export async function getProfile(): Promise<UserProfile> {
   try {
-    const { data } = await axios.get<UserProfile>("/api/auth/profile/");
+    const { data } = await apiClient.get<UserProfile>("/auth/profile/");
     return data;
   } catch (err) {
     throw new Error(getApiErrorMessage(err, "Failed to load profile."));
@@ -77,13 +113,13 @@ export async function getProfile(): Promise<UserProfile> {
 
 /**
  * Update the authenticated user's bio.
- * PATCH /api/auth/profile/  →  { bio: string }
+ * PATCH /auth/profile/  →  { bio: string }
  *
  * The backend should update Profile.bio (not User.bio — bio lives on Profile).
  */
 export async function updateBio(bio: string): Promise<UserProfile> {
   try {
-    const { data } = await axios.patch<UserProfile>("/api/auth/profile/", { bio });
+    const { data } = await apiClient.patch<UserProfile>("/auth/profile/", { bio });
     return data;
   } catch (err) {
     throw new Error(getApiErrorMessage(err, "Failed to save bio."));
@@ -92,7 +128,7 @@ export async function updateBio(bio: string): Promise<UserProfile> {
 
 /**
  * Upload a new avatar image for the authenticated user.
- * PATCH /api/auth/profile/  (multipart/form-data, field name: "avatar")
+ * PATCH /auth/profile/  (multipart/form-data, field name: "avatar")
  *
  * The backend updates Profile.avatar (ImageField, upload_to="avatars/").
  * The response must include { profile: { avatar: "<url>" } }.
@@ -106,9 +142,7 @@ export async function uploadAvatar(file: File): Promise<{ avatar: string }> {
   form.append("avatar", file);
 
   try {
-    const { data } = await axios.patch<UserProfile>("/api/auth/profile/", form, {
-      headers: { "Content-Type": "multipart/form-data" },
-    });
+    const { data } = await apiClient.patch<UserProfile>("/auth/profile/", form);
     // avatar URL is nested under profile
     return { avatar: data.profile.avatar ?? "" };
   } catch (err) {
@@ -123,25 +157,35 @@ export async function uploadAvatar(file: File): Promise<{ avatar: string }> {
  */
 export async function getStudentStats(): Promise<StudentStats> {
   try {
-    const [personalRes, assignmentSubRes, completedRes] = await Promise.allSettled([
-      axios.get("/api/submissions/", { params: { mine: true, page_size: 1 } }),
-      axios.get("/api/assignment-submissions/", { params: { mine: true, page_size: 1 } }),
-      axios.get("/api/assignments/", { params: { has_submitted: true, page_size: 1 } }),
-    ]);
+    const personalRes = await apiClient.get("/personal-submissions/", {
+      params: { mine: true, page: 1 },
+    });
 
-    const count = (res: PromiseSettledResult<unknown>): number => {
-      if (res.status === "fulfilled") {
-        const d = res.value.data;
-        if (typeof d?.count === "number") return d.count;
-        if (Array.isArray(d)) return d.length;
-      }
-      return 0;
-    };
+    const personalSubmissions = getListData<RawSubmission>(personalRes.data);
+    const totalPersonalSubmissions = getCountData(
+      personalRes.data,
+      personalSubmissions.length,
+    );
+
+    const assignmentsRes = await apiClient.get("/assignments/", {
+      params: { page: 1 },
+    });
+    const assignments = getListData<RawAssignment>(assignmentsRes.data);
+
+    const assignmentSubmissionChecks = await Promise.allSettled(
+      assignments.map((assignment) =>
+        apiClient.get(`/assignments/${assignment.id}/my-submission/`),
+      ),
+    );
+
+    const assignmentSubmissionCount = assignmentSubmissionChecks.filter(
+      (result) => result.status === "fulfilled",
+    ).length;
 
     return {
-      total_personal_submissions: count(personalRes),
-      total_assignment_submissions: count(assignmentSubRes),
-      assignments_completed: count(completedRes),
+      total_personal_submissions: totalPersonalSubmissions,
+      total_assignment_submissions: assignmentSubmissionCount,
+      assignments_completed: assignmentSubmissionCount,
     };
   } catch (err) {
     throw new Error(getApiErrorMessage(err, "Failed to load student stats."));
@@ -155,7 +199,7 @@ export async function getStudentStats(): Promise<StudentStats> {
  */
 export async function getProfessorStats(): Promise<ProfessorStats> {
   try {
-    const assignmentsRes = await axios.get("/api/assignments/", {
+    const assignmentsRes = await apiClient.get("/assignments/", {
       params: { mine: true, page_size: 100 },
     });
 
@@ -199,6 +243,16 @@ interface RawSubmission {
   submission_type?: string;
 }
 
+interface RawAssignment {
+  id: number;
+  title: string;
+}
+
+interface RawAssignmentSubmission {
+  submitted_at: string;
+  is_late?: boolean;
+}
+
 /**
  * Derive the user's recent activity from existing endpoints.
  * Currently fetches personal submissions only (limit 10).
@@ -209,15 +263,11 @@ export async function getRecentActivity(): Promise<ActivityItem[]> {
   const items: ActivityItem[] = [];
 
   try {
-    const { data } = await axios.get("/api/submissions/", {
-      params: { mine: true, page_size: 10, ordering: "-created_at" },
+    const { data } = await apiClient.get("/personal-submissions/", {
+      params: { mine: true, page: 1 },
     });
 
-    const submissions: RawSubmission[] = Array.isArray(data)
-      ? data
-      : Array.isArray(data?.results)
-      ? data.results
-      : [];
+    const submissions = getListData<RawSubmission>(data);
 
     for (const sub of submissions.slice(0, 10)) {
       items.push({
@@ -231,12 +281,39 @@ export async function getRecentActivity(): Promise<ActivityItem[]> {
     // Non-fatal — return what we have
   }
 
-  // TODO: add assignment submissions when endpoint is available
-  // try {
-  //   const { data } = await axios.get("/api/assignment-submissions/", {
-  //     params: { mine: true, page_size: 10, ordering: "-created_at" },
-  //   });
-  // } catch {}
+  try {
+    const { data } = await apiClient.get("/assignments/", { params: { page: 1 } });
+    const assignments = getListData<RawAssignment>(data);
+
+    const submissionChecks = await Promise.allSettled(
+      assignments.map(async (assignment) => {
+        const submissionRes = await apiClient.get<RawAssignmentSubmission>(
+          `/assignments/${assignment.id}/my-submission/`,
+        );
+
+        return {
+          assignment,
+          submission: submissionRes.data,
+        };
+      }),
+    );
+
+    for (const result of submissionChecks) {
+      if (result.status !== "fulfilled") continue;
+
+      const { assignment, submission } = result.value;
+      if (!submission?.submitted_at) continue;
+
+      items.push({
+        icon: "📝",
+        label: `Submitted assignment "${assignment.title}"`,
+        sub: submission.is_late ? "Late submission" : "On-time submission",
+        created_at: submission.submitted_at,
+      });
+    }
+  } catch {
+    // Non-fatal — return what we have
+  }
 
   return items
     .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
