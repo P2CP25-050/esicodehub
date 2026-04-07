@@ -21,7 +21,6 @@ interface UpcomingDeadlinesProps {
   assignments: Assignment[];
   loading: boolean;
   error: boolean;
-  role: "student" | "professor";
 }
 
 function useNow(intervalMs = 60000) {
@@ -86,7 +85,7 @@ function AssignmentCard({ assignment, idx }: { assignment: Assignment; idx: numb
   );
 }
 
-export default function UpcomingDeadlines({ assignments, loading, error, role }: UpcomingDeadlinesProps) {
+export default function UpcomingDeadlines({ assignments, loading, error }: UpcomingDeadlinesProps) {
   return (
     <div className="flex flex-col h-full">
       {/* Column header */}

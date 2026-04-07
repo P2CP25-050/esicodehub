@@ -7,7 +7,7 @@ import RecentSubmissions from "@/components/home/RecentSubmissions";
 import UpcomingDeadlines from "@/components/home/UpcomingDeadlines";
 import ForumPlaceholder from "@/components/home/ForumPlaceholder";
 import QuickStats from "@/components/home/QuickStats";
-import  ProtectedRoute  from "@/components/ProtectedRoute";
+import { ProtectedRoute } from "@/components/ProtectedRoute";
 import type { Assignment } from "@/services/assignments/assignments.types";
 import { useAuth } from "@/hooks/useAuth";
 
@@ -190,7 +190,6 @@ function HomePageContent() {
               assignments={homeAssignments}
               loading={assignmentsLoading}
               error={assignmentsError}
-              role={role}
             />
           </div>
 
