@@ -1,4 +1,6 @@
 import { useEffect, useState } from "react";
+// Import from the real Header location — it uses default export and only
+// accepts activePage?: string (no userInitials prop)
 import Header from "@/components/submissions/Header";
 import GreetingBar from "@/components/home/GreetingBar";
 import RecentSubmissions from "@/components/home/RecentSubmissions";
@@ -7,9 +9,6 @@ import ForumPlaceholder from "@/components/home/ForumPlaceholder";
 import QuickStats from "@/components/home/QuickStats";
 import  ProtectedRoute  from "@/components/ProtectedRoute";
 import type { Assignment } from "@/services/assignments/assignments.types";
-// Use the project's existing auth hook — this is the single source of truth
-// for the logged-in user. The manual localStorage approach was reading a key
-// that doesn't exist in this app, leaving role permanently as "student".
 import { useAuth } from "@/hooks/useAuth";
 
 // ── Types ────────────────────────────────────────────────────────────────────
@@ -66,7 +65,7 @@ function buildStats(
   const isProfessor = user.role === "professor";
 
   if (isProfessor) {
-    // professor_name on the API is a full name string
+    // professor_name on the API is a full name string, e.g. "Hassan Nasri"
     const fullName = `${user.first_name} ${user.last_name}`.trim();
     const myAssignments = assignments.filter(
       (a) => a.professor_name === fullName
@@ -143,11 +142,8 @@ function HomePageContent() {
   }, []);
 
   // Derive display values from the auth user
-  const role       = user?.role === "professor" ? "professor" : "student";
-  const firstName  = user?.first_name ?? "User";
-  const initials   = [user?.first_name, user?.last_name]
-    .map((s) => (s?.trim() ? s.trim()[0].toUpperCase() : ""))
-    .join("");
+  const role      = user?.role === "professor" ? "professor" : "student";
+  const firstName = user?.first_name ?? "User";
 
   const homeAssignments: HomeAssignment[] = rawAssignments
     .slice(0, 3)
@@ -165,7 +161,8 @@ function HomePageContent() {
         color: "#1a2340",
       }}
     >
-      <Header activePage="Home" userInitials={initials || "U"} />
+      {/* activePage highlights the Home link in the existing Header nav */}
+      <Header activePage="Home" />
 
       <main style={{ maxWidth: 1200, margin: "0 auto", padding: "32px 24px 64px" }}>
         <GreetingBar firstName={firstName} role={role} />
