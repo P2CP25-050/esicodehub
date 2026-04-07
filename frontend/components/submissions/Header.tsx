@@ -5,6 +5,8 @@ import { useRouter } from 'next/router';
 import { useAuth } from "@/hooks/useAuth";
 import { logout } from '@/services/auth';
 import { clearTokens } from '@/lib/tokens';
+import { listAssignments, getMySubmission } from '@/services/assignments';
+import type { AssignmentSubmission } from '@/services/assignments';
 
 interface HeaderProps {
   activePage?: string;
@@ -361,6 +363,22 @@ const styles: Record<string, CSSProperties> = {
   },
   navLinkHover: { color: "#e2e8f0", background: "rgba(148,163,184,0.08)" },
   navLinkActive: { color: "#ffffff", fontWeight: 700 },
+  navBadge: {
+    position: 'absolute',
+    top: -3,
+    right: -4,
+    minWidth: 18,
+    height: 18,
+    borderRadius: 999,
+    background: '#ef4444',
+    color: '#fff',
+    fontSize: 10,
+    fontWeight: 700,
+    lineHeight: '18px',
+    textAlign: 'center',
+    padding: '0 5px',
+    boxShadow: '0 0 0 2px #0d1b2a',
+  },
   navActiveBar: {
     position: "absolute",
     bottom: -1,
