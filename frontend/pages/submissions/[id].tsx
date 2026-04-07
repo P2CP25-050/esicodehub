@@ -899,26 +899,26 @@ function SubmissionDetailPage() {
               </div>
             </aside>
 
-            <section className="h-[52vh] min-h-90 overflow-hidden rounded-2xl border border-slate-200 bg-slate-900 shadow-sm transition-shadow duration-300 hover:shadow-md lg:h-[72vh]">
-              <div className="flex items-center justify-between gap-3 border-b border-slate-700 px-4 py-3">
+            <section className="h-[52vh] min-h-90 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition-shadow duration-300 hover:shadow-md lg:h-[72vh]">
+              <div className="flex items-center justify-between gap-3 border-b border-slate-200 px-4 py-3">
                 <div className="min-w-0">
-                  <p className="truncate text-sm font-semibold text-slate-100">
+                  <p className="truncate text-sm font-semibold text-slate-800">
                     {selectedFilePath || 'Select a file'}
                   </p>
                   {selectedFileMeta ? (
-                    <p className="text-xs text-slate-400">
+                    <p className="text-xs text-slate-500">
                       {formatFileSize(selectedFileMeta.file_size)}
                     </p>
                   ) : null}
                 </div>
-                {fileError ? <p className="text-xs text-rose-300">{fileError}</p> : null}
+                {fileError ? <p className="text-xs text-rose-600">{fileError}</p> : null}
               </div>
 
               <div className="relative h-[calc(52vh-57px)] lg:h-[calc(72vh-57px)]">
                 {loadingFile ? (
-                  <div className="absolute inset-0 z-10 flex items-center justify-center bg-slate-900/65">
-                    <div className="inline-flex items-center gap-2 rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100">
-                      <span className="h-4 w-4 animate-spin rounded-full border-2 border-slate-400 border-t-slate-100" />
+                  <div className="absolute inset-0 z-10 flex items-center justify-center bg-white/75 backdrop-blur-[1px]">
+                    <div className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm">
+                      <span className="h-4 w-4 animate-spin rounded-full border-2 border-slate-300 border-t-slate-700" />
                       Loading file...
                     </div>
                   </div>
@@ -927,8 +927,8 @@ function SubmissionDetailPage() {
                 {selectedFileId == null ? (
                   <div className="flex h-full items-center justify-center px-4 text-center">
                     <div>
-                      <p className="text-base font-semibold text-slate-100">No file selected</p>
-                      <p className="mt-1 text-sm text-slate-400">
+                      <p className="text-base font-semibold text-slate-700">No file selected</p>
+                      <p className="mt-1 text-sm text-slate-500">
                         Choose a file from the explorer to preview its source code.
                       </p>
                     </div>
@@ -936,7 +936,7 @@ function SubmissionDetailPage() {
                 ) : (
                   <MonacoEditor
                     height="100%"
-                    theme="vs-dark"
+                    theme="vs"
                     language={editorLanguage}
                     value={editorValue}
                     options={{
