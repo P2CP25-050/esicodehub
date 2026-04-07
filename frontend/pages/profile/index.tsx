@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, ChangeEvent, CSSProperties } from "react";
-import { useRouter } from "next/router";
+
 import Link from "next/link";
 import Header from "@/components/submissions/Header";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
@@ -300,7 +300,7 @@ function ProfilePage() {
   const firstName = (user as unknown).first_name ?? "";
   const lastName = (user as unknown).last_name ?? "";
   const email = (user as unknown).email ?? "";
-  const schoolId = (user as unknown).school_id ?? (user as any).student_id ?? "";
+  const schoolId = (user as unknown).school_id ?? (user as unknown).student_id ?? "";
   const createdAt = (user as unknown).created_at ?? "";
 
   return (
@@ -330,7 +330,7 @@ function ProfilePage() {
                       <Spinner size={28} />
                     </div>
                   ) : avatarUrl ? (
-                    <img
+                    <image
                       src={avatarUrl}
                       alt="Avatar"
                       style={{ width: 96, height: 96, borderRadius: "50%", objectFit: "cover", border: "3px solid #e2e8f6" }}
