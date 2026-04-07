@@ -50,8 +50,23 @@ export interface ActivityItem {
 
 const getApiErrorMessage = (err: unknown, fallback: string): string => {
   if (axios.isAxiosError(err)) {
-    const detail = err.response?.data?.detail;
+    const data = err.response?.data;
+    const detail = data?.detail;
     if (typeof detail === "string" && detail.trim().length > 0) return detail;
+
+    // Handle DRF field errors, e.g. { avatar: ["Upload a valid image..."] }
+    if (data && typeof data === "object") {
+      const values = Object.values(data as Record<string, unknown>);
+      for (const value of values) {
+        if (Array.isArray(value) && typeof value[0] === "string" && value[0].trim().length > 0) {
+          return value[0];
+        }
+        if (typeof value === "string" && value.trim().length > 0) {
+          return value;
+        }
+      }
+    }
+
     if (typeof err.message === "string" && err.message.trim().length > 0) return err.message;
   }
   if (err instanceof Error && err.message.trim().length > 0) return err.message;

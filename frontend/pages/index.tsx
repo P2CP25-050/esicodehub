@@ -98,9 +98,9 @@ export default function LandingPage() {
   };
 
   // Stats counters
-  const students  = useCounter(1240);
-  const snippets  = useCounter(18700);
-  const professors = useCounter(87);
+  const students  = useCounter(1000);
+  const snippets  = useCounter(20000);
+  const professors = useCounter(50);
 
   const statsRef = useInView();
   useEffect(() => {

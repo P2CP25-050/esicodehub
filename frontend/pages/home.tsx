@@ -5,7 +5,6 @@ import Header from "@/components/submissions/Header";
 import GreetingBar from "@/components/home/GreetingBar";
 import RecentSubmissions from "@/components/home/RecentSubmissions";
 import UpcomingDeadlines from "@/components/home/UpcomingDeadlines";
-import ForumPlaceholder from "@/components/home/ForumPlaceholder";
 import QuickStats from "@/components/home/QuickStats";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import type { Assignment } from "@/services/assignments/assignments.types";
@@ -167,8 +166,8 @@ function HomePageContent() {
       <main style={{ maxWidth: 1200, margin: "0 auto", padding: "32px 24px 64px" }}>
         <GreetingBar firstName={firstName} role={role} />
 
-        {/* Three-column grid */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        {/* Two-column grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
           {/* Col 1 — Recent Submissions */}
           <div
             className="bg-white rounded-2xl border border-[#e2e8f6] p-6"
@@ -193,13 +192,6 @@ function HomePageContent() {
             />
           </div>
 
-          {/* Col 3 — Forum Placeholder */}
-          <div
-            className="bg-white rounded-2xl border border-[#e2e8f6] p-6"
-            style={{ boxShadow: "0 4px 24px rgba(30,60,120,0.08)" }}
-          >
-            <ForumPlaceholder />
-          </div>
         </div>
 
         {/* Quick Stats Bar */}

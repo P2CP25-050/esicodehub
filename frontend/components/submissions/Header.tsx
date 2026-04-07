@@ -5,8 +5,7 @@ import { useRouter } from 'next/router';
 import { useAuth } from "@/hooks/useAuth";
 import { logout } from '@/services/auth';
 import { clearTokens } from '@/lib/tokens';
-import { listAssignments, getMySubmission } from '@/services/assignments';
-import type { AssignmentSubmission } from '@/services/assignments';
+import { getProfile } from '@/services/profile/api';
 
 interface HeaderProps {
   activePage?: string;
@@ -19,14 +18,100 @@ const NAV_LINKS = [
   { label: "Insights",    href: "/insights" },
 ];
 
+const PROFILE_AVATAR_KEY = 'profile_avatar_url';
+const AVATAR_UPDATED_EVENT = 'profile-avatar-updated';
+
+const normalizeAvatarUrl = (value: unknown): string | null => {
+  if (typeof value !== 'string') return null;
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : null;
+};
+
 export default function Header({ activePage = "" }: HeaderProps) {
   const [hoveredNav, setHoveredNav] = useState<string | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const router = useRouter();
   const { user } = useAuth();
 
   const userName = user ? `${user.first_name} ${user.last_name}` : "—";
   const userRole = user?.role ?? "student";
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const fromStorage = normalizeAvatarUrl(window.localStorage.getItem(PROFILE_AVATAR_KEY));
+    setAvatarUrl(fromStorage);
+
+    const onAvatarUpdated = (event: Event) => {
+      const customEvent = event as CustomEvent<{ avatarUrl?: string | null }>;
+      setAvatarUrl(normalizeAvatarUrl(customEvent.detail?.avatarUrl ?? null));
+    };
+
+    const onStorage = (event: StorageEvent) => {
+      if (event.key !== PROFILE_AVATAR_KEY) return;
+      setAvatarUrl(normalizeAvatarUrl(event.newValue));
+    };
+
+    window.addEventListener(AVATAR_UPDATED_EVENT, onAvatarUpdated as EventListener);
+    window.addEventListener('storage', onStorage);
+
+    return () => {
+      window.removeEventListener(AVATAR_UPDATED_EVENT, onAvatarUpdated as EventListener);
+      window.removeEventListener('storage', onStorage);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!user) return;
+    let cancelled = false;
+
+    (async () => {
+      try {
+        const profile = await getProfile();
+        const latestAvatar = normalizeAvatarUrl(profile.profile?.avatar ?? null);
+        if (cancelled) return;
+
+        setAvatarUrl(latestAvatar);
+        if (typeof window !== 'undefined') {
+          if (latestAvatar) {
+            window.localStorage.setItem(PROFILE_AVATAR_KEY, latestAvatar);
+          } else {
+            window.localStorage.removeItem(PROFILE_AVATAR_KEY);
+          }
+        }
+      } catch {
+        // Non-fatal: keep avatar from storage if request fails.
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [user]);
+
+  const renderProfileIcon = () => (
+    <div style={styles.profileIcon}>
+      {avatarUrl ? (
+        <div
+          style={{
+            width: '100%',
+            height: '100%',
+            borderRadius: '50%',
+            backgroundImage: `url(${avatarUrl})`,
+            backgroundPosition: 'center',
+            backgroundRepeat: 'no-repeat',
+            backgroundSize: 'cover',
+          }}
+        />
+      ) : (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+          <circle cx="12" cy="8" r="4" stroke="#c8d6f0" strokeWidth="2" />
+          <path d="M4 20c0-4 3.6-7 8-7s8 3 8 7" stroke="#c8d6f0" strokeWidth="2" strokeLinecap="round" />
+        </svg>
+      )}
+    </div>
+  );
 
   // Close drawer on route change
   useEffect(() => {
@@ -211,12 +296,7 @@ export default function Header({ activePage = "" }: HeaderProps) {
             </button>
 
             <Link href="/profile" style={styles.profileBtn} aria-label="Go to profile">
-              <div style={styles.profileIcon}>
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-                  <circle cx="12" cy="8" r="4" stroke="#c8d6f0" strokeWidth="2" />
-                  <path d="M4 20c0-4 3.6-7 8-7s8 3 8 7" stroke="#c8d6f0" strokeWidth="2" strokeLinecap="round" />
-                </svg>
-              </div>
+              {renderProfileIcon()}
               <div style={styles.profileInfo} className="header-profile-info">
                 <span style={styles.profileName}>{userName}</span>
                 <span style={styles.profileRole}>{userRole}</span>
@@ -290,12 +370,7 @@ export default function Header({ activePage = "" }: HeaderProps) {
         <div className="drawer-divider" />
 
         <Link href="/profile" className="drawer-profile" aria-label="Go to profile">
-          <div style={styles.profileIcon}>
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-              <circle cx="12" cy="8" r="4" stroke="#c8d6f0" strokeWidth="2" />
-              <path d="M4 20c0-4 3.6-7 8-7s8 3 8 7" stroke="#c8d6f0" strokeWidth="2" strokeLinecap="round" />
-            </svg>
-          </div>
+          {renderProfileIcon()}
           <div style={styles.profileInfo}>
             <span style={styles.profileName}>{userName}</span>
             <span style={styles.profileRole}>{userRole}</span>

@@ -18,6 +18,25 @@ import type {
   UserProfile,
 } from "@/services/profile/api";
 
+const PROFILE_AVATAR_KEY = "profile_avatar_url";
+const AVATAR_UPDATED_EVENT = "profile-avatar-updated";
+
+const syncAvatarForHeader = (avatar: string | null) => {
+  if (typeof window === "undefined") return;
+
+  if (avatar) {
+    window.localStorage.setItem(PROFILE_AVATAR_KEY, avatar);
+  } else {
+    window.localStorage.removeItem(PROFILE_AVATAR_KEY);
+  }
+
+  window.dispatchEvent(
+    new CustomEvent(AVATAR_UPDATED_EVENT, {
+      detail: { avatarUrl: avatar },
+    }),
+  );
+};
+
 // ─── Responsive CSS ──────────────────────────────────────────────────────────
 const RESPONSIVE_CSS = `
   .pf-container {
@@ -236,7 +255,9 @@ function ProfilePage() {
         setBio(profile.profile?.bio ?? "");
         setSavedBio(profile.profile?.bio ?? "");
         // Django ImageField serializes to an absolute URL string
-        setAvatarUrl(profile.profile?.avatar ?? null);
+        const loadedAvatar = profile.profile?.avatar ?? null;
+        setAvatarUrl(loadedAvatar);
+        syncAvatarForHeader(loadedAvatar);
         setProfileData(profile);
         setStats(statsData);
         setActivity(activityData);
@@ -287,7 +308,9 @@ function ProfilePage() {
     try {
       const result = await uploadAvatar(file);
       // avatar field is the ImageField name on the Profile model
-      setAvatarUrl(result.avatar);
+      const newAvatar = result.avatar || null;
+      setAvatarUrl(newAvatar);
+      syncAvatarForHeader(newAvatar);
     } catch (err: unknown) {
       setAvatarError(err instanceof Error ? err.message : "Avatar upload failed.");
     } finally {
