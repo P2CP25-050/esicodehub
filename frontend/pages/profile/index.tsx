@@ -15,6 +15,7 @@ import {
 import type {
   ProfileStats,
   ActivityItem,
+  UserProfile,
 } from "@/services/profile/api";
 
 // ─── Responsive CSS ──────────────────────────────────────────────────────────
@@ -202,6 +203,7 @@ function ProfilePage() {
 
   const [stats, setStats] = useState<ProfileStats | null>(null);
   const [activity, setActivity] = useState<ActivityItem[]>([]);
+  const [profileData, setProfileData] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
 
   // Inject styles
@@ -235,6 +237,7 @@ function ProfilePage() {
         setSavedBio(profile.profile?.bio ?? "");
         // Django ImageField serializes to an absolute URL string
         setAvatarUrl(profile.profile?.avatar ?? null);
+        setProfileData(profile);
         setStats(statsData);
         setActivity(activityData);
       } catch {
@@ -296,12 +299,12 @@ function ProfilePage() {
 
   if (!user) return null;
 
-  const role = (user as unknown).role ?? "student";
-  const firstName = (user as unknown).first_name ?? "";
-  const lastName = (user as unknown).last_name ?? "";
-  const email = (user as unknown).email ?? "";
-  const schoolId = (user as unknown).school_id ?? (user as unknown).student_id ?? "";
-  const createdAt = (user as unknown).created_at ?? "";
+  const role = profileData?.role ?? user.role ?? "student";
+  const firstName = profileData?.first_name ?? user.first_name ?? "";
+  const lastName = profileData?.last_name ?? user.last_name ?? "";
+  const email = profileData?.email ?? user.email ?? "";
+  const schoolId = profileData?.school_id ?? "";
+  const createdAt = profileData?.created_at ?? "";
 
   return (
     <div style={s.page}>
@@ -330,7 +333,7 @@ function ProfilePage() {
                       <Spinner size={28} />
                     </div>
                   ) : avatarUrl ? (
-                    <image
+                    <img
                       src={avatarUrl}
                       alt="Avatar"
                       style={{ width: 96, height: 96, borderRadius: "50%", objectFit: "cover", border: "3px solid #e2e8f6" }}
