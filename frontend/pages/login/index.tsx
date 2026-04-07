@@ -140,7 +140,7 @@ function LoginPageContent() {
     try {
       const { data } = await login({ email, password });
       saveTokens({ access: data.access, refresh: "" });
-      router.push("/");
+      router.push("/home");
     } catch (error: unknown) {
       if (error instanceof AxiosError) {
         const status = error.response?.status;
