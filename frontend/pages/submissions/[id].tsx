@@ -936,7 +936,7 @@ function SubmissionDetailPage() {
                 ) : (
                   <MonacoEditor
                     height="100%"
-                    theme="vs"
+                    theme="vs-dark"
                     language={editorLanguage}
                     value={editorValue}
                     options={{
