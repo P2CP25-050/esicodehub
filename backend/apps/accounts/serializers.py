@@ -1,3 +1,5 @@
+import base64
+
 from rest_framework import serializers
 
 from .models import Profile, Subject, User
@@ -58,6 +60,9 @@ class ProfileSerializer(serializers.ModelSerializer):
         fields = ['avatar', 'bio', 'subjects']
 
     def get_avatar(self, obj):
+        if obj.avatar_data and obj.avatar_content_type:
+            return f'data:{obj.avatar_content_type};base64,{obj.avatar_data}'
+
         if not obj.avatar:
             return None
 
@@ -86,6 +91,43 @@ class UserProfileSerializer(serializers.ModelSerializer):
 
 
 class ProfileUpdateSerializer(serializers.ModelSerializer):
+    avatar = serializers.FileField(required=False, allow_null=True, write_only=True)
+
+    ALLOWED_AVATAR_TYPES = {'image/jpeg', 'image/png', 'image/webp'}
+    MAX_AVATAR_SIZE = 2 * 1024 * 1024
+
     class Meta:
         model = Profile
         fields = ['bio', 'avatar']
+
+    def validate_avatar(self, value):
+        if value is None:
+            return value
+
+        content_type = (getattr(value, 'content_type', '') or '').lower()
+        if content_type not in self.ALLOWED_AVATAR_TYPES:
+            raise serializers.ValidationError('Only .jpg, .png, and .webp files are allowed.')
+
+        if value.size > self.MAX_AVATAR_SIZE:
+            raise serializers.ValidationError('File must be under 2MB.')
+
+        return value
+
+    def update(self, instance, validated_data):
+        avatar_file = validated_data.pop('avatar', serializers.empty)
+
+        if avatar_file is not serializers.empty:
+            if avatar_file is None:
+                instance.avatar_data = ''
+                instance.avatar_content_type = ''
+            else:
+                avatar_file.seek(0)
+                encoded_avatar = base64.b64encode(avatar_file.read()).decode('ascii')
+                instance.avatar_data = encoded_avatar
+                instance.avatar_content_type = (avatar_file.content_type or '').lower()
+
+            if instance.avatar:
+                instance.avatar.delete(save=False)
+            instance.avatar = None
+
+        return super().update(instance, validated_data)
