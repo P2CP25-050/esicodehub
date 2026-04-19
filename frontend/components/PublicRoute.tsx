@@ -20,25 +20,21 @@ interface PublicRouteProps {
 // If already logged in → redirect to the correct dashboard based on role.
 
 export const PublicRoute = ({ children }: PublicRouteProps) => {
-  const { isAuthenticated, isLoading, user } = useAuth();
+  const { isAuthenticated, isLoading } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
     // still checking session
     if (isLoading) return;
 
-    // Already logged in => send to their dashboard
+    // Already logged in => send to the authenticated home page
     if (isAuthenticated) {
-      router.replace(
-        user?.role === 'professor'
-          ? '/dashboard/professor'
-          : '/dashboard/student'
-      );
+      void router.replace('/home');
     }
-  }, [isLoading, isAuthenticated, user, router]);
+  }, [isLoading, isAuthenticated, router]);
 
   // Still verifying session
-  if (isLoading) return <LoadingSpinner message="checking session...." />;
+  if (isLoading) return <LoadingSpinner message="Checking session..." />;
 
   // Authenticated — null while redirect happens
   if (isAuthenticated) return null;
