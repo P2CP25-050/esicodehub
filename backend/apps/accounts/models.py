@@ -108,6 +108,8 @@ class Profile(models.Model):
         null=True,
         blank=True,
     )
+    avatar_data = models.TextField(blank=True, default='')
+    avatar_content_type = models.CharField(max_length=100, blank=True, default='')
     bio = models.TextField(blank=True)
     subjects = models.ManyToManyField(
         Subject,

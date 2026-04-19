@@ -4,6 +4,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { useAuth } from '@/hooks/useAuth';
+import { LoadingSpinner } from '@/components/LoadingSpinner';
 
 // ─── Animated counter hook ───────────────────────────────────────────────────
 function useCounter(target: number, duration = 1800) {
@@ -92,6 +93,12 @@ export default function LandingPage() {
       void router.replace('/home');
     }
   }, [isAuthenticated, isLoading, router]);
+
+  // Prevent rendering the landing UI while session state is unresolved
+  // or while redirecting authenticated users to home.
+  if (isLoading || isAuthenticated) {
+    return <LoadingSpinner message="Checking session..." />;
+  }
 
   const scrollToFeatures = () => {
     featuresRef.current?.scrollIntoView({ behavior: 'smooth' });
