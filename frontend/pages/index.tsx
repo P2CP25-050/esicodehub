@@ -94,12 +94,6 @@ export default function LandingPage() {
     }
   }, [isAuthenticated, isLoading, router]);
 
-  // Prevent rendering the landing UI while session state is unresolved
-  // or while redirecting authenticated users to home.
-  if (isLoading || isAuthenticated) {
-    return <LoadingSpinner message="Checking session..." />;
-  }
-
   const scrollToFeatures = () => {
     featuresRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
@@ -118,6 +112,12 @@ export default function LandingPage() {
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [statsRef.inView]);
+
+  // Prevent rendering the landing UI while session state is unresolved
+  // or while redirecting authenticated users to home.
+  if (isLoading || isAuthenticated) {
+    return <LoadingSpinner message="Checking session..." />;
+  }
 
   return (
     <>
