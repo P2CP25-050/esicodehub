@@ -142,10 +142,8 @@ function RegisterPageContent() {
 
   // ── Role-based redirect ──
   const redirectToDashboard = useCallback(
-    (role: Role) => {
-      router.push(
-        role === "professor" ? "/dashboard/professor" : "/dashboard/student"
-      );
+    (_role: Role) => {
+      router.push('/home');
     },
     [router]
   );

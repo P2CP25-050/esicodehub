@@ -107,7 +107,7 @@ describe('PublicRoute', () => {
 
   // ── Authenticated student ──────────────────────────────────────────────────
 
-  it('redirects student to /dashboard/student', async () => {
+  it('redirects student to /home', async () => {
     mockAuth({ isLoading: false, isAuthenticated: true, user: studentUser });
 
     render(
@@ -117,7 +117,7 @@ describe('PublicRoute', () => {
     );
 
     await waitFor(() =>
-      expect(mockReplace).toHaveBeenCalledWith('/dashboard/student')
+      expect(mockReplace).toHaveBeenCalledWith('/home')
     );
   });
 
@@ -136,7 +136,7 @@ describe('PublicRoute', () => {
 
   // ── Authenticated professor ────────────────────────────────────────────────
 
-  it('redirects professor to /dashboard/professor', async () => {
+  it('redirects professor to /home', async () => {
     mockAuth({ isLoading: false, isAuthenticated: true, user: professorUser });
 
     render(
@@ -145,9 +145,8 @@ describe('PublicRoute', () => {
       </PublicRoute>
     );
 
-    // ✅ fixed: /dashboard/professor not /dashboard/teacher
     await waitFor(() =>
-      expect(mockReplace).toHaveBeenCalledWith('/dashboard/professor')
+      expect(mockReplace).toHaveBeenCalledWith('/home')
     );
   });
 
