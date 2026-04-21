@@ -66,7 +66,7 @@ class Answer(models.Model):
 
     class Meta:
         db_table = 'forum_answers'
-        ordering = ['-created_at']
+        ordering = ['created_at']
         unique_together = [['parent', 'author']]
 
 
