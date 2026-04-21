@@ -66,8 +66,14 @@ class Answer(models.Model):
 
     class Meta:
         db_table = 'forum_answers'
-        ordering = ['created_at']
-        unique_together = [['parent', 'author']]
+        ordering = ['-created_at']
+        constraints = [
+            models.UniqueConstraint(
+                fields=['parent', 'author'],
+                condition=models.Q(parent__isnull=False),
+                name='unique_reply_per_user_per_answer',
+            )
+        ]
 
 
 class Vote(models.Model):
