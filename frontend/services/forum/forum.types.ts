@@ -62,3 +62,7 @@ export interface ForumListParams {
   ordering?: ForumOrdering;
   page?: number;
 }
+
+export interface VoteResponse {
+  vote_score: number;
+}

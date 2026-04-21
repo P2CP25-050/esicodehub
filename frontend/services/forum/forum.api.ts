@@ -7,6 +7,7 @@ import type {
   QuestionCreatePayload,
   QuestionDetail,
   QuestionListItem,
+  VoteResponse,
 } from './forum.types';
 
 const QUESTIONS_BASE = '/forum/questions/';
@@ -81,8 +82,8 @@ export const deleteAnswer = async (
 export const acceptAnswer = async (
   questionId: number,
   answerId: number
-): Promise<QuestionDetail> => {
-  const res = await apiClient.post<QuestionDetail>(
+): Promise<Answer> => {
+  const res = await apiClient.post<Answer>(
     `${QUESTIONS_BASE}${questionId}/answers/${answerId}/accept/`
   );
   return res.data;
@@ -91,8 +92,8 @@ export const acceptAnswer = async (
 export const voteQuestion = async (
   questionId: number,
   value: 1 | -1
-): Promise<QuestionDetail> => {
-  const res = await apiClient.post<QuestionDetail>(
+): Promise<VoteResponse> => {
+  const res = await apiClient.post<VoteResponse>(
     `${QUESTIONS_BASE}${questionId}/vote/`,
     { value }
   );
@@ -103,8 +104,8 @@ export const voteAnswer = async (
   questionId: number,
   answerId: number,
   value: 1 | -1
-): Promise<Answer> => {
-  const res = await apiClient.post<Answer>(
+): Promise<VoteResponse> => {
+  const res = await apiClient.post<VoteResponse>(
     `${QUESTIONS_BASE}${questionId}/answers/${answerId}/vote/`,
     { value }
   );
