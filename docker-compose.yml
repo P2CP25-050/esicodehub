@@ -2,7 +2,7 @@ services:
   db:
     image: postgres:14-alpine
     ports:
-      - '5432:5432'
+      - '5433:5432'
 
     environment:
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
@@ -74,6 +74,37 @@ services:
       custom_network:
         aliases:
           - ${PROJECT_NAME}_django.local
+
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    networks:
+      - custom_network
+
+  celery:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    command: celery -A config worker --loglevel=info --concurrency=2
+    env_file:
+      - ./backend/.env
+    environment:
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_DB=${POSTGRES_DB}
+      - DATABASE_HOST=db
+    volumes:
+      - ./backend:/app/backend
+      - ./gcs-credentials.json:/app/gcs-credentials.json
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    networks:
+      - custom_network
 
 networks:
   custom_network:
