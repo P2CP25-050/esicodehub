@@ -1,5 +1,13 @@
 #!/bin/sh
 
+set -e
+
+# If a command is provided (e.g. celery service), run it directly.
+# This also handles shell form commands like: /bin/sh -c "celery ..."
+if [ "$#" -gt 0 ]; then
+    exec "$@"
+fi
+
 /wait-for-postgres.sh
 
 python manage.py migrate
@@ -17,4 +25,4 @@ else:
     print('Subjects already exist, skipping.')
 "
 
-gunicorn config.wsgi:application --bind 0.0.0.0:8000
+exec gunicorn config.wsgi:application --bind 0.0.0.0:8000
