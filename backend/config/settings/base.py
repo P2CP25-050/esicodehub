@@ -50,6 +50,7 @@ INSTALLED_APPS = [
     'apps.personal_submissions',
     'apps.assignment_submissions',
     'apps.forum',
+    'apps.plagiarism',
 ]
 
 AUTH_USER_MODEL = 'accounts.User'
