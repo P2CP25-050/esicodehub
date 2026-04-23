@@ -37,7 +37,6 @@ SUPPORTED_MOSS_LANGUAGES = [
     'HCL2',
 ]
 
-
 class ReviewCommentSerializer(serializers.ModelSerializer):
     """
     Serializer for line by line review comments.
@@ -91,6 +90,7 @@ class AssignmentListSerializer(serializers.ModelSerializer):
             'target_year',
             'languages',
             'target_sections',
+            'languages',
             'target_groups',
             'deadline',
             'allow_late',
@@ -198,6 +198,7 @@ class AssignmentCreateSerializer(serializers.ModelSerializer):
                 )
 
         return [lang.lower() for lang in value]
+    
 
     def validate_deadline(self, value):
         """Reject deadlines that are in the past on creation."""
