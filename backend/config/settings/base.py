@@ -41,6 +41,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'django_celery_results',
     'corsheaders',
     'apps.core',
     'apps.accounts',
@@ -184,3 +185,9 @@ GS_CREDENTIALS = GCS_CREDENTIALS_PATH
 GS_FILE_OVERWRITE = False
 GS_DEFAULT_ACL = None
 GS_EXPIRATION = 3600
+
+CELERY_BROKER_URL = os.getenv('REDIS_URL', 'redis://redis:6379/0')
+CELERY_RESULT_BACKEND = 'django-db'
+CELERY_ACCEPT_CONTENT = ['json']
+CELERY_TASK_SERIALIZER = 'json'
+CELERY_RESULT_SERIALIZER = 'json'
