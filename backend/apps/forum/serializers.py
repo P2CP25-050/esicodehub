@@ -9,7 +9,7 @@ from .models import Answer, Question, Vote
 class AnswerSerializer(serializers.ModelSerializer):
     """
     Recursive serializer for answers and their replies.
-    Fetches one level of replies  client requests deeper nesting separately.
+    Serializes nested replies recursively.
     """
     # Full name of the answer author
     author_name = serializers.SerializerMethodField()
@@ -26,7 +26,7 @@ class AnswerSerializer(serializers.ModelSerializer):
     # Total number of replies to this answer
     reply_count = serializers.SerializerMethodField()
 
-    # Nested replies — one level deep only
+    # Nested replies serialized recursively
     replies = serializers.SerializerMethodField()
 
     # Return only the parent id, not the full object
@@ -96,8 +96,7 @@ class AnswerSerializer(serializers.ModelSerializer):
 
     def get_replies(self, obj):
         """
-        Fetch one level of replies ordered by creation time.
-        Uses the same serializer recursively.
+        Serialize nested replies ordered by creation time.
         """
         replies = obj.replies.all().order_by('created_at')
         return AnswerSerializer(replies, many=True, context=self.context).data
@@ -308,12 +307,21 @@ class AnswerCreateSerializer(serializers.ModelSerializer):
     Used for creating answers and replies.
     Validates that body is not blank.
     """
+    parent_id = serializers.PrimaryKeyRelatedField(
+        source='parent',
+        queryset=Answer.objects.all(),
+        required=False,
+        allow_null=True,
+        write_only=True,
+    )
+
     class Meta:
         model = Answer
         fields = [
             'body',
             'code_snippet',
             'code_language',
+            'parent_id',
         ]
 
     def validate_body(self, value):
@@ -321,3 +329,26 @@ class AnswerCreateSerializer(serializers.ModelSerializer):
         if not value.strip():
             raise serializers.ValidationError('Body cannot be blank.')
         return value
+
+    def validate(self, attrs):
+        """Ensure reply parent belongs to the same question when provided."""
+        attrs = super().validate(attrs)
+
+        parent = attrs.get('parent')
+        question = (
+            attrs.get('question')
+            or self.context.get('question')
+            or getattr(self.instance, 'question', None)
+        )
+
+        if parent is not None:
+            if question is None:
+                raise serializers.ValidationError(
+                    {'parent_id': 'Question context is required when parent_id is provided.'}
+                )
+            if parent.question_id != question.id:
+                raise serializers.ValidationError(
+                    {'parent_id': 'Parent answer must belong to the same question.'}
+                )
+
+        return attrs
