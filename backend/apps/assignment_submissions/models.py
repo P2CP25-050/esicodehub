@@ -24,6 +24,11 @@ class Assignment(models.Model):
     title = models.CharField(max_length=255)
     description = models.TextField(blank=True)
     target_year = models.CharField(max_length=3, choices=TargetYear.choices)
+    languages = models.JSONField(
+        default=list,
+        blank=True,
+        help_text='List of programming languages for this assignment. e.g. ["python", "c"]',
+    )
     target_sections = models.JSONField(default=list, blank=True)
     target_groups = models.JSONField(default=list, blank=True)
     deadline = models.DateTimeField()
