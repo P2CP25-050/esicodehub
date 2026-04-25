@@ -1,5 +1,5 @@
 from django.contrib.contenttypes.models import ContentType
-from django.db.models import Sum
+from django.db.models import Count, IntegerField, OuterRef, Subquery, Sum, Value
 from django.db.models.functions import Coalesce
 from rest_framework import serializers
 
@@ -65,13 +65,14 @@ class AnswerSerializer(serializers.ModelSerializer):
         Return total vote score using annotation if available,
         otherwise fall back to a direct query.
         """
-        if not hasattr(obj, 'vote_score'):
-            raise AttributeError(
-                "vote_score annotation is missing. "
-                "The view must annotate the queryset with "
-                "Coalesce(Sum('votes__value'), 0) before serializing."
-            )
-        return obj.vote_score
+        if hasattr(obj, 'vote_score'):
+            return obj.vote_score
+        content_type = ContentType.objects.get_for_model(Answer)
+        result = Vote.objects.filter(
+            content_type=content_type,
+            object_id=obj.id,
+        ).aggregate(score=Coalesce(Sum('value'), 0))
+        return result['score']
 
     def get_user_vote(self, obj):
         """
@@ -91,17 +92,22 @@ class AnswerSerializer(serializers.ModelSerializer):
 
     def get_reply_count(self, obj):
         """Return the total number of replies to this answer."""
-        if not hasattr(obj, 'reply_count'):
-            raise AttributeError(
-                "reply_count annotation is missing. "
-                "The view must annotate the queryset with Count('replies')."
-            )
-        return obj.reply_count
+        if hasattr(obj, 'reply_count'):
+            return obj.reply_count
+        return obj.replies.count()
 
     def get_replies(self, obj):
-        from django.db.models import Count
+        answer_content_type = ContentType.objects.get_for_model(Answer)
+        vote_score_subquery = Vote.objects.filter(
+            content_type=answer_content_type,
+            object_id=OuterRef('pk'),
+        ).values('object_id').annotate(score=Sum('value')).values('score')[:1]
+
         replies = obj.replies.annotate(
-            vote_score=Coalesce(Sum('votes__value'), 0),
+            vote_score=Coalesce(
+                Subquery(vote_score_subquery, output_field=IntegerField()),
+                Value(0),
+            ),
             reply_count=Count('replies'),
         ).order_by('created_at')
         return AnswerSerializer(replies, many=True, context=self.context).data
@@ -144,25 +150,23 @@ class QuestionListSerializer(serializers.ModelSerializer):
 
     def get_answer_count(self, obj):
         """Return the total number of answers for this question."""
-        if not hasattr(obj, 'answer_count'):
-            raise AttributeError(
-                "answer_count annotation is missing. "
-                "The view must annotate the queryset with Count('answers')."
-            )
-        return obj.answer_count
+        if hasattr(obj, 'answer_count'):
+            return obj.answer_count
+        return obj.answers.count()
 
     def get_vote_score(self, obj):
         """
         Return total vote score using annotation if available,
         otherwise fall back to a direct query.
         """
-        if not hasattr(obj, 'vote_score'):
-            raise AttributeError(
-                "vote_score annotation is missing. "
-                "The view must annotate the queryset with "
-                "Coalesce(Sum('votes__value'), 0) before serializing."
-            )
-        return obj.vote_score
+        if hasattr(obj, 'vote_score'):
+            return obj.vote_score
+        content_type = ContentType.objects.get_for_model(Question)
+        result = Vote.objects.filter(
+            content_type=content_type,
+            object_id=obj.id,
+        ).aggregate(score=Coalesce(Sum('value'), 0))
+        return result['score']
 
     def get_has_accepted_answer(self, obj):
         """Return True if this question has an accepted answer."""
@@ -218,25 +222,23 @@ class QuestionDetailSerializer(serializers.ModelSerializer):
 
     def get_answer_count(self, obj):
         """Return the total number of answers for this question."""
-        if not hasattr(obj, 'answer_count'):
-            raise AttributeError(
-                "answer_count annotation is missing. "
-                "The view must annotate the queryset with Count('answers')."
-            )
-        return obj.answer_count
+        if hasattr(obj, 'answer_count'):
+            return obj.answer_count
+        return obj.answers.count()
 
     def get_vote_score(self, obj):
         """
         Return total vote score using annotation if available,
         otherwise fall back to a direct query.
         """
-        if not hasattr(obj, 'vote_score'):
-            raise AttributeError(
-                "vote_score annotation is missing. "
-                "The view must annotate the queryset with "
-                "Coalesce(Sum('votes__value'), 0) before serializing."
-            )
-        return obj.vote_score
+        if hasattr(obj, 'vote_score'):
+            return obj.vote_score
+        content_type = ContentType.objects.get_for_model(Question)
+        result = Vote.objects.filter(
+            content_type=content_type,
+            object_id=obj.id,
+        ).aggregate(score=Coalesce(Sum('value'), 0))
+        return result['score']
 
     def get_has_accepted_answer(self, obj):
         """Return True if this question has an accepted answer."""
@@ -251,9 +253,17 @@ class QuestionDetailSerializer(serializers.ModelSerializer):
         Return only top-level answers (parent=None)
         each with their nested replies via AnswerSerializer.
         """
-        from django.db.models import Count
+        answer_content_type = ContentType.objects.get_for_model(Answer)
+        vote_score_subquery = Vote.objects.filter(
+            content_type=answer_content_type,
+            object_id=OuterRef('pk'),
+        ).values('object_id').annotate(score=Sum('value')).values('score')[:1]
+
         top_level_answers = obj.answers.filter(parent=None).annotate(
-            vote_score=Coalesce(Sum('votes__value'), 0),
+            vote_score=Coalesce(
+                Subquery(vote_score_subquery, output_field=IntegerField()),
+                Value(0),
+            ),
             reply_count=Count('replies'),
         ).order_by('created_at')
         return AnswerSerializer(top_level_answers, many=True, context=self.context).data
@@ -272,7 +282,7 @@ class QuestionCreateSerializer(serializers.ModelSerializer):
             'code_snippet',
             'code_language',
             'tags',
-            'is_closed',  # add this
+            'is_closed',
         ]
 
     def validate_title(self, value):
