@@ -99,10 +99,11 @@ class AnswerSerializer(serializers.ModelSerializer):
         return obj.reply_count
 
     def get_replies(self, obj):
-        """
-        Serialize nested replies ordered by creation time.
-        """
-        replies = obj.replies.all().order_by('created_at')
+        from django.db.models import Count
+        replies = obj.replies.annotate(
+            vote_score=Coalesce(Sum('votes__value'), 0),
+            reply_count=Count('replies'),
+        ).order_by('created_at')
         return AnswerSerializer(replies, many=True, context=self.context).data
 
 
@@ -250,14 +251,12 @@ class QuestionDetailSerializer(serializers.ModelSerializer):
         Return only top-level answers (parent=None)
         each with their nested replies via AnswerSerializer.
         """
-        top_level_answers = obj.answers.filter(
-            parent=None,
+        from django.db.models import Count
+        top_level_answers = obj.answers.filter(parent=None).annotate(
+            vote_score=Coalesce(Sum('votes__value'), 0),
+            reply_count=Count('replies'),
         ).order_by('created_at')
-        return AnswerSerializer(
-            top_level_answers,
-            many=True,
-            context=self.context,
-        ).data
+        return AnswerSerializer(top_level_answers, many=True, context=self.context).data
 
 
 class QuestionCreateSerializer(serializers.ModelSerializer):
@@ -275,11 +274,6 @@ class QuestionCreateSerializer(serializers.ModelSerializer):
             'tags',
             'is_closed',  # add this
         ]
-        extra_kwargs = {
-            'title':     {'required': False},
-            'body':      {'required': False},
-            'is_closed': {'required': False},
-        }
 
     def validate_title(self, value):
         """Reject titles that are empty or contain only whitespace."""
