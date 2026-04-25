@@ -9,6 +9,34 @@ from .models import (
     ReviewComment,
 )
 
+SUPPORTED_MOSS_LANGUAGES = [
+    'python',
+    'c',
+    'c++',
+    'java',
+    'javascript',
+    'typescript',
+    'c#',
+    'visual basic',
+    'fortran',
+    'ML',
+    'haskell',
+    'lisp',
+    'scheme',
+    'pascal',
+    'modula2',
+    'ada',
+    'perl',
+    'TCL',
+    'MATLAB',
+    'VHDL',
+    'Verilog',
+    'Spice',
+    'MIPS Assembly',
+    'x86 assembly',
+    'HCL2',
+]
+
 
 class ReviewCommentSerializer(serializers.ModelSerializer):
     """
@@ -61,6 +89,7 @@ class AssignmentListSerializer(serializers.ModelSerializer):
             'description',
             'subject',
             'target_year',
+            'languages',
             'target_sections',
             'target_groups',
             'deadline',
@@ -144,11 +173,31 @@ class AssignmentCreateSerializer(serializers.ModelSerializer):
             'description',
             'subject',
             'target_year',
+            'languages',
             'target_sections',
             'target_groups',
             'deadline',
             'allow_late',
         ]
+
+    def validate_languages(self, value):
+        """Ensure all assignment languages are supported by MOSS."""
+        if not isinstance(value, list):
+            raise serializers.ValidationError('languages must be provided as a list.')
+
+        normalized = [lang.lower() for lang in SUPPORTED_MOSS_LANGUAGES]
+        valid_languages = set(normalized)
+
+        for lang in value:
+            if not isinstance(lang, str):
+                raise serializers.ValidationError('Each language must be a string.')
+            if lang.lower() not in valid_languages:
+                raise serializers.ValidationError(
+                    f"'{lang}' is not a supported language. Choose from: "
+                    f"{', '.join(normalized)}"
+                )
+
+        return [lang.lower() for lang in value]
 
     def validate_deadline(self, value):
         """Reject deadlines that are in the past on creation."""
