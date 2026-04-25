@@ -84,10 +84,14 @@ class SimilarityMatch(models.Model):
     def clean(self):
         errors = {}
 
-        if self.submission_a_id and self.submission_b_id and self.submission_a_id == self.submission_b_id:
+        if self.submission_a_id and self.submission_b_id and (
+                self.submission_a_id == self.submission_b_id):
             errors['submission_b'] = 'submission_b must be different from submission_a.'
 
-        report_assignment_id = getattr(self.report, 'assignment_id', None) if self.report_id else None
+        report_assignment_id = getattr(
+                self.report,
+                'assignment_id',
+                None) if self.report_id else None
 
         if report_assignment_id and self.submission_a_id:
             if self.submission_a.assignment_id != report_assignment_id:
@@ -104,7 +108,8 @@ class SimilarityMatch(models.Model):
         if self.language:
             self.language = self.language.strip().lower()
 
-        if self.submission_a_id and self.submission_b_id and self.submission_a_id > self.submission_b_id:
+        if self.submission_a_id and self.submission_b_id and (
+                self.submission_a_id > self.submission_b_id):
             self.submission_a, self.submission_b = self.submission_b, self.submission_a
             self.similarity_a, self.similarity_b = self.similarity_b, self.similarity_a
 
