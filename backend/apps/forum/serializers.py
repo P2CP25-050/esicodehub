@@ -273,7 +273,13 @@ class QuestionCreateSerializer(serializers.ModelSerializer):
             'code_snippet',
             'code_language',
             'tags',
+            'is_closed',  # add this
         ]
+        extra_kwargs = {
+            'title':     {'required': False},
+            'body':      {'required': False},
+            'is_closed': {'required': False},
+        }
 
     def validate_title(self, value):
         """Reject titles that are empty or contain only whitespace."""
