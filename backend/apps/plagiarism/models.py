@@ -1,4 +1,6 @@
 from django.conf import settings
+from django.core.exceptions import ValidationError
+from django.core.validators import MaxValueValidator
 from django.db import models
 
 
@@ -53,13 +55,61 @@ class SimilarityMatch(models.Model):
         related_name='similarity_matches_as_b',
     )
     language = models.CharField(max_length=50)
-    similarity_a = models.IntegerField()
-    similarity_b = models.IntegerField()
-    lines_matched = models.IntegerField()
+    similarity_a = models.PositiveSmallIntegerField(validators=[MaxValueValidator(100)])
+    similarity_b = models.PositiveSmallIntegerField(validators=[MaxValueValidator(100)])
+    lines_matched = models.PositiveIntegerField()
     moss_link = models.URLField()
 
     class Meta:
         db_table = 'similarity_matches'
+        constraints = [
+            models.CheckConstraint(
+                condition=models.Q(submission_a__lt=models.F('submission_b')),
+                name='similarity_match_submission_order',
+            ),
+            models.CheckConstraint(
+                condition=models.Q(similarity_a__lte=100),
+                name='similarity_a_lte_100',
+            ),
+            models.CheckConstraint(
+                condition=models.Q(similarity_b__lte=100),
+                name='similarity_b_lte_100',
+            ),
+            models.UniqueConstraint(
+                fields=['report', 'submission_a', 'submission_b', 'language'],
+                name='unique_similarity_pair_per_language',
+            ),
+        ]
+
+    def clean(self):
+        errors = {}
+
+        if self.submission_a_id and self.submission_b_id and self.submission_a_id == self.submission_b_id:
+            errors['submission_b'] = 'submission_b must be different from submission_a.'
+
+        report_assignment_id = getattr(self.report, 'assignment_id', None) if self.report_id else None
+
+        if report_assignment_id and self.submission_a_id:
+            if self.submission_a.assignment_id != report_assignment_id:
+                errors['submission_a'] = 'submission_a must belong to the report assignment.'
+
+        if report_assignment_id and self.submission_b_id:
+            if self.submission_b.assignment_id != report_assignment_id:
+                errors['submission_b'] = 'submission_b must belong to the report assignment.'
+
+        if errors:
+            raise ValidationError(errors)
+
+    def save(self, *args, **kwargs):
+        if self.language:
+            self.language = self.language.strip().lower()
+
+        if self.submission_a_id and self.submission_b_id and self.submission_a_id > self.submission_b_id:
+            self.submission_a, self.submission_b = self.submission_b, self.submission_a
+            self.similarity_a, self.similarity_b = self.similarity_b, self.similarity_a
+
+        self.full_clean()
+        return super().save(*args, **kwargs)
 
     @property
     def max_similarity(self):

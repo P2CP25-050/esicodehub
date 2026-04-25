@@ -91,7 +91,6 @@ class AssignmentListSerializer(serializers.ModelSerializer):
             'target_year',
             'languages',
             'target_sections',
-            'languages',
             'target_groups',
             'deadline',
             'allow_late',
