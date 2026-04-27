@@ -6,7 +6,7 @@ from django.utils import timezone
 from apps.assignment_submissions.models import AssignmentSubmission
 from apps.personal_submissions.gcs import get_file_content
 from .models import PlagiarismReport, SimilarityMatch
-from .moss import get_file_language, run_moss_for_language
+from .moss import get_file_language, run_moss_for_language, LANGUAGE_MOSS_ID
 from .parser import parse_moss_results
 
 
@@ -45,9 +45,11 @@ def run_plagiarism_check(self, report_id: int):
 
         with tempfile.TemporaryDirectory() as tmpdir:
             # Group files by language, skip files that don't match assignment languages
-            language_groups: dict[str, list[tuple[str, int]]] = {
-                lang: [] for lang in assignment_languages
-            }
+            language_groups: dict[str, list[tuple[str, int]]] = {}
+            for lang in assignment_languages:
+                moss_id = LANGUAGE_MOSS_ID.get(lang.lower())
+                if moss_id and moss_id not in language_groups:
+                    language_groups[moss_id] = []
 
             for sub in submissions:
                 student_id = sub.student_id
