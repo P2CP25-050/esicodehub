@@ -1,6 +1,6 @@
 from django.contrib.contenttypes.models import ContentType
 from django.db import transaction
-from django.db.models import Count, F, Sum
+from django.db.models import Count, F, IntegerField, OuterRef, Subquery, Sum, Value
 from django.db.models.functions import Coalesce
 from django.shortcuts import get_object_or_404
 from rest_framework import status
@@ -21,12 +21,49 @@ from .serializers import (
 
 class ForumPagination(PageNumberPagination):
     """Pagination used for forum listing, 20 per page."""
+
     page_size = 20
 
 
 def _is_student(user):
     """Return True if the user is a student."""
-    return user.role == 'student'
+    return getattr(user, 'role', None) == 'student'
+
+
+def _vote_score_subquery(model):
+    """Build a vote score subquery for generic relations."""
+    content_type = ContentType.objects.get_for_model(model)
+    return (
+        Vote.objects.filter(
+            content_type=content_type,
+            object_id=OuterRef('pk'),
+        )
+        .values('object_id')
+        .annotate(score=Sum('value'))
+        .values('score')[:1]
+    )
+
+
+def _annotate_questions(queryset):
+    """Annotate question querysets with vote_score and answer_count."""
+    return queryset.annotate(
+        vote_score=Coalesce(
+            Subquery(_vote_score_subquery(Question), output_field=IntegerField()),
+            Value(0),
+        ),
+        answer_count=Count('answers', distinct=True),
+    )
+
+
+def _annotate_answers(queryset):
+    """Annotate answer querysets with vote_score and reply_count."""
+    return queryset.annotate(
+        vote_score=Coalesce(
+            Subquery(_vote_score_subquery(Answer), output_field=IntegerField()),
+            Value(0),
+        ),
+        reply_count=Count('replies', distinct=True),
+    )
 
 
 def _get_vote_score(obj, model):
@@ -39,60 +76,33 @@ def _get_vote_score(obj, model):
     return result['score']
 
 
-def _annotate_questions(queryset):
-    """Annotate queryset with vote_score and answer_count."""
-    content_type = ContentType.objects.get_for_model(Question)
-    return queryset.annotate(
-        vote_score=Coalesce(
-            Sum(
-                'votes__value',
-                filter=F('votes__content_type') == content_type.id,
-            ),
-            0,
-        ),
-        answer_count=Count('answers', distinct=True),
-    )
-
-
-# Question endpoints
-
 class QuestionListCreateView(APIView):
     """List questions with filtering and allow students to create questions."""
 
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        queryset = Question.objects.select_related(
-            'author',
-        ).prefetch_related(
-            'answers',
-        ).annotate(
-            answer_count=Count('answers', distinct=True),
+        queryset = _annotate_questions(
+            Question.objects.select_related('author')
         )
 
-        # Filters
         tag = request.query_params.get('tag')
         search = request.query_params.get('search')
         author = request.query_params.get('author')
         ordering = request.query_params.get('ordering', 'newest')
 
         if tag:
-            # Case insensitive contains match on tags JSONField
             queryset = queryset.filter(tags__icontains=tag.lower())
         if search:
             queryset = queryset.filter(title__icontains=search.strip())
         if author:
             queryset = queryset.filter(author__email__iexact=author.strip())
 
-        # Ordering
         if ordering == 'top':
-            queryset = queryset.annotate(
-                vote_score=Coalesce(Sum('votes__value'), 0)
-            ).order_by('-vote_score')
+            queryset = queryset.order_by('-vote_score', '-created_at')
         elif ordering == 'unanswered':
             queryset = queryset.filter(answer_count=0).order_by('-created_at')
         else:
-            # Default is the  newest
             queryset = queryset.order_by('-created_at')
 
         paginator = ForumPagination()
@@ -105,7 +115,6 @@ class QuestionListCreateView(APIView):
         return paginator.get_paginated_response(serializer.data)
 
     def post(self, request):
-        # Students only
         if not _is_student(request.user):
             return Response(
                 {'detail': 'You do not have permission to perform this action.'},
@@ -116,6 +125,9 @@ class QuestionListCreateView(APIView):
         serializer.is_valid(raise_exception=True)
         question = serializer.save(author=request.user)
 
+        question = _annotate_questions(
+            Question.objects.select_related('author').filter(pk=question.pk)
+        ).get()
         detail_serializer = QuestionDetailSerializer(
             question,
             context={'request': request},
@@ -135,15 +147,16 @@ class QuestionDetailView(APIView):
 
     def get_object(self, pk):
         return get_object_or_404(
-            Question.objects.select_related('author').prefetch_related(
-                'answers__author',
-                'answers__replies__author',
+            _annotate_questions(
+                Question.objects.select_related('author').prefetch_related(
+                    'answers__author',
+                    'answers__replies__author',
+                )
             ),
             pk=pk,
         )
 
     def get(self, request, pk):
-        # Increment view_count without race condition
         Question.objects.filter(pk=pk).update(
             view_count=F('view_count') + 1
         )
@@ -157,14 +170,12 @@ class QuestionDetailView(APIView):
     def patch(self, request, pk):
         question = self.get_object(pk)
 
-        # Author only and must be a student
         if not _is_student(request.user) or question.author != request.user:
             return Response(
                 {'detail': 'You do not have permission to perform this action.'},
                 status=status.HTTP_403_FORBIDDEN,
             )
 
-        # Cannot edit if question has an accepted answer
         if question.accepted_answer_id is not None:
             return Response(
                 {'detail': 'Cannot edit a question that has an accepted answer.'},
@@ -185,8 +196,10 @@ class QuestionDetailView(APIView):
         )
         serializer.is_valid(raise_exception=True)
         serializer.save()
-        question.refresh_from_db()
 
+        question = _annotate_questions(
+            Question.objects.select_related('author').filter(pk=question.pk)
+        ).get()
         detail_serializer = QuestionDetailSerializer(
             question,
             context={'request': request},
@@ -196,14 +209,12 @@ class QuestionDetailView(APIView):
     def delete(self, request, pk):
         question = self.get_object(pk)
 
-        # Author only and must be a student
         if not _is_student(request.user) or question.author != request.user:
             return Response(
                 {'detail': 'You do not have permission to perform this action.'},
                 status=status.HTTP_403_FORBIDDEN,
             )
 
-        # Cannot delete if question has an accepted answer
         if question.accepted_answer_id is not None:
             return Response(
                 {'detail': 'Cannot delete a question that has an accepted answer.'},
@@ -214,15 +225,12 @@ class QuestionDetailView(APIView):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
-# Answer endpoints
-
 class AnswerCreateView(APIView):
     """Post a top level answer or a reply to an existing answer."""
 
     permission_classes = [IsAuthenticated]
 
     def post(self, request, pk):
-        # Students only
         if not _is_student(request.user):
             return Response(
                 {'detail': 'You do not have permission to perform this action.'},
@@ -231,43 +239,35 @@ class AnswerCreateView(APIView):
 
         question = get_object_or_404(Question, pk=pk)
 
-        # Cannot post if question is closed
         if question.is_closed:
             return Response(
                 {'detail': 'This question is closed.'},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        serializer = AnswerCreateSerializer(data=request.data)
+        serializer = AnswerCreateSerializer(
+            data=request.data,
+            context={'question': question, 'request': request},
+        )
         serializer.is_valid(raise_exception=True)
 
-        parent_id = request.data.get('parent_id')
-        parent = None
-
-        if parent_id:
-            # Validate parent belongs to the same question
-            parent = get_object_or_404(Answer, id=parent_id)
-            if parent.question_id != question.id:
-                return Response(
-                    {'detail': 'Parent answer does not belong to this question.'},
-                    status=status.HTTP_400_BAD_REQUEST,
-                )
-
-            # Enforce unique_together, one reply per user per parent
-            if Answer.objects.filter(
-                parent=parent,
-                author=request.user,
-            ).exists():
-                return Response(
-                    {'detail': 'You have already replied to this answer.'},
-                    status=status.HTTP_400_BAD_REQUEST,
-                )
+        parent = serializer.validated_data.get('parent')
+        if parent is not None and Answer.objects.filter(
+            parent=parent,
+            author=request.user,
+        ).exists():
+            return Response(
+                {'detail': 'You have already replied to this answer.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
         answer = serializer.save(
             question=question,
             author=request.user,
-            parent=parent,
         )
+        answer = _annotate_answers(
+            Answer.objects.select_related('author').filter(pk=answer.pk)
+        ).get()
 
         return Response(
             AnswerSerializer(answer, context={'request': request}).data,
@@ -284,13 +284,20 @@ class AnswerDetailView(APIView):
 
     def get_object(self, qid, aid):
         question = get_object_or_404(Question, pk=qid)
-        answer = get_object_or_404(Answer, pk=aid, question=question)
+        answer = get_object_or_404(
+            _annotate_answers(
+                Answer.objects.select_related('author').prefetch_related(
+                    'replies__author',
+                )
+            ),
+            pk=aid,
+            question=question,
+        )
         return question, answer
 
     def patch(self, request, qid, aid):
         question, answer = self.get_object(qid, aid)
 
-        # Answer author only and must be a student
         if not _is_student(request.user) or answer.author != request.user:
             return Response(
                 {'detail': 'You do not have permission to perform this action.'},
@@ -308,11 +315,14 @@ class AnswerDetailView(APIView):
             answer,
             data=request.data,
             partial=True,
+            context={'question': question, 'request': request},
         )
         serializer.is_valid(raise_exception=True)
         serializer.save()
-        answer.refresh_from_db()
 
+        answer = _annotate_answers(
+            Answer.objects.select_related('author').filter(pk=answer.pk)
+        ).get()
         return Response(
             AnswerSerializer(answer, context={'request': request}).data,
         )
@@ -320,14 +330,12 @@ class AnswerDetailView(APIView):
     def delete(self, request, qid, aid):
         question, answer = self.get_object(qid, aid)
 
-        # Answer author only and must be a student
         if not _is_student(request.user) or answer.author != request.user:
             return Response(
                 {'detail': 'You do not have permission to perform this action.'},
                 status=status.HTTP_403_FORBIDDEN,
             )
 
-        # Cannot delete the accepted answer
         if question.accepted_answer_id == answer.id:
             return Response(
                 {'detail': 'Cannot delete the accepted answer.'},
@@ -349,21 +357,18 @@ class AnswerAcceptView(APIView):
             pk=qid,
         )
 
-        # Question author only and must be a student
         if not _is_student(request.user) or question.author != request.user:
             return Response(
                 {'detail': 'You do not have permission to perform this action.'},
                 status=status.HTTP_403_FORBIDDEN,
             )
 
-        # Check 24h rule
         if not question.can_accept_answer:
             return Response(
                 {'detail': 'You can only accept an answer 24 hours after posting the question.'},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        # Check question doesn't already have an accepted answer
         if question.accepted_answer_id is not None:
             return Response(
                 {'detail': 'This question already has an accepted answer.'},
@@ -372,7 +377,6 @@ class AnswerAcceptView(APIView):
 
         answer = get_object_or_404(Answer, pk=aid, question=question)
 
-        # Only top level answers can be accepted
         if answer.parent_id is not None:
             return Response(
                 {'detail': 'Only top-level answers can be accepted.'},
@@ -386,21 +390,21 @@ class AnswerAcceptView(APIView):
             question.accepted_answer = answer
             question.save(update_fields=['accepted_answer'])
 
+        answer = _annotate_answers(
+            Answer.objects.select_related('author').filter(pk=answer.pk)
+        ).get()
         return Response(
             AnswerSerializer(answer, context={'request': request}).data,
             status=status.HTTP_200_OK,
         )
 
 
-# Vote endpoints
-
 class QuestionVoteView(APIView):
-    """Vote on a question ,students only, cannot vote on own content."""
+    """Vote on a question, students only, cannot vote on own content."""
 
     permission_classes = [IsAuthenticated]
 
     def post(self, request, pk):
-        # Students only
         if not _is_student(request.user):
             return Response(
                 {'detail': 'You do not have permission to perform this action.'},
@@ -409,7 +413,6 @@ class QuestionVoteView(APIView):
 
         question = get_object_or_404(Question, pk=pk)
 
-        # Cannot vote on own content
         if question.author == request.user:
             return Response(
                 {'detail': 'You cannot vote on your own content.'},
@@ -432,14 +435,11 @@ class QuestionVoteView(APIView):
 
         if existing_vote:
             if existing_vote.value == value:
-                # Same vote, toggle off
                 existing_vote.delete()
             else:
-                # Opposite vote, update it
                 existing_vote.value = value
                 existing_vote.save(update_fields=['value'])
         else:
-            # No vote , create it
             Vote.objects.create(
                 user=request.user,
                 content_type=content_type,
@@ -454,12 +454,11 @@ class QuestionVoteView(APIView):
 
 
 class AnswerVoteView(APIView):
-    """Vote on an answer , students only, cannot vote on own content."""
+    """Vote on an answer, students only, cannot vote on own content."""
 
     permission_classes = [IsAuthenticated]
 
     def post(self, request, qid, aid):
-        # Students only
         if not _is_student(request.user):
             return Response(
                 {'detail': 'You do not have permission to perform this action.'},
@@ -469,7 +468,6 @@ class AnswerVoteView(APIView):
         get_object_or_404(Question, pk=qid)
         answer = get_object_or_404(Answer, pk=aid, question_id=qid)
 
-        # Cannot vote on own content
         if answer.author == request.user:
             return Response(
                 {'detail': 'You cannot vote on your own content.'},
@@ -492,14 +490,11 @@ class AnswerVoteView(APIView):
 
         if existing_vote:
             if existing_vote.value == value:
-                # Same vote , toggle off
                 existing_vote.delete()
             else:
-                # Opposite vote , update it
                 existing_vote.value = value
                 existing_vote.save(update_fields=['value'])
         else:
-            # No vote , create it
             Vote.objects.create(
                 user=request.user,
                 content_type=content_type,
