@@ -3,8 +3,8 @@ import Link from 'next/link';
 import Image from 'next/image';
 import dynamic from 'next/dynamic';
 import { useRouter } from 'next/router';
-import { createQuestion } from '@/features/forum';
-import type { QuestionCreatePayload } from '@/features/forum';
+import { createQuestion } from '@/services/forum';
+import type { QuestionCreatePayload } from '@/services/forum';
 
 // ─── Monaco (no SSR) ─────────────────────────────────────────────────────────
 const MonacoEditor = dynamic(() => import('@monaco-editor/react'), {
@@ -17,6 +17,9 @@ const MonacoEditor = dynamic(() => import('@monaco-editor/react'), {
     </div>
   ),
 });
+
+// Cast dynamic editor to any to avoid strict prop-type mismatch
+const MonacoEditorAny = MonacoEditor as any;
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 const SUGGESTED_TAGS = [
@@ -360,12 +363,12 @@ export default function NewQuestionPage() {
                           </select>
                         </div>
                       </div>
-                      <MonacoEditor
+                      <MonacoEditorAny
                         height="240px"
                         language={codeLanguage}
                         theme="vs-dark"
                         value={codeSnippet}
-                        onChange={v => setCodeSnippet(v ?? '')}
+                        onChange={(v: string | undefined) => setCodeSnippet(v ?? '')}
                         options={{
                           minimap: { enabled: false },
                           fontSize: 13,

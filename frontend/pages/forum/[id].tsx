@@ -1,6 +1,5 @@
 import { useState, useCallback, useEffect } from 'react';
 import Link from 'next/link';
-import Image from 'next/image';
 import dynamic from 'next/dynamic';
 import { useRouter } from 'next/router';
 import {
@@ -12,11 +11,11 @@ import {
   acceptAnswer,
   voteQuestion,
   voteAnswer,
-} from '@/features/forum';
-import type { Answer, QuestionDetail, AnswerCreatePayload } from '@/features/forum';
+} from '@/services/forum';
+import type { Answer, QuestionDetail, AnswerCreatePayload } from '@/services/forum';
 
 // ─── Monaco (no SSR) ─────────────────────────────────────────────────────────
-const MonacoEditor = dynamic(() => import('@monaco-editor/react'), {
+const MonacoEditor = dynamic(() => import('@monaco-editor/react').then(mod => mod.default), {
   ssr: false,
   loading: () => (
     <div className="flex items-center justify-center h-40 bg-[#1e1e1e]">
@@ -24,6 +23,9 @@ const MonacoEditor = dynamic(() => import('@monaco-editor/react'), {
     </div>
   ),
 });
+
+// Cast the dynamic editor to `any` to avoid prop-type mismatch issues.
+const MonacoEditorAny = MonacoEditor as any;
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 const LANGUAGES = [
@@ -57,60 +59,40 @@ function removeFromTree(answers: Answer[], id: number): Answer[] {
     .map(a => ({ ...a, replies: removeFromTree(a.replies ?? [], id) }));
 }
 
-// ─── Shared Header (matches index page) ──────────────────────────────────────
-function Header() {
+// ─── Navbar ───────────────────────────────────────────────────────────────────
+function Navbar() {
   return (
-    <header style={{
-      background: '#0d1b2a',
-      padding: '0 24px',
-      position: 'sticky',
-      top: 0,
-      zIndex: 100,
-      boxShadow: '0 2px 12px rgba(0,0,0,0.3)',
-    }}>
-      <div style={{
-        maxWidth: 1200,
-        margin: '0 auto',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        height: 64,
-      }}>
-        <div>
-          <Link href="/">
-            <Image
-              src="/esicodehub-logo.png"
-              alt="ESICodeHub Logo"
-              width={60}
-              height={30}
-              className="object-contain"
-              priority
-            />
-          </Link>
+    <nav className="bg-[#0d1b4b] shadow-xl sticky top-0 z-30">
+      <div className="max-w-screen-xl mx-auto px-4 sm:px-8 flex items-center justify-between h-16">
+        <div className="flex items-center gap-4">
+          <Link href="/" className="font-black text-white text-xl tracking-tight font-mono border-2 border-blue-400 px-3 py-1 rounded-lg">ECH</Link>
+          <button className="text-slate-400 hover:text-white transition-colors p-1">
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+            </svg>
+          </button>
         </div>
-        <nav style={{ display: 'flex', gap: 28 }}>
-          <Link style={{ color: '#94a3c8', textDecoration: 'none', fontSize: 14, fontWeight: 500 }} href="/forum">Forum</Link>
-          <Link style={{ color: '#94a3c8', textDecoration: 'none', fontSize: 14, fontWeight: 500 }} href="#">Courses</Link>
-          <Link style={{ color: '#94a3c8', textDecoration: 'none', fontSize: 14, fontWeight: 500 }} href="#">Leaderboard</Link>
-        </nav>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-          {/* Notification bell */}
+        <div className="flex items-center gap-4">
           <button className="relative text-slate-300 hover:text-white transition-colors">
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
             </svg>
-            <span className="absolute -top-1 -right-1 w-4 h-4 bg-amber-400 text-[#0d1b2a] text-[9px] font-black rounded-full flex items-center justify-center">2</span>
+            <span className="absolute -top-1 -right-1 w-4 h-4 bg-amber-400 text-[#0d1b4b] text-[9px] font-black rounded-full flex items-center justify-center">2</span>
           </button>
-          {/* Avatar */}
-          <div style={{
-            width: 36, height: 36, borderRadius: '50%',
-            background: 'linear-gradient(135deg, #1d6ef5, #00c6ff)',
-            color: '#fff', display: 'flex', alignItems: 'center',
-            justifyContent: 'center', fontWeight: 700, fontSize: 13,
-          }}>DH</div>
+          <div className="flex items-center gap-3 border-l border-slate-600 pl-4">
+            <div className="w-9 h-9 rounded-full bg-slate-600 flex items-center justify-center ring-2 ring-blue-400">
+              <svg className="w-5 h-5 text-slate-200" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z" />
+              </svg>
+            </div>
+            <div className="hidden sm:block">
+              <p className="text-white text-sm font-semibold leading-tight">Teacher Name</p>
+              <p className="text-slate-400 text-xs">Teacher</p>
+            </div>
+          </div>
         </div>
       </div>
-    </header>
+    </nav>
   );
 }
 
@@ -184,24 +166,25 @@ function CodeBlock({ code, lang }: { code: string; lang: string }) {
         </div>
         <span className="text-xs text-slate-400 font-mono ml-1 tracking-wider">{lang || 'code'}</span>
       </div>
-      <MonacoEditor
-        height="180px"
-        language={lang === 'plaintext' ? 'plaintext' : lang}
-        theme="vs-dark"
-        value={code}
-        options={{
-          readOnly: true,
-          minimap: { enabled: false },
-          fontSize: 12.5,
-          lineNumbers: 'on',
-          scrollBeyondLastLine: false,
-          fontFamily: "'Fira Code', Consolas, monospace",
-          fontLigatures: true,
-          padding: { top: 12, bottom: 12 },
-          renderLineHighlight: 'none',
-          scrollbar: { verticalScrollbarSize: 4 },
-        }}
-      />
+      <div style={{ height: '180px' }}>
+        <MonacoEditorAny
+          language={lang === 'plaintext' ? 'plaintext' : lang}
+          theme="vs-dark"
+          value={code}
+          options={{
+            readOnly: true,
+            minimap: { enabled: false },
+            fontSize: 12.5,
+            lineNumbers: 'on',
+            scrollBeyondLastLine: false,
+            fontFamily: "'Fira Code', Consolas, monospace",
+            fontLigatures: true,
+            padding: { top: 12, bottom: 12 },
+            renderLineHighlight: 'none',
+            scrollbar: { verticalScrollbarSize: 4 },
+          }}
+        />
+      </div>
     </div>
   );
 }
@@ -274,20 +257,21 @@ function InlineAnswerForm({
 
       {showCode && (
         <div className="rounded-xl overflow-hidden border border-slate-700">
-          <MonacoEditor
-            height="160px"
-            language={lang}
-            theme="vs-dark"
-            value={code}
-            onChange={v => setCode(v ?? '')}
-            options={{
-              minimap: { enabled: false },
-              fontSize: 12,
-              scrollBeyondLastLine: false,
-              padding: { top: 10, bottom: 10 },
-              fontFamily: "'Fira Code', Consolas, monospace",
-            }}
-          />
+          <div style={{ height: '160px' }}>
+            <MonacoEditorAny
+              language={lang}
+              theme="vs-dark"
+              value={code}
+              onChange={(v: string | undefined) => setCode(v ?? '')}
+              options={{
+                minimap: { enabled: false },
+                fontSize: 12,
+                scrollBeyondLastLine: false,
+                padding: { top: 10, bottom: 10 },
+                fontFamily: "'Fira Code', Consolas, monospace",
+              }}
+            />
+          </div>
         </div>
       )}
 
@@ -361,6 +345,7 @@ function AnswerNode({
             ? 'bg-white border border-slate-200 shadow-sm'
             : 'bg-slate-50 border border-slate-150'}`}
       >
+        {/* Accepted badge */}
         {answer.is_accepted && (
           <div className="flex items-center gap-1.5 mb-3 text-green-700 bg-green-100 border border-green-200 w-fit px-3 py-1 rounded-full text-xs font-bold">
             <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" /></svg>
@@ -369,10 +354,18 @@ function AnswerNode({
         )}
 
         <div className="flex gap-3 items-start">
+          {/* Votes */}
           <div className="shrink-0 pt-0.5">
-            <VoteButtons score={answer.vote_score} userVote={answer.user_vote} onVote={v => onVote(answer.id, v)} />
+            <VoteButtons
+              score={answer.vote_score}
+              userVote={answer.user_vote}
+              onVote={v => onVote(answer.id, v)}
+            />
           </div>
+
+          {/* Content */}
           <div className="flex-1 min-w-0">
+            {/* Author + time */}
             <div className="flex items-center gap-2 mb-2 flex-wrap">
               <div className="w-7 h-7 rounded-full bg-[#0d1b4b] flex items-center justify-center text-white text-[10px] font-black shrink-0">
                 {initials(answer.author_name)}
@@ -381,34 +374,59 @@ function AnswerNode({
               <span className="text-slate-300 text-xs">·</span>
               <span className="text-xs text-slate-400">{timeAgo(answer.created_at)}</span>
             </div>
-            <p className="text-sm text-slate-700 leading-relaxed whitespace-pre-wrap mb-2">{answer.body}</p>
-            {answer.code_snippet && <CodeBlock code={answer.code_snippet} lang={answer.code_language} />}
 
+            {/* Body */}
+            <p className="text-sm text-slate-700 leading-relaxed whitespace-pre-wrap mb-2">
+              {answer.body}
+            </p>
+
+            {/* Code snippet */}
+            {answer.code_snippet && (
+              <CodeBlock code={answer.code_snippet} lang={answer.code_language || 'plaintext'} />
+            )}
+
+            {/* Actions row */}
             <div className="flex items-center gap-3 mt-3 flex-wrap">
-              <button onClick={() => setReplyOpen(v => !v)} className="text-xs font-semibold text-slate-500 hover:text-[#0d1b4b] transition-colors flex items-center gap-1">
+              <button
+                onClick={() => setReplyOpen(v => !v)}
+                className="text-xs font-semibold text-slate-500 hover:text-[#0d1b4b] transition-colors flex items-center gap-1"
+              >
                 <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" /></svg>
                 {replyOpen ? 'Cancel' : 'Reply'}
               </button>
+
+              {/* Accept button — question author, top-level, no accepted yet */}
               {isTopLevel && isQAuthor && canAccept && !hasAccepted && !answer.is_accepted && (
-                <button onClick={() => onAccept(answer.id)} className="text-xs font-bold text-green-700 border border-green-300 bg-green-50 hover:bg-green-100 px-3 py-1 rounded-full flex items-center gap-1 transition-all">
+                <button
+                  onClick={() => onAccept(answer.id)}
+                  className="text-xs font-bold text-green-700 border border-green-300 bg-green-50 hover:bg-green-100 px-3 py-1 rounded-full flex items-center gap-1 transition-all"
+                >
                   <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" /></svg>
                   Accept
                 </button>
               )}
+
               {isOwn && (
                 <>
                   <button className="text-xs font-semibold text-slate-400 hover:text-slate-700 transition-colors flex items-center gap-1">
                     <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
                     Edit
                   </button>
-                  <button onClick={() => onDelete(answer.id)} className="text-xs font-semibold text-red-400 hover:text-red-600 transition-colors flex items-center gap-1">
+                  <button
+                    onClick={() => onDelete(answer.id)}
+                    className="text-xs font-semibold text-red-400 hover:text-red-600 transition-colors flex items-center gap-1"
+                  >
                     <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
                     Delete
                   </button>
                 </>
               )}
+
               {hasReplies && (
-                <button onClick={() => setCollapsed(v => !v)} className="ml-auto text-xs text-slate-400 hover:text-slate-600 flex items-center gap-1 transition-colors">
+                <button
+                  onClick={() => setCollapsed(v => !v)}
+                  className="ml-auto text-xs text-slate-400 hover:text-slate-600 flex items-center gap-1 transition-colors"
+                >
                   <svg className={`w-3.5 h-3.5 transition-transform ${collapsed ? '-rotate-90' : ''}`} fill="currentColor" viewBox="0 0 20 20">
                     <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
                   </svg>
@@ -417,6 +435,7 @@ function AnswerNode({
               )}
             </div>
 
+            {/* Reply form */}
             {replyOpen && (
               <InlineAnswerForm
                 questionId={questionId}
@@ -429,6 +448,7 @@ function AnswerNode({
         </div>
       </div>
 
+      {/* Recursive replies */}
       {!collapsed && (answer.replies ?? []).map(r => (
         <AnswerNode
           key={r.id}
@@ -459,6 +479,7 @@ export default function QuestionDetailPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
+  // Post-answer form state
   const [answerBody, setAnswerBody] = useState('');
   const [showCode, setShowCode] = useState(false);
   const [ansCode, setAnsCode] = useState('');
@@ -466,6 +487,7 @@ export default function QuestionDetailPage() {
   const [posting, setPosting] = useState(false);
   const [ansError, setAnsError] = useState('');
 
+  // For demo: simulate a current user
   const CURRENT_USER_EMAIL = 'me@example.com';
 
   useEffect(() => {
@@ -479,7 +501,11 @@ export default function QuestionDetailPage() {
   const hasAccepted = (question?.answers ?? []).some(a => a.is_accepted);
 
   const handleQuestionVote = (v: 1 | -1) => {
-    voteQuestion(questionId, v).then(q => setQuestion(q)).catch(() => {});
+    voteQuestion(questionId, v).then(q => {
+      if (q && typeof q === 'object' && 'vote_score' in q) {
+        setQuestion(prev => prev ? { ...prev, vote_score: q.vote_score } : null);
+      }
+    }).catch(() => {});
   };
 
   const handleAnswerVote = (id: number, v: 1 | -1) => {
@@ -487,7 +513,14 @@ export default function QuestionDetailPage() {
   };
 
   const handleAccept = (answerId: number) => {
-    acceptAnswer(questionId, answerId).then(q => setQuestion(q)).catch(() => {});
+    acceptAnswer(questionId, answerId)
+      .then(ans => {
+        setQuestion(q => q ? {
+          ...q,
+          answers: q.answers.map(a => a.id === ans.id ? { ...a, is_accepted: true } : { ...a, is_accepted: false })
+        } : q);
+      })
+      .catch(() => {});
   };
 
   const handleDeleteAnswer = useCallback((id: number) => {
@@ -525,6 +558,7 @@ export default function QuestionDetailPage() {
     }
   };
 
+  // Separate accepted answers to pin them
   const acceptedAnswers = (question?.answers ?? []).filter(a => a.is_accepted && a.parent === null);
   const otherAnswers = (question?.answers ?? []).filter(a => !a.is_accepted && a.parent === null);
 
@@ -542,10 +576,9 @@ export default function QuestionDetailPage() {
 
   return (
     <ProtectedRoute>
-      {/* ── Shared Header with ESICodeHub logo ── */}
-      <Header />
+      <Navbar />
 
-      <div className="min-h-screen bg-[#f0f4ff]">
+      <div className="min-h-screen bg-[#eef0f8]">
         <div className="max-w-screen-xl mx-auto px-4 sm:px-8 py-8">
 
           {/* Tab switcher */}
@@ -587,36 +620,53 @@ export default function QuestionDetailPage() {
 
                 {/* ─── QUESTION CARD */}
                 <article className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+
+                  {/* Closed banner */}
                   {question.is_closed && (
                     <div className="bg-red-50 border-b border-red-200 px-6 py-3 flex items-center gap-2 text-red-700 text-sm font-medium">
                       <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" /></svg>
                       This question is closed and no longer accepting answers.
                     </div>
                   )}
+
+                  {/* Header strip */}
                   <div className="bg-[#0d1b4b] px-6 py-5 relative overflow-hidden">
                     <div className="absolute -top-4 -right-4 w-24 h-24 bg-blue-400 opacity-10 rounded-full" />
                     <div className="flex items-start justify-between gap-4 relative z-10">
                       <div>
+                        {/* Breadcrumb */}
                         <div className="flex items-center gap-1.5 text-blue-400 text-xs mb-2">
                           <Link href="/forum" className="hover:text-white transition-colors">Forum</Link>
                           <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" /></svg>
                           <span className="text-blue-300">Question</span>
                         </div>
-                        <h1 className="text-xl font-black text-white leading-snug max-w-2xl">{question.title}</h1>
+                        <h1 className="text-xl font-black text-white leading-snug max-w-2xl">
+                          {question.title}
+                        </h1>
                       </div>
                     </div>
                   </div>
 
                   <div className="p-6">
                     <div className="flex gap-4 items-start">
+                      {/* Question votes */}
                       <div className="shrink-0 pt-1">
-                        <VoteButtons score={question.vote_score} userVote={null} onVote={handleQuestionVote} />
+                        <VoteButtons
+                          score={question.vote_score}
+                          userVote={null}
+                          onVote={handleQuestionVote}
+                        />
                       </div>
+
                       <div className="flex-1 min-w-0">
+                        {/* Meta row */}
                         <div className="flex flex-wrap items-center gap-x-4 gap-y-2 mb-4">
+                          {/* Tags */}
                           <div className="flex flex-wrap gap-1.5">
                             {question.tags.map(t => (
-                              <span key={t} className="px-2.5 py-0.5 bg-[#0d1b4b] text-white text-[10px] font-bold rounded-full tracking-wide">{t}</span>
+                              <span key={t} className="px-2.5 py-0.5 bg-[#0d1b4b] text-white text-[10px] font-bold rounded-full tracking-wide">
+                                {t}
+                              </span>
                             ))}
                           </div>
                           <div className="flex items-center gap-3 text-xs text-slate-400 ml-auto">
@@ -628,6 +678,7 @@ export default function QuestionDetailPage() {
                           </div>
                         </div>
 
+                        {/* Author */}
                         <div className="flex items-center gap-2 mb-4">
                           <div className="w-7 h-7 rounded-full bg-[#0d1b4b] flex items-center justify-center text-white text-[10px] font-black">
                             {initials(question.author_name)}
@@ -635,16 +686,27 @@ export default function QuestionDetailPage() {
                           <span className="text-sm font-bold text-[#0d1b4b]">{question.author_name}</span>
                         </div>
 
-                        <p className="text-sm text-slate-700 leading-relaxed whitespace-pre-wrap mb-4">{question.body}</p>
-                        {question.code_snippet && <CodeBlock code={question.code_snippet} lang={question.code_language} />}
+                        {/* Body */}
+                        <p className="text-sm text-slate-700 leading-relaxed whitespace-pre-wrap mb-4">
+                          {question.body}
+                        </p>
 
+                        {/* Code snippet */}
+                        {question.code_snippet && (
+                          <CodeBlock code={question.code_snippet} lang={question.code_language || 'plaintext'} />
+                        )}
+
+                        {/* Owner actions */}
                         {question.author_email === CURRENT_USER_EMAIL && (
                           <div className="flex gap-2 mt-4 pt-4 border-t border-slate-100">
                             <button className="text-xs font-semibold text-slate-500 hover:text-slate-700 border border-slate-200 px-3 py-1.5 rounded-lg hover:bg-slate-50 transition-all flex items-center gap-1.5">
                               <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
                               Edit
                             </button>
-                            <button onClick={handleDeleteQuestion} className="text-xs font-semibold text-red-500 hover:text-red-700 border border-red-200 px-3 py-1.5 rounded-lg hover:bg-red-50 transition-all flex items-center gap-1.5">
+                            <button
+                              onClick={handleDeleteQuestion}
+                              className="text-xs font-semibold text-red-500 hover:text-red-700 border border-red-200 px-3 py-1.5 rounded-lg hover:bg-red-50 transition-all flex items-center gap-1.5"
+                            >
                               <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
                               Delete
                             </button>
@@ -678,9 +740,12 @@ export default function QuestionDetailPage() {
                     )}
                   </div>
 
+                  {/* Pinned accepted answers */}
                   {acceptedAnswers.map(a => (
                     <AnswerNode key={a.id} answer={a} depth={0} {...sharedNodeProps} />
                   ))}
+
+                  {/* Other answers */}
                   {otherAnswers.map(a => (
                     <AnswerNode key={a.id} answer={a} depth={0} {...sharedNodeProps} />
                   ))}
@@ -744,22 +809,23 @@ export default function QuestionDetailPage() {
                             </div>
                             <span className="text-xs text-slate-400 font-mono">answer.{ansLang}</span>
                           </div>
-                          <MonacoEditor
-                            height="200px"
-                            language={ansLang}
-                            theme="vs-dark"
-                            value={ansCode}
-                            onChange={v => setAnsCode(v ?? '')}
-                            options={{
-                              minimap: { enabled: false },
-                              fontSize: 13,
-                              scrollBeyondLastLine: false,
-                              padding: { top: 14, bottom: 14 },
-                              fontFamily: "'Fira Code', Consolas, monospace",
-                              fontLigatures: true,
-                              lineNumbers: 'on',
-                            }}
-                          />
+                          <div style={{ height: '200px' }}>
+                            <MonacoEditorAny
+                              language={ansLang}
+                              theme="vs-dark"
+                              value={ansCode}
+                              onChange={(v: string | undefined) => setAnsCode(v ?? '')}
+                              options={{
+                                minimap: { enabled: false },
+                                fontSize: 13,
+                                scrollBeyondLastLine: false,
+                                padding: { top: 14, bottom: 14 },
+                                fontFamily: "'Fira Code', Consolas, monospace",
+                                fontLigatures: true,
+                                lineNumbers: 'on',
+                              }}
+                            />
+                          </div>
                         </div>
                       )}
 
@@ -781,6 +847,7 @@ export default function QuestionDetailPage() {
 
               {/* ── Sidebar */}
               <div className="space-y-4">
+                {/* Question stats */}
                 <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
                   <div className="bg-[#0d1b4b] px-5 py-3">
                     <h3 className="text-xs font-black text-white tracking-widest uppercase font-mono">Question Stats</h3>
@@ -811,17 +878,21 @@ export default function QuestionDetailPage() {
                   </div>
                 </div>
 
+                {/* Tags */}
                 {question.tags.length > 0 && (
                   <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-4">
                     <h3 className="text-xs font-black text-[#0d1b4b] tracking-widest uppercase font-mono mb-3">Tags</h3>
                     <div className="flex flex-wrap gap-1.5">
                       {question.tags.map(t => (
-                        <span key={t} className="px-3 py-1 bg-[#0d1b4b] text-white text-xs font-bold rounded-full">{t}</span>
+                        <span key={t} className="px-3 py-1 bg-[#0d1b4b] text-white text-xs font-bold rounded-full">
+                          {t}
+                        </span>
                       ))}
                     </div>
                   </div>
                 )}
 
+                {/* Related questions placeholder */}
                 <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
                   <div className="bg-amber-400 px-5 py-3">
                     <h3 className="text-xs font-black text-[#0d1b4b] tracking-widest uppercase font-mono">Related</h3>
