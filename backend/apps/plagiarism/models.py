@@ -125,3 +125,37 @@ class SimilarityMatch(models.Model):
             f'Match {self.submission_a_id} vs {self.submission_b_id} '
             f'({self.language}: {self.max_similarity}%)'
         )
+
+
+class AIReferenceSubmission(models.Model):
+    """Stores one AI-generated reference solution for an assignment."""
+
+    assignment = models.ForeignKey(
+        'assignment_submissions.Assignment',
+        on_delete=models.CASCADE,
+        related_name='ai_references',
+    )
+    language = models.CharField(max_length=50)
+
+    # verbose, minimal, beginner, structured
+    style = models.CharField(max_length=50)
+
+    gcs_path = models.CharField(max_length=1000)
+    file_name = models.CharField(max_length=255)
+    generated_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'ai_reference_submissions'
+
+    @staticmethod
+    def build_gcs_path(
+        assignment_id: int,
+        language: str,
+        style: str,
+        ext: str,
+    ) -> str:
+        """Build the GCS path for an AI reference file."""
+        return f"assignments/{assignment_id}/ai_reference/{language}_{style}.{ext}"
+
+    def __str__(self):
+        return f"AI reference for assignment {self.assignment_id} ({self.language} — {self.style})"
