@@ -12,7 +12,10 @@ class SimilarityMatchSerializer(serializers.ModelSerializer):
     student_a_email = serializers.SerializerMethodField()
     student_b_name = serializers.SerializerMethodField()
     student_b_email = serializers.SerializerMethodField()
-    max_similarity = serializers.IntegerField(read_only=True)
+    max_similarity = serializers.SerializerMethodField()
+
+    def get_max_similarity(self, obj):
+        return obj.max_similarity
 
     class Meta:
         model = SimilarityMatch
