@@ -1,5 +1,6 @@
 import os
 import tempfile
+import logging
 from celery import shared_task
 from django.utils import timezone
 
@@ -8,6 +9,8 @@ from apps.personal_submissions.gcs import get_file_content
 from .models import PlagiarismReport, SimilarityMatch
 from .moss import get_file_language, run_moss_for_language, LANGUAGE_MOSS_ID
 from .parser import parse_moss_results
+
+logger = logging.getLogger(__name__)
 
 
 @shared_task(bind=True, max_retries=2, default_retry_delay=60)
@@ -114,3 +117,65 @@ def run_plagiarism_check(self, report_id: int):
         report.completed_at = timezone.now()
         report.save(update_fields=['status', 'error_message', 'completed_at'])
         raise self.retry(exc=exc)
+
+
+@shared_task(bind=True, max_retries=1, default_retry_delay=30)
+def generate_ai_references(self, assignment_id: int):
+    """
+    Generate AI reference submissions for all configured languages of an
+    assignment and upload them to GCS.
+    Called when a professor clicks 'Generate AI References' or when a
+    plagiarism check is triggered and no references exist yet.
+    """
+    from apps.assignment_submissions.models import Assignment
+    from apps.personal_submissions.gcs import upload_file_content
+    from .models import AIReferenceSubmission
+    from .ai_generator import generate_reference_solution, EXTENSION_MAP, STYLES
+
+    assignment = Assignment.objects.get(id=assignment_id)
+    languages = [lang.lower() for lang in (assignment.languages or [])]
+
+    if not languages:
+        # Nothing to generate , assignment has no languages configured
+        return
+
+    # Delete stale references before regenerating
+    AIReferenceSubmission.objects.filter(assignment=assignment).delete()
+
+    for language in languages:
+        ext = EXTENSION_MAP.get(language, 'txt')
+
+        for style in STYLES.keys():
+            try:
+                code = generate_reference_solution(
+                    language=language,
+                    style=style,
+                    assignment_title=assignment.title,
+                    assignment_description=assignment.description or '',
+                )
+
+                gcs_path = AIReferenceSubmission.build_gcs_path(
+                    assignment.id,
+                    language,
+                    style,
+                    ext,
+                )
+
+                # Upload generated code as plain text to GCS
+                upload_file_content(gcs_path, code)
+
+                AIReferenceSubmission.objects.create(
+                    assignment=assignment,
+                    language=language,
+                    style=style,
+                    gcs_path=gcs_path,
+                    file_name=f"{language}_{style}.{ext}",
+                )
+
+            except Exception as exc:
+                # Log and continue , one failed style doesn't abort the whole task
+                logger.warning(
+                    f"AI reference generation failed: assignment={assignment_id} "
+                    f"language={language} style={style} error={exc}"
+                )
+                continue
