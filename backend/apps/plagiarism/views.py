@@ -69,6 +69,7 @@ class PlagiarismReportRunView(APIView):
             report.completed_at = None
             report.error_message = ''
             report.moss_urls = {}
+            report.triggered_at = timezone.now()
             report.save(
                 update_fields=[
                     'status',
