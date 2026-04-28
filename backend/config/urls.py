@@ -30,7 +30,15 @@ urlpatterns = [
     path('api/', include('apps.core.urls')),
     path('api/auth/', include('apps.accounts.urls')),
     path('api/subjects/', subject_list, name='subject-list'),
-    path('api/assignments/', include('apps.assignment_submissions.urls')),
+    path(
+        'api/assignments/',
+        include(
+            [
+                path('', include('apps.assignment_submissions.urls')),
+                path('', include('apps.plagiarism.urls')),
+            ]
+        ),
+    ),
     path(
         'api/personal-submissions/',
         include('apps.personal_submissions.urls'),
