@@ -13,6 +13,7 @@ import {
   voteAnswer,
 } from '@/services/forum';
 import type { Answer, QuestionDetail, AnswerCreatePayload } from '@/services/forum';
+import Header from '@/components/submissions/Header';
 
 // ─── Monaco (no SSR) ─────────────────────────────────────────────────────────
 const MonacoEditor = dynamic(() => import('@monaco-editor/react').then(mod => mod.default), {
@@ -54,43 +55,6 @@ function removeFromTree(answers: Answer[], id: number): Answer[] {
   return answers
     .filter(a => a.id !== id)
     .map(a => ({ ...a, replies: removeFromTree(a.replies ?? [], id) }));
-}
-
-// ─── Navbar ───────────────────────────────────────────────────────────────────
-function Navbar() {
-  return (
-    <nav className="bg-[#0d1b4b] shadow-xl sticky top-0 z-30">
-      <div className="max-w-screen-xl mx-auto px-4 sm:px-8 flex items-center justify-between h-16">
-        <div className="flex items-center gap-4">
-          <Link href="/" className="font-black text-white text-xl tracking-tight font-mono border-2 border-blue-400 px-3 py-1 rounded-lg">ECH</Link>
-          <button className="text-slate-400 hover:text-white transition-colors p-1">
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-            </svg>
-          </button>
-        </div>
-        <div className="flex items-center gap-4">
-          <button className="relative text-slate-300 hover:text-white transition-colors">
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
-            </svg>
-            <span className="absolute -top-1 -right-1 w-4 h-4 bg-amber-400 text-[#0d1b4b] text-[9px] font-black rounded-full flex items-center justify-center">2</span>
-          </button>
-          <div className="flex items-center gap-3 border-l border-slate-600 pl-4">
-            <div className="w-9 h-9 rounded-full bg-slate-600 flex items-center justify-center ring-2 ring-blue-400">
-              <svg className="w-5 h-5 text-slate-200" fill="currentColor" viewBox="0 0 24 24">
-                <path d="M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z" />
-              </svg>
-            </div>
-            <div className="hidden sm:block">
-              <p className="text-white text-sm font-semibold leading-tight">Teacher Name</p>
-              <p className="text-slate-400 text-xs">Teacher</p>
-            </div>
-          </div>
-        </div>
-      </div>
-    </nav>
-  );
 }
 
 // ─── ProtectedRoute ───────────────────────────────────────────────────────────
@@ -566,20 +530,11 @@ export default function QuestionDetailPage() {
 
   return (
     <ProtectedRoute>
-      <Navbar />
+      <Header activePage="Q&A Forums" />
 
       <div className="min-h-screen bg-[#eef0f8]">
         <div className="max-w-screen-xl mx-auto px-4 sm:px-8 py-8">
 
-          {/* Tab switcher */}
-          <div className="flex gap-3 mb-8">
-            <Link href="/forum/new" className="px-6 py-2.5 border-2 border-[#0d1b4b] text-[#0d1b4b] font-bold text-sm rounded-xl bg-white hover:bg-[#0d1b4b] hover:text-white transition-all duration-200">
-              Ask a question
-            </Link>
-            <span className="px-6 py-2.5 bg-[#0d1b4b] text-white font-bold text-sm rounded-xl shadow-md">
-              Question Details
-            </span>
-          </div>
 
           {/* Loading */}
           {loading && (
@@ -881,20 +836,6 @@ export default function QuestionDetailPage() {
                     </div>
                   </div>
                 )}
-
-                {/* Related questions placeholder */}
-                <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-                  <div className="bg-amber-400 px-5 py-3">
-                    <h3 className="text-xs font-black text-[#0d1b4b] tracking-widest uppercase font-mono">Related</h3>
-                  </div>
-                  <div className="p-4 space-y-2">
-                    {['Stack overflow in recursive DFS?', 'Python memoization best practices', 'When to use iterative vs recursive?'].map(q => (
-                      <Link key={q} href="/forum" className="block text-xs text-slate-600 hover:text-[#0d1b4b] transition-colors leading-relaxed hover:underline">
-                        → {q}
-                      </Link>
-                    ))}
-                  </div>
-                </div>
               </div>
             </div>
           )}

@@ -4,6 +4,7 @@ import dynamic from 'next/dynamic';
 import { useRouter } from 'next/router';
 import { createQuestion } from '@/services/forum';
 import type { QuestionCreatePayload } from '@/services/forum';
+import Header from '@/components/submissions/Header';
 
 // ─── Monaco (no SSR) ─────────────────────────────────────────────────────────
 const MonacoEditor = dynamic(() => import('@monaco-editor/react').then(mod => mod.default), {
@@ -30,45 +31,6 @@ const LANGUAGES = [
   'python','javascript','typescript','java','c','cpp','rust','go',
   'sql','bash','html','css','json','yaml','markdown','plaintext',
 ];
-
-// ─── Navbar ───────────────────────────────────────────────────────────────────
-function Navbar() {
-  return (
-    <nav className="bg-[#0d1b4b] shadow-xl sticky top-0 z-30">
-      <div className="max-w-screen-xl mx-auto px-4 sm:px-8 flex items-center justify-between h-16">
-        <div className="flex items-center gap-4">
-          <Link href="/" className="font-black text-white text-xl tracking-tight font-mono border-2 border-blue-400 px-3 py-1 rounded-lg">
-            ECH
-          </Link>
-          <button className="text-slate-400 hover:text-white transition-colors p-1">
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-            </svg>
-          </button>
-        </div>
-        <div className="flex items-center gap-4">
-          <button className="relative text-slate-300 hover:text-white transition-colors">
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
-            </svg>
-            <span className="absolute -top-1 -right-1 w-4 h-4 bg-amber-400 text-[#0d1b4b] text-[9px] font-black rounded-full flex items-center justify-center">2</span>
-          </button>
-          <div className="flex items-center gap-3 border-l border-slate-600 pl-4">
-            <div className="w-9 h-9 rounded-full bg-slate-600 flex items-center justify-center ring-2 ring-blue-400">
-              <svg className="w-5 h-5 text-slate-200" fill="currentColor" viewBox="0 0 24 24">
-                <path d="M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z" />
-              </svg>
-            </div>
-            <div className="hidden sm:block">
-              <p className="text-white text-sm font-semibold leading-tight">Teacher Name</p>
-              <p className="text-slate-400 text-xs">Teacher</p>
-            </div>
-          </div>
-        </div>
-      </div>
-    </nav>
-  );
-}
 
 // ─── ProtectedRoute ───────────────────────────────────────────────────────────
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => <>{children}</>;
@@ -227,239 +189,181 @@ export default function NewQuestionPage() {
 
   return (
     <ProtectedRoute>
-      <Navbar />
+      <Header activePage="Q&A Forums" />
 
       <div className="min-h-screen bg-[#eef0f8]">
         <div className="max-w-screen-xl mx-auto px-4 sm:px-8 py-8">
 
-          {/* Tab switcher */}
-          <div className="flex gap-3 mb-8">
-            <span className="px-6 py-2.5 bg-[#0d1b4b] text-white font-bold text-sm rounded-xl shadow-md">
-              Ask a question
-            </span>
-            <Link
-              href="/forum/1"
-              className="px-6 py-2.5 border-2 border-[#0d1b4b] text-[#0d1b4b] font-bold text-sm rounded-xl bg-white hover:bg-[#0d1b4b] hover:text-white transition-all duration-200"
-            >
-              Question Details
-            </Link>
-          </div>
 
-          {/* Main grid: form + sidebar tip */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
+          {/* Full-width form card — no sidebar */}
+          <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
 
-            {/* ── Form card */}
-            <div className="lg:col-span-2 bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+            {/* Card header */}
+            <div className="bg-[#0d1b4b] px-8 py-7 relative overflow-hidden">
+              <div className="absolute -top-6 -right-6 w-28 h-28 bg-blue-400 opacity-10 rounded-full" />
+              <div className="absolute top-4 right-16 w-14 h-14 bg-blue-300 opacity-10 rounded-full" />
+              <h1 className="text-2xl font-black text-white tracking-widest font-mono uppercase relative z-10">
+                Ask a Question
+              </h1>
+              <p className="text-blue-300 text-sm mt-1.5 relative z-10">
+                Good questions get good answers. Be specific, show your work.
+              </p>
+            </div>
 
-              {/* Header */}
-              <div className="bg-[#0d1b4b] px-8 py-7 relative overflow-hidden">
-                {/* decorative circles */}
-                <div className="absolute -top-6 -right-6 w-28 h-28 bg-blue-400 opacity-10 rounded-full" />
-                <div className="absolute top-4 right-16 w-14 h-14 bg-blue-300 opacity-10 rounded-full" />
-                <h1 className="text-2xl font-black text-white tracking-widest font-mono uppercase relative z-10">
-                  Ask a Question
-                </h1>
-                <p className="text-blue-300 text-sm mt-1.5 relative z-10">
-                  Good questions get good answers. Be specific, show your work.
-                </p>
-              </div>
+            <form onSubmit={handleSubmit} noValidate className="px-6 sm:px-10 py-8 space-y-8">
 
-              <form onSubmit={handleSubmit} noValidate className="px-6 sm:px-10 py-8 space-y-8">
-
-                {/* Title */}
-                <Field label="Title" required error={errors.title}>
-                  <div className="relative">
-                    <input
-                      type="text"
-                      value={title}
-                      maxLength={300}
-                      onChange={e => { setTitle(e.target.value); if (errors.title) setErrors(p => ({ ...p, title: undefined })); }}
-                      placeholder="e.g. Why does my recursive Fibonacci overflow the stack?"
-                      className={`w-full px-4 py-3 rounded-xl border-2 bg-slate-50 text-slate-800 text-sm outline-none transition-all duration-200 pr-16
-                        ${errors.title ? 'border-red-400' : 'border-slate-200 focus:border-[#0d1b4b] focus:shadow-[0_0_0_3px_rgba(13,27,75,0.08)]'}`}
-                    />
-                    <span className={`absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-mono tabular-nums pointer-events-none
-                      ${title.length > 270 ? 'text-red-500' : 'text-slate-400'}`}>
-                      {title.length}/300
-                    </span>
-                  </div>
-                </Field>
-
-                {/* Body */}
-                <Field
-                  label="Description"
-                  required
-                  hint="Describe the problem in full. Include what you've already tried."
-                  error={errors.body}
-                >
-                  <textarea
-                    value={body}
-                    rows={8}
-                    onChange={e => { setBody(e.target.value); if (errors.body) setErrors(p => ({ ...p, body: undefined })); }}
-                    placeholder="I'm trying to implement … but I keep getting …"
-                    className={`w-full px-4 py-3 rounded-xl border-2 bg-slate-50 text-slate-800 text-sm outline-none resize-y leading-relaxed transition-all duration-200
-                      ${errors.body ? 'border-red-400' : 'border-slate-200 focus:border-[#0d1b4b] focus:shadow-[0_0_0_3px_rgba(13,27,75,0.08)]'}`}
+              {/* Title */}
+              <Field label="Title" required error={errors.title}>
+                <div className="relative">
+                  <input
+                    type="text"
+                    value={title}
+                    maxLength={300}
+                    onChange={e => { setTitle(e.target.value); if (errors.title) setErrors(p => ({ ...p, title: undefined })); }}
+                    placeholder="e.g. Why does my recursive Fibonacci overflow the stack?"
+                    className={`w-full px-4 py-3 rounded-xl border-2 bg-slate-50 text-slate-800 text-sm outline-none transition-all duration-200 pr-16
+                      ${errors.title ? 'border-red-400' : 'border-slate-200 focus:border-[#0d1b4b] focus:shadow-[0_0_0_3px_rgba(13,27,75,0.08)]'}`}
                   />
-                </Field>
-
-                {/* Code Snippet */}
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <span className="text-sm font-bold text-slate-800">Code Snippet</span>
-                      <span className="ml-2 text-xs text-slate-400">optional</span>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => setShowCode(v => !v)}
-                      className={`text-xs font-bold px-4 py-1.5 rounded-full border-2 transition-all duration-200
-                        ${showCode
-                          ? 'bg-slate-100 border-slate-300 text-slate-600 hover:bg-red-50 hover:border-red-300 hover:text-red-600'
-                          : 'border-[#0d1b4b] text-[#0d1b4b] hover:bg-[#0d1b4b] hover:text-white'}`}
-                    >
-                      {showCode ? '− Remove snippet' : '+ Add snippet'}
-                    </button>
-                  </div>
-
-                  {showCode && (
-                    <div className="rounded-xl overflow-hidden border-2 border-slate-700 shadow-lg">
-                      {/* editor toolbar */}
-                      <div className="flex items-center gap-3 px-4 py-2.5 bg-[#1a1f2e] border-b border-slate-700">
-                        <div className="flex gap-1.5">
-                          <div className="w-3 h-3 rounded-full bg-red-500 opacity-80" />
-                          <div className="w-3 h-3 rounded-full bg-amber-400 opacity-80" />
-                          <div className="w-3 h-3 rounded-full bg-green-500 opacity-80" />
-                        </div>
-                        <span className="text-slate-500 text-xs font-mono">snippet.{codeLanguage === 'plaintext' ? 'txt' : codeLanguage}</span>
-                        <div className="ml-auto flex items-center gap-2">
-                          <span className="text-slate-500 text-xs">Language:</span>
-                          <select
-                            value={codeLanguage}
-                            onChange={e => setCodeLanguage(e.target.value)}
-                            className="bg-slate-800 border border-slate-600 text-slate-200 text-xs px-2 py-1 rounded-md outline-none cursor-pointer hover:border-slate-400 transition-colors"
-                          >
-                            {LANGUAGES.map(l => <option key={l} value={l}>{l}</option>)}
-                          </select>
-                        </div>
-                      </div>
-                      <div style={{ height: '240px' }}>
-                        <MonacoEditor
-                          language={codeLanguage}
-                          theme="vs-dark"
-                          value={codeSnippet}
-                          onChange={(v: string | undefined) => setCodeSnippet(v ?? '')}
-                          options={{
-                            minimap: { enabled: false },
-                            fontSize: 13,
-                            lineNumbers: 'on',
-                            scrollBeyondLastLine: false,
-                            wordWrap: 'on',
-                            padding: { top: 14, bottom: 14 },
-                            fontFamily: "'Fira Code', 'Cascadia Code', Consolas, monospace",
-                            fontLigatures: true,
-                            renderLineHighlight: 'line',
-                            cursorBlinking: 'smooth',
-                          }}
-                        />
-                      </div>
-                    </div>
-                  )}
+                  <span className={`absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-mono tabular-nums pointer-events-none
+                    ${title.length > 270 ? 'text-red-500' : 'text-slate-400'}`}>
+                    {title.length}/300
+                  </span>
                 </div>
+              </Field>
 
-                {/* Tags */}
-                <Field
-                  label="Tags"
-                  hint="Add subject codes or topic keywords to help others find this."
-                >
-                  <TagInput tags={tags} onChange={setTags} />
-                </Field>
+              {/* Body */}
+              <Field
+                label="Description"
+                required
+                hint="Describe the problem in full. Include what you've already tried."
+                error={errors.body}
+              >
+                <textarea
+                  value={body}
+                  rows={8}
+                  onChange={e => { setBody(e.target.value); if (errors.body) setErrors(p => ({ ...p, body: undefined })); }}
+                  placeholder="I'm trying to implement … but I keep getting …"
+                  className={`w-full px-4 py-3 rounded-xl border-2 bg-slate-50 text-slate-800 text-sm outline-none resize-y leading-relaxed transition-all duration-200
+                    ${errors.body ? 'border-red-400' : 'border-slate-200 focus:border-[#0d1b4b] focus:shadow-[0_0_0_3px_rgba(13,27,75,0.08)]'}`}
+                />
+              </Field>
 
-                {/* Server error */}
-                {submitError && (
-                  <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3 text-sm text-red-600 flex items-center gap-2">
-                    <svg className="w-4 h-4 shrink-0" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" /></svg>
-                    {submitError}
+              {/* Code Snippet */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <span className="text-sm font-bold text-slate-800">Code Snippet</span>
+                    <span className="ml-2 text-xs text-slate-400">optional</span>
                   </div>
-                )}
-
-                {/* Form actions */}
-                <div className="flex items-center justify-between pt-4 border-t border-slate-100">
-                  <Link
-                    href="/forum"
-                    className="text-sm text-slate-500 hover:text-slate-800 font-medium transition-colors flex items-center gap-1.5 group"
-                  >
-                    <svg className="w-4 h-4 group-hover:-translate-x-0.5 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-                    </svg>
-                    Back to Forum
-                  </Link>
                   <button
-                    type="submit"
-                    disabled={submitting}
-                    className="flex items-center gap-2.5 bg-[#0d1b4b] hover:bg-[#162269] active:scale-[0.97] text-white font-bold text-sm px-8 py-3 rounded-xl transition-all duration-200 shadow-md hover:shadow-lg disabled:opacity-60 disabled:cursor-not-allowed"
+                    type="button"
+                    onClick={() => setShowCode(v => !v)}
+                    className={`text-xs font-bold px-4 py-1.5 rounded-full border-2 transition-all duration-200
+                      ${showCode
+                        ? 'bg-slate-100 border-slate-300 text-slate-600 hover:bg-red-50 hover:border-red-300 hover:text-red-600'
+                        : 'border-[#0d1b4b] text-[#0d1b4b] hover:bg-[#0d1b4b] hover:text-white'}`}
                   >
-                    {submitting ? (
-                      <>
-                        <svg className="animate-spin w-4 h-4" viewBox="0 0 24 24" fill="none">
-                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
-                        </svg>
-                        Posting…
-                      </>
-                    ) : (
-                      <>
-                        Post Question
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
-                        </svg>
-                      </>
-                    )}
+                    {showCode ? '− Remove snippet' : '+ Add snippet'}
                   </button>
                 </div>
-              </form>
-            </div>
 
-            {/* ── Sidebar: Tips */}
-            <div className="space-y-4">
-              {/* Writing tips card */}
-              <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-                <div className="bg-amber-400 px-5 py-3">
-                  <h3 className="font-black text-[#0d1b4b] text-sm tracking-wide uppercase font-mono">
-                    Tips for a Great Question
-                  </h3>
-                </div>
-                <ul className="px-5 py-4 space-y-3">
-                  {[
-                    { icon: '🎯', tip: 'Summarize the problem in one clear sentence.' },
-                    { icon: '🔍', tip: 'Include what you have already tried.' },
-                    { icon: '🐛', tip: 'Paste the exact error message you see.' },
-                    { icon: '✂️', tip: 'Keep code snippets minimal and focused.' },
-                    { icon: '🏷️', tip: 'Add relevant tags so the right people find it.' },
-                  ].map(({ icon, tip }) => (
-                    <li key={tip} className="flex items-start gap-2.5 text-xs text-slate-600 leading-relaxed">
-                      <span className="text-sm shrink-0">{icon}</span>
-                      {tip}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-
-              {/* Community stats */}
-              <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 space-y-3">
-                <h3 className="font-black text-[#0d1b4b] text-xs tracking-widest uppercase font-mono">Forum Stats</h3>
-                {[
-                  { label: 'Questions', value: '1,248' },
-                  { label: 'Answers', value: '4,791' },
-                  { label: 'Members', value: '389' },
-                ].map(s => (
-                  <div key={s.label} className="flex items-center justify-between">
-                    <span className="text-xs text-slate-500">{s.label}</span>
-                    <span className="text-sm font-black text-[#0d1b4b] font-mono">{s.value}</span>
+                {showCode && (
+                  <div className="rounded-xl overflow-hidden border-2 border-slate-700 shadow-lg">
+                    <div className="flex items-center gap-3 px-4 py-2.5 bg-[#1a1f2e] border-b border-slate-700">
+                      <div className="flex gap-1.5">
+                        <div className="w-3 h-3 rounded-full bg-red-500 opacity-80" />
+                        <div className="w-3 h-3 rounded-full bg-amber-400 opacity-80" />
+                        <div className="w-3 h-3 rounded-full bg-green-500 opacity-80" />
+                      </div>
+                      <span className="text-slate-500 text-xs font-mono">snippet.{codeLanguage === 'plaintext' ? 'txt' : codeLanguage}</span>
+                      <div className="ml-auto flex items-center gap-2">
+                        <span className="text-slate-500 text-xs">Language:</span>
+                        <select
+                          value={codeLanguage}
+                          onChange={e => setCodeLanguage(e.target.value)}
+                          className="bg-slate-800 border border-slate-600 text-slate-200 text-xs px-2 py-1 rounded-md outline-none cursor-pointer hover:border-slate-400 transition-colors"
+                        >
+                          {LANGUAGES.map(l => <option key={l} value={l}>{l}</option>)}
+                        </select>
+                      </div>
+                    </div>
+                    <div style={{ height: '240px' }}>
+                      <MonacoEditor
+                        language={codeLanguage}
+                        theme="vs-dark"
+                        value={codeSnippet}
+                        onChange={(v: string | undefined) => setCodeSnippet(v ?? '')}
+                        options={{
+                          minimap: { enabled: false },
+                          fontSize: 13,
+                          lineNumbers: 'on',
+                          scrollBeyondLastLine: false,
+                          wordWrap: 'on',
+                          padding: { top: 14, bottom: 14 },
+                          fontFamily: "'Fira Code', 'Cascadia Code', Consolas, monospace",
+                          fontLigatures: true,
+                          renderLineHighlight: 'line',
+                          cursorBlinking: 'smooth',
+                        }}
+                      />
+                    </div>
                   </div>
-                ))}
+                )}
               </div>
-            </div>
+
+              {/* Tags */}
+              <Field
+                label="Tags"
+                hint="Add subject codes or topic keywords to help others find this."
+              >
+                <TagInput tags={tags} onChange={setTags} />
+              </Field>
+
+              {/* Server error */}
+              {submitError && (
+                <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3 text-sm text-red-600 flex items-center gap-2">
+                  <svg className="w-4 h-4 shrink-0" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" /></svg>
+                  {submitError}
+                </div>
+              )}
+
+              {/* Form actions */}
+              <div className="flex items-center justify-between pt-4 border-t border-slate-100">
+                <Link
+                  href="/forum"
+                  className="text-sm text-slate-500 hover:text-slate-800 font-medium transition-colors flex items-center gap-1.5 group"
+                >
+                  <svg className="w-4 h-4 group-hover:-translate-x-0.5 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                  </svg>
+                  Back to Forum
+                </Link>
+                <button
+                  type="submit"
+                  disabled={submitting}
+                  className="flex items-center gap-2.5 bg-[#0d1b4b] hover:bg-[#162269] active:scale-[0.97] text-white font-bold text-sm px-8 py-3 rounded-xl transition-all duration-200 shadow-md hover:shadow-lg disabled:opacity-60 disabled:cursor-not-allowed"
+                >
+                  {submitting ? (
+                    <>
+                      <svg className="animate-spin w-4 h-4" viewBox="0 0 24 24" fill="none">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
+                      </svg>
+                      Posting…
+                    </>
+                  ) : (
+                    <>
+                      Post Question
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                      </svg>
+                    </>
+                  )}
+                </button>
+              </div>
+            </form>
           </div>
+
         </div>
       </div>
     </ProtectedRoute>
