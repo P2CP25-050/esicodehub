@@ -12,10 +12,10 @@ interface HeaderProps {
 }
 
 const NAV_LINKS = [
-  { label: "Submissions", href: "/submissions" },
-  { label: "Assignments", href: "/assignments" },
-  { label: "Q&A Forums",   href: "/forums" },
-  { label: "Insights",    href: "/insights" },
+  { label: "Submissions", href: "/submissions",  roles: ["student", "professor"] },
+  { label: "Assignments", href: "/assignments",  roles: ["student", "professor"] },
+  { label: "Q&A Forums",  href: "/forums",       roles: ["student"] },
+  { label: "Insights",    href: "/insights",     roles: ["student", "professor"] },
 ];
 
 const PROFILE_AVATAR_KEY = 'profile_avatar_url';
@@ -260,7 +260,7 @@ export default function Header({ activePage = "" }: HeaderProps) {
             </Link>
 
             <nav style={styles.desktopNav} className="header-desktop-nav">
-              {NAV_LINKS.map(({ label, href }) => {
+              {NAV_LINKS.filter(({ roles }) => roles.includes(userRole)).map(({ label, href }) => {
                 const isActive = activePage === label;
                 const isHovered = hoveredNav === label;
                 return (
@@ -355,7 +355,7 @@ export default function Header({ activePage = "" }: HeaderProps) {
 
         {/* Nav links */}
         <div style={{ flex: 1, paddingTop: 8 }}>
-          {NAV_LINKS.map(({ label, href }) => (
+          {NAV_LINKS.filter(({ roles }) => roles.includes(userRole)).map(({ label, href }) => (
             <Link
               key={label}
               href={href}
