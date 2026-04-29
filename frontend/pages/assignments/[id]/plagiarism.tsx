@@ -512,8 +512,8 @@ function PlagiarismReportContent() {
                     <th className="px-6 py-4 font-semibold">Student A</th>
                     <th className="px-6 py-4 font-semibold">Student B</th>
                     <th className="px-6 py-4 font-semibold">Language</th>
-                    <th className="px-6 py-4 font-semibold">A's match %</th>
-                    <th className="px-6 py-4 font-semibold">B's match %</th>
+                    <th className="px-6 py-4 font-semibold">A&apos;s match %</th>
+                    <th className="px-6 py-4 font-semibold">B&apos;s match %</th>
                     <th className="px-6 py-4 font-semibold">Lines matched</th>
                     <th className="px-6 py-4 font-semibold">Diff</th>
                   </tr>
