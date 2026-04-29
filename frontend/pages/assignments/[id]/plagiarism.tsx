@@ -741,8 +741,20 @@ function PlagiarismReportContent() {
             </div>
 
             <div className="border-t border-slate-200 px-6 py-5 text-sm text-slate-500">
-              These results indicate code similarity, not confirmed plagiarism. Manual
-              review is required before any academic action.
+              <div className="flex flex-wrap gap-3 text-xs text-slate-500">
+                <span>■ Red — similarity ≥ 70% (high risk)</span>
+                <span>■ Orange — similarity 50–70% (moderate risk)</span>
+                <span>■ Green — similarity &lt; 50% (low risk)</span>
+                <span>■ Purple — matched AI reference (structural similarity to AI-generated code)</span>
+              </div>
+              <p className="mt-3 text-xs text-slate-500">
+                AI reference matching indicates structural similarity to AI-generated code.
+                This is a signal for manual review — not a determination of academic misconduct.
+              </p>
+              <p className="mt-3">
+                These results indicate code similarity, not confirmed plagiarism. Manual
+                review is required before any academic action.
+              </p>
             </div>
           </div>
         )}
