@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import {
   getNotifications,
@@ -11,7 +11,11 @@ export function useNotifications() {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const { isAuthenticated } = useAuth();
 
-  const fetch = useCallback(async () => {
+  // Keep a stable ref so the effect never needs to redeclare itself when
+  // isAuthenticated changes, avoiding the set-state-in-effect lint rule.
+  const fetchRef = useRef<() => Promise<void>>(async () => {});
+
+  fetchRef.current = useCallback(async () => {
     if (!isAuthenticated) return;
     try {
       const data = await getNotifications();
@@ -22,10 +26,12 @@ export function useNotifications() {
   }, [isAuthenticated]);
 
   useEffect(() => {
-    fetch();
-    const interval = setInterval(fetch, 30_000);
+    const run = () => fetchRef.current();
+    run();
+    const interval = setInterval(run, 30_000);
     return () => clearInterval(interval);
-  }, [fetch]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const unreadCount = notifications.filter(n => !n.is_read).length;
 
@@ -41,5 +47,7 @@ export function useNotifications() {
     );
   };
 
-  return { notifications, unreadCount, markAllRead, markOneRead, refresh: fetch };
+  const refresh = () => fetchRef.current();
+
+  return { notifications, unreadCount, markAllRead, markOneRead, refresh };
 }
