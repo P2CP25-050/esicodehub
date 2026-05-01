@@ -1,5 +1,5 @@
 """Views for the assignment_submissions app."""
-
+import magic
 from pathlib import PurePosixPath
 
 from django.db import transaction
@@ -18,6 +18,7 @@ from apps.esi_db.models import EsiStudent
 from apps.personal_submissions.gcs import (
     delete_directory,
     get_file_content,
+    get_signed_url,
     upload_file,
 )
 from apps.personal_submissions.validators import validate_code_file
@@ -672,3 +673,78 @@ class SubmissionReviewView(APIView):
         review.refresh_from_db()
         response_serializer = SubmissionReviewSerializer(review)
         return Response(response_serializer.data, status=status.HTTP_201_CREATED)
+
+
+class AssignmentDescriptionPDFUploadView(APIView):
+    """
+    Upload a PDF file as the assignment description.
+    Professor only must be the assignment creator.
+    Validates MIME type is application/pdf only.
+    Stores at assignments/{assignment_id}/description.pdf in GCS.
+    Returns a signed URL valid for 7 days.
+    """
+
+    permission_classes = [IsAuthenticated]
+
+    # 7 days in seconds
+    SIGNED_URL_EXPIRATION = 7 * 24 * 60 * 60
+
+    def post(self, request, pk):
+        # Professor only
+        if request.user.role != 'professor':
+            return Response(
+                {'detail': 'You do not have permission to perform this action.'},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        assignment = get_object_or_404(
+            Assignment.objects.select_related('professor'),
+            pk=pk,
+        )
+
+        # Only the professor who created it can upload
+        if assignment.professor != request.user:
+            return Response(
+                {'detail': 'You do not have permission to perform this action.'},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        # Cannot upload after deadline
+        if assignment.deadline < timezone.now():
+            return Response(
+                {'detail': 'Cannot edit an assignment after its deadline has passed.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        file = request.FILES.get('file')
+        if not file:
+            return Response(
+                {'detail': 'No file provided.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        # Validate MIME type is application/pdf only
+        file_content = file.read(2048)
+        file.seek(0)
+        mime_type = magic.from_buffer(file_content, mime=True)
+
+        if mime_type != 'application/pdf':
+            return Response(
+                {'detail': f'Only PDF files are allowed. Detected: {mime_type}'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        # Build GCS path and upload
+        gcs_path = f'assignments/{assignment.id}/description.pdf'
+        upload_file(file, gcs_path)
+
+        # Save GCS path to the assignment
+        assignment.description_pdf = gcs_path
+        assignment.save(update_fields=['description_pdf'])
+
+        # Return signed URL valid for 7 days
+        signed_url = get_signed_url(gcs_path, expiration=self.SIGNED_URL_EXPIRATION)
+        return Response(
+            {'url': signed_url},
+            status=status.HTTP_200_OK,
+        )
