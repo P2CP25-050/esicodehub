@@ -1,6 +1,6 @@
 from django.contrib.contenttypes.models import ContentType
 from django.db import transaction
-from django.db.models import Count, F, IntegerField, OuterRef, Subquery, Sum, Value
+from django.db.models import Count, F, IntegerField, OuterRef, Prefetch, Subquery, Sum, Value
 from django.db.models.functions import Coalesce
 from django.shortcuts import get_object_or_404
 from rest_framework import status
@@ -96,10 +96,8 @@ def get_annotated_answers(question, user):
         .values('total')[:1]
     )
 
-    qs = (
-        Answer.objects.filter(question=question, parent=None)
-        .select_related('author')
-        .prefetch_related('replies__author')
+    replies_qs = (
+        Answer.objects.select_related('author')
         .annotate(
             vote_score_db=Coalesce(
                 Subquery(vote_score_subquery, output_field=IntegerField()),
@@ -121,11 +119,27 @@ def get_annotated_answers(question, user):
             )
             .values('value')[:1]
         )
-        qs = qs.annotate(
+        replies_qs = replies_qs.annotate(
             user_vote_value=Subquery(
                 user_vote_subquery, output_field=IntegerField()
             )
         )
+
+    qs = (
+        Answer.objects.filter(question=question, parent=None)
+        .select_related('author')
+        .prefetch_related(
+            Prefetch('replies', queryset=replies_qs, to_attr='prefetched_replies')
+        )
+        .annotate(
+            vote_score_db=Coalesce(
+                Subquery(vote_score_subquery, output_field=IntegerField()),
+                Value(0),
+            ),
+            reply_count=Count('replies', distinct=True),
+        )
+        .order_by('created_at')
+    )
 
     return qs
 
