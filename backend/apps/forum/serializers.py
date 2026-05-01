@@ -127,6 +127,14 @@ class AnswerSerializer(serializers.ModelSerializer):
         user_vote_value so the recursive AnswerSerializer calls stay
         query free for those fields too.
         """
+        prefetched_replies = getattr(obj, 'prefetched_replies', None)
+        if prefetched_replies is not None:
+            return AnswerSerializer(
+                prefetched_replies,
+                many=True,
+                context=self.context,
+            ).data
+
         request = self.context.get('request')
         answer_content_type = ContentType.objects.get_for_model(Answer)
 
