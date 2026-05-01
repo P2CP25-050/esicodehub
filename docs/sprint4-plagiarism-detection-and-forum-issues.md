@@ -520,6 +520,9 @@ def run_plagiarism_check(self, report_id: int):
         raise self.retry(exc=exc)
 ```
 
+  **Optimization:** If a language group contains only AI reference files (no student
+  submissions), the task skips the MOSS submission for that language.
+
 #### Related Issues
 - Depends on: P1, P2
 - Blocks: P4

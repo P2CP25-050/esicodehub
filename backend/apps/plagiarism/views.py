@@ -1,6 +1,6 @@
 """Views for plagiarism reports."""
 
-from django.db.models import Prefetch
+from django.db.models import Count, Prefetch
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from rest_framework import status
@@ -9,9 +9,9 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from apps.assignment_submissions.models import Assignment
-from .models import PlagiarismReport, SimilarityMatch
+from .models import AIReferenceSubmission, PlagiarismReport, SimilarityMatch
 from .serializers import PlagiarismReportSerializer
-from .tasks import run_plagiarism_check
+from .tasks import generate_ai_references, run_plagiarism_check
 
 
 class PlagiarismReportRunView(APIView):
@@ -91,6 +91,82 @@ class PlagiarismReportRunView(APIView):
         return Response(
             {'report_id': report.id, 'status': report.status},
             status=status.HTTP_202_ACCEPTED,
+        )
+
+
+class PlagiarismReferenceGenerateView(APIView):
+    """Trigger AI reference generation for an assignment."""
+
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, pk):
+        """Queue AI reference generation after validation."""
+        if request.user.role != 'professor':
+            return Response(
+                {'detail': 'You do not have permission to perform this action.'},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        assignment = get_object_or_404(Assignment, pk=pk)
+
+        if not assignment.languages:
+            return Response(
+                {
+                    'detail': (
+                        'This assignment has no languages configured. Add at '
+                        'least one language before generating references.'
+                    )
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        generate_ai_references.delay(assignment.id)
+
+        return Response(
+            {
+                'status': 'generating',
+                'message': 'AI references are being generated.',
+            },
+            status=status.HTTP_202_ACCEPTED,
+        )
+
+
+class PlagiarismReferenceStatusView(APIView):
+    """Return AI reference generation status for an assignment."""
+
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, pk):
+        """Return AI reference counts per language and latest timestamp."""
+        if request.user.role != 'professor':
+            return Response(
+                {'detail': 'You do not have permission to perform this action.'},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        assignment = get_object_or_404(Assignment, pk=pk)
+        references = AIReferenceSubmission.objects.filter(assignment=assignment)
+
+        if not references.exists():
+            return Response({'has_references': False, 'references': {}})
+
+        counts = (
+            references.values('language')
+            .annotate(count=Count('id'))
+            .order_by('language')
+        )
+        references_by_language = {
+            item['language']: item['count']
+            for item in counts
+        }
+        latest_reference = references.order_by('-generated_at').first()
+
+        return Response(
+            {
+                'has_references': True,
+                'references': references_by_language,
+                'generated_at': latest_reference.generated_at,
+            }
         )
 
 
