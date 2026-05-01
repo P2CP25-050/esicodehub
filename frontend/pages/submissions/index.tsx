@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter } from 'next/router';
 import Head from 'next/head';
-import { useAuth } from '@/hooks/useAuth'; 
+import { useAuth } from '@/context/AuthContext'; 
 import { listSubmissions } from '@/services/submissions/submissions.api';
 import type { PersonalSubmission, SubmissionListParams } from '@/services/submissions/submissions.types';
 import SearchBar    from '@/components/submissions/SearchBar';

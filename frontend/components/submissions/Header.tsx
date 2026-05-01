@@ -2,7 +2,7 @@ import { useState, CSSProperties, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from 'next/router';
-import { useAuth } from "@/hooks/useAuth";
+import { useAuth } from '@/context/AuthContext';
 import { logout } from '@/services/auth';
 import { clearTokens } from '@/lib/tokens';
 import { getProfile } from '@/services/profile/api';

@@ -3,7 +3,7 @@ import { useState, useEffect, useRef, ChangeEvent, CSSProperties } from "react";
 import Link from "next/link";
 import Header from "@/components/submissions/Header";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
-import { useAuth } from "@/hooks/useAuth";
+import { useAuth } from '@/context/AuthContext';
 import {
   getProfile,
   updateBio,

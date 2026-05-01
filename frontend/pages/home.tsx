@@ -8,7 +8,7 @@ import UpcomingDeadlines from "@/components/home/UpcomingDeadlines";
 import QuickStats from "@/components/home/QuickStats";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import type { Assignment } from "@/services/assignments/assignments.types";
-import { useAuth } from "@/hooks/useAuth";
+import { useAuth } from '@/context/AuthContext';
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
