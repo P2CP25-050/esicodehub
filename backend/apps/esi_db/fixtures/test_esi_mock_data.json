@@ -14,6 +14,19 @@
   },
   {
     "model": "esi_db.esistudent",
+    "pk": "25/0002",
+    "fields": {
+      "first_name": "BENOUADA",
+      "last_name": "MOUNA",
+      "email": "pm_benouada@esi.dz",
+      "section": "B",
+      "group": 7,
+      "study_year": "1CP",
+      "status": "inscrit"
+    }
+  },
+  {
+    "model": "esi_db.esistudent",
     "pk": "24/0198",
     "fields": {
       "first_name": "ANES",
