@@ -1,4 +1,4 @@
-import { useState, CSSProperties, useEffect } from "react";
+import { useState, CSSProperties, useEffect, useRef } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from 'next/router';
@@ -6,6 +6,8 @@ import { useAuth } from "@/hooks/useAuth";
 import { logout } from '@/services/auth';
 import { clearTokens } from '@/lib/tokens';
 import { getProfile } from '@/services/profile/api';
+import { useNotifications } from '@/hooks/useNotifications';
+import type { Notification } from '@/services/notifications/notifications';
 
 interface HeaderProps {
   activePage?: string;
@@ -27,16 +29,45 @@ const normalizeAvatarUrl = (value: unknown): string | null => {
   return trimmed.length > 0 ? trimmed : null;
 };
 
+/** Returns a human-readable "time ago" string for an ISO date. */
+function timeAgo(isoDate: string): string {
+  const diff = Math.floor((Date.now() - new Date(isoDate).getTime()) / 1000);
+  if (diff < 60)  return 'just now';
+  if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
+  if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
+  return `${Math.floor(diff / 86400)}d ago`;
+}
+
+/** Icon that varies by notification type. */
+function NotificationTypeIcon({ type }: { type: string }) {
+  const icons: Record<string, { path: string; color: string }> = {
+    success: { color: '#22c55e', path: 'M5 13l4 4L19 7' },
+    warning: { color: '#f59e0b', path: 'M12 9v4m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z' },
+    error:   { color: '#ef4444', path: 'M6 18L18 6M6 6l12 12' },
+    info:    { color: '#3b82f6', path: 'M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z' },
+  };
+  const icon = icons[type] ?? icons.info;
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={icon.color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+      <path d={icon.path} />
+    </svg>
+  );
+}
+
 export default function Header({ activePage = "" }: HeaderProps) {
-  const [hoveredNav, setHoveredNav] = useState<string | null>(null);
-  const [menuOpen, setMenuOpen] = useState(false);
-  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
-  const router = useRouter();
-  const { user } = useAuth();
+  const [hoveredNav, setHoveredNav]   = useState<string | null>(null);
+  const [menuOpen, setMenuOpen]       = useState(false);
+  const [avatarUrl, setAvatarUrl]     = useState<string | null>(null);
+  const [bellOpen, setBellOpen]       = useState(false);
+  const bellRef                       = useRef<HTMLDivElement>(null);
+  const router                        = useRouter();
+  const { user }                      = useAuth();
+  const { notifications, unreadCount, markAllRead, markOneRead } = useNotifications();
 
   const userName = user ? `${user.first_name} ${user.last_name}` : "—";
   const userRole = user?.role ?? "student";
 
+  // ── Avatar from localStorage / API ──────────────────────────────────────
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
@@ -71,39 +102,53 @@ export default function Header({ activePage = "" }: HeaderProps) {
         const profile = await getProfile();
         const latestAvatar = normalizeAvatarUrl(profile.profile?.avatar ?? null);
         if (cancelled) return;
-
         setAvatarUrl(latestAvatar);
         if (typeof window !== 'undefined') {
-          if (latestAvatar) {
-            window.localStorage.setItem(PROFILE_AVATAR_KEY, latestAvatar);
-          } else {
-            window.localStorage.removeItem(PROFILE_AVATAR_KEY);
-          }
+          if (latestAvatar) window.localStorage.setItem(PROFILE_AVATAR_KEY, latestAvatar);
+          else window.localStorage.removeItem(PROFILE_AVATAR_KEY);
         }
-      } catch {
-        // Non-fatal: keep avatar from storage if request fails.
-      }
+      } catch { /* Non-fatal */ }
     })();
 
-    return () => {
-      cancelled = true;
-    };
+    return () => { cancelled = true; };
   }, [user]);
+
+  // ── Close bell dropdown on outside click ─────────────────────────────────
+  useEffect(() => {
+    if (!bellOpen) return;
+    const handler = (e: MouseEvent) => {
+      if (bellRef.current && !bellRef.current.contains(e.target as Node)) {
+        setBellOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [bellOpen]);
+
+  // ── Close drawer on route change ──────────────────────────────────────────
+  useEffect(() => { setMenuOpen(false); }, [router.pathname]);
+
+  // ── Prevent body scroll when drawer is open ───────────────────────────────
+  useEffect(() => {
+    document.body.style.overflow = menuOpen ? "hidden" : "";
+    return () => { document.body.style.overflow = ""; };
+  }, [menuOpen]);
+
+  const handleLogout = async () => {
+    try { await logout(); } catch { }
+    finally { clearTokens(); router.replace('/login'); }
+  };
+
+  const handleNotificationClick = async (n: Notification) => {
+    if (!n.is_read) await markOneRead(n.id);
+    setBellOpen(false);
+    router.push(n.link);
+  };
 
   const renderProfileIcon = () => (
     <div style={styles.profileIcon}>
       {avatarUrl ? (
-        <div
-          style={{
-            width: '100%',
-            height: '100%',
-            borderRadius: '50%',
-            backgroundImage: `url(${avatarUrl})`,
-            backgroundPosition: 'center',
-            backgroundRepeat: 'no-repeat',
-            backgroundSize: 'cover',
-          }}
-        />
+        <div style={{ width: '100%', height: '100%', borderRadius: '50%', backgroundImage: `url(${avatarUrl})`, backgroundPosition: 'center', backgroundRepeat: 'no-repeat', backgroundSize: 'cover' }} />
       ) : (
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
           <circle cx="12" cy="8" r="4" stroke="#c8d6f0" strokeWidth="2" />
@@ -113,26 +158,7 @@ export default function Header({ activePage = "" }: HeaderProps) {
     </div>
   );
 
-  // Close drawer on route change
-  useEffect(() => {
-    setMenuOpen(false);
-  }, [router.pathname]);
-
-  // Prevent body scroll when drawer is open
-  useEffect(() => {
-    document.body.style.overflow = menuOpen ? "hidden" : "";
-    return () => { document.body.style.overflow = ""; };
-  }, [menuOpen]);
-
-  const handleLogout = async () => {
-    try {
-      await logout();
-    } catch {
-    } finally {
-      clearTokens();
-      router.replace('/login');
-    }
-  };
+  const visibleNotifications = notifications.slice(0, 10);
 
   return (
     <>
@@ -155,6 +181,7 @@ export default function Header({ activePage = "" }: HeaderProps) {
           .header-logout-btn  { display: none !important; }
           .header-profile-info { display: none !important; }
           .header-hamburger   { display: flex !important; }
+          .header-bell        { display: none !important; }
         }
 
         .mobile-drawer {
@@ -172,9 +199,7 @@ export default function Header({ activePage = "" }: HeaderProps) {
           transform: translateX(100%);
           transition: transform 0.28s cubic-bezier(0.4, 0, 0.2, 1);
         }
-        .mobile-drawer.open {
-          transform: translateX(0);
-        }
+        .mobile-drawer.open { transform: translateX(0); }
 
         .mobile-overlay {
           position: fixed;
@@ -185,10 +210,7 @@ export default function Header({ activePage = "" }: HeaderProps) {
           pointer-events: none;
           transition: opacity 0.28s ease;
         }
-        .mobile-overlay.open {
-          opacity: 1;
-          pointer-events: all;
-        }
+        .mobile-overlay.open { opacity: 1; pointer-events: all; }
 
         .drawer-nav-link {
           display: flex;
@@ -202,20 +224,10 @@ export default function Header({ activePage = "" }: HeaderProps) {
           transition: color .15s, background .15s, border-color .15s;
         }
         .drawer-nav-link:hover,
-        .drawer-nav-link.active {
-          color: #ffffff;
-          background: rgba(148,163,184,0.08);
-        }
-        .drawer-nav-link.active {
-          border-left-color: #1d6ef5;
-          font-weight: 700;
-        }
+        .drawer-nav-link.active { color: #ffffff; background: rgba(148,163,184,0.08); }
+        .drawer-nav-link.active { border-left-color: #1d6ef5; font-weight: 700; }
 
-        .drawer-divider {
-          height: 1px;
-          background: rgba(148,163,184,0.12);
-          margin: 12px 24px;
-        }
+        .drawer-divider { height: 1px; background: rgba(148,163,184,0.12); margin: 12px 24px; }
 
         .drawer-profile {
           display: flex;
@@ -237,8 +249,73 @@ export default function Header({ activePage = "" }: HeaderProps) {
           cursor: pointer;
           text-align: center;
         }
-        .drawer-logout-btn:hover {
-          background: rgba(148,163,184,0.08);
+        .drawer-logout-btn:hover { background: rgba(148,163,184,0.08); }
+
+        /* ── Bell dropdown ── */
+        .notif-item {
+          display: flex;
+          align-items: flex-start;
+          gap: 10px;
+          padding: 10px 14px;
+          cursor: pointer;
+          transition: background .12s;
+          border-bottom: 1px solid rgba(148,163,184,0.08);
+        }
+        .notif-item:last-child { border-bottom: none; }
+        .notif-item:hover { background: rgba(148,163,184,0.07); }
+        .notif-item.unread { background: rgba(29,110,245,0.06); }
+        .notif-item.unread:hover { background: rgba(29,110,245,0.1); }
+
+        .notif-mark-all {
+          background: none;
+          border: none;
+          color: #1d6ef5;
+          font-size: 12px;
+          font-weight: 600;
+          cursor: pointer;
+          padding: 0;
+        }
+        .notif-mark-all:hover { text-decoration: underline; }
+
+        .bell-btn {
+          position: relative;
+          background: none;
+          border: none;
+          cursor: pointer;
+          padding: 8px;
+          border-radius: 8px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          color: #94a3b8;
+          transition: background .15s, color .15s;
+        }
+        .bell-btn:hover { background: rgba(148,163,184,0.08); color: #e2e8f0; }
+
+        /* ── Mobile drawer notifications section ── */
+        .drawer-notif-header {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          padding: 14px 24px 8px;
+        }
+        .drawer-notif-item {
+          display: flex;
+          align-items: flex-start;
+          gap: 10px;
+          padding: 10px 24px;
+          cursor: pointer;
+          transition: background .12s;
+          border-bottom: 1px solid rgba(148,163,184,0.07);
+        }
+        .drawer-notif-item:last-child { border-bottom: none; }
+        .drawer-notif-item:hover { background: rgba(148,163,184,0.06); }
+        .drawer-notif-item.unread { background: rgba(29,110,245,0.06); }
+        .drawer-notif-item.unread:hover { background: rgba(29,110,245,0.1); }
+        .drawer-notif-empty {
+          padding: 16px 24px;
+          color: #64748b;
+          font-size: 13px;
         }
       `}</style>
 
@@ -247,7 +324,7 @@ export default function Header({ activePage = "" }: HeaderProps) {
           {/* ── Left: logo + desktop nav ── */}
           <div style={styles.headerLeft}>
             <Link href="/" style={styles.logoLink}>
-              <span aria-label="Go to homepage" style={{ display: "flex", alignItems: "center" }}>
+              <span style={styles.logo}>
                 <Image
                   src="/esicodehub-logo.png"
                   alt="Logo"
@@ -261,18 +338,14 @@ export default function Header({ activePage = "" }: HeaderProps) {
 
             <nav style={styles.desktopNav} className="header-desktop-nav">
               {NAV_LINKS.filter(({ roles }) => roles.includes(userRole)).map(({ label, href }) => {
-                const isActive = activePage === label;
+                const isActive  = activePage === label;
                 const isHovered = hoveredNav === label;
                 return (
                   <Link
                     key={label}
                     href={href}
                     className="nav-link"
-                    style={{
-                      ...styles.navLink,
-                      ...(isActive ? styles.navLinkActive : {}),
-                      ...(isHovered && !isActive ? styles.navLinkHover : {}),
-                    }}
+                    style={{ ...styles.navLink, ...(isActive ? styles.navLinkActive : {}), ...(isHovered && !isActive ? styles.navLinkHover : {}) }}
                     onMouseEnter={() => setHoveredNav(label)}
                     onMouseLeave={() => setHoveredNav(null)}
                   >
@@ -284,8 +357,94 @@ export default function Header({ activePage = "" }: HeaderProps) {
             </nav>
           </div>
 
-          {/* ── Right: logout + profile (desktop) + hamburger (mobile) ── */}
+          {/* ── Right: bell + logout + profile (desktop) + hamburger (mobile) ── */}
           <div style={styles.headerRight}>
+
+            {/* ── Notification Bell ── */}
+            <div ref={bellRef} className="header-bell" style={{ position: 'relative' }}>
+              <button
+                type="button"
+                className="bell-btn"
+                aria-label={`Notifications${unreadCount > 0 ? ` (${unreadCount} unread)` : ''}`}
+                onClick={() => setBellOpen(v => !v)}
+              >
+                {/* Bell SVG */}
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
+                  <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+                </svg>
+
+                {/* Unread badge */}
+                {unreadCount > 0 && (
+                  <span style={styles.bellBadge}>
+                    {unreadCount > 99 ? '99+' : unreadCount}
+                  </span>
+                )}
+              </button>
+
+              {/* ── Dropdown ── */}
+              {bellOpen && (
+                <div style={styles.bellDropdown}>
+                  {/* Dropdown header */}
+                  <div style={styles.bellDropdownHeader}>
+                    <span style={{ color: '#e2e8f0', fontWeight: 700, fontSize: 14 }}>Notifications</span>
+                    {unreadCount > 0 && (
+                      <button
+                        type="button"
+                        className="notif-mark-all"
+                        onClick={async () => { await markAllRead(); }}
+                      >
+                        Mark all read
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Notification list */}
+                  <div style={{ overflowY: 'auto', maxHeight: 360 }}>
+                    {visibleNotifications.length === 0 ? (
+                      <div style={styles.bellEmpty}>
+                        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#475569" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
+                          <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+                        </svg>
+                        <span style={{ color: '#64748b', fontSize: 13, marginTop: 8 }}>No notifications yet</span>
+                      </div>
+                    ) : (
+                      visibleNotifications.map(n => (
+                        <div
+                          key={n.id}
+                          className={`notif-item${!n.is_read ? ' unread' : ''}`}
+                          onClick={() => handleNotificationClick(n)}
+                          role="button"
+                          tabIndex={0}
+                          onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') handleNotificationClick(n); }}
+                          aria-label={n.title}
+                        >
+                          {/* Type icon */}
+                          <div style={{ marginTop: 2 }}>
+                            <NotificationTypeIcon type={n.type} />
+                          </div>
+
+                          {/* Text */}
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <p style={{ margin: 0, color: n.is_read ? '#94a3b8' : '#e2e8f0', fontSize: 13, fontWeight: n.is_read ? 400 : 600, lineHeight: 1.4, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                              {n.title}
+                            </p>
+                            <p style={{ margin: '2px 0 0', color: '#64748b', fontSize: 11 }}>
+                              {timeAgo(n.created_at)}
+                            </p>
+                          </div>
+
+                          {/* Unread dot */}
+                          {!n.is_read && <span style={styles.unreadDot} aria-hidden="true" />}
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+
             <button
               type="button"
               onClick={handleLogout}
@@ -302,6 +461,7 @@ export default function Header({ activePage = "" }: HeaderProps) {
                 <span style={styles.profileRole}>{userRole}</span>
               </div>
             </Link>
+
             <button
               type="button"
               className="header-hamburger"
@@ -310,18 +470,13 @@ export default function Header({ activePage = "" }: HeaderProps) {
               aria-expanded={menuOpen}
               style={styles.hamburger}
             >
-              <svg
-                width="22" height="22" viewBox="0 0 22 22" fill="none"
-                style={{ transition: "transform .2s" }}
-              >
+              <svg width="22" height="22" viewBox="0 0 22 22" fill="none" style={{ transition: "transform .2s" }}>
                 {menuOpen ? (
-                  /* X icon */
                   <>
                     <line x1="4" y1="4" x2="18" y2="18" stroke="#e2e8f0" strokeWidth="2" strokeLinecap="round" />
                     <line x1="18" y1="4" x2="4" y2="18" stroke="#e2e8f0" strokeWidth="2" strokeLinecap="round" />
                   </>
                 ) : (
-                  /* Burger icon */
                   <>
                     <line x1="3" y1="6"  x2="19" y2="6"  stroke="#e2e8f0" strokeWidth="2" strokeLinecap="round" />
                     <line x1="3" y1="11" x2="19" y2="11" stroke="#e2e8f0" strokeWidth="2" strokeLinecap="round" />
@@ -342,10 +497,7 @@ export default function Header({ activePage = "" }: HeaderProps) {
       />
 
       {/* ── Mobile drawer ── */}
-      <nav
-        className={`mobile-drawer${menuOpen ? " open" : ""}`}
-        aria-label="Mobile navigation"
-      >
+      <nav className={`mobile-drawer${menuOpen ? " open" : ""}`} aria-label="Mobile navigation">
         {/* Drawer header */}
         <div style={{ padding: "4px 24px 16px", borderBottom: "1px solid rgba(148,163,184,0.12)" }}>
           <Link href="/" aria-label="Go to homepage">
@@ -356,14 +508,49 @@ export default function Header({ activePage = "" }: HeaderProps) {
         {/* Nav links */}
         <div style={{ flex: 1, paddingTop: 8 }}>
           {NAV_LINKS.filter(({ roles }) => roles.includes(userRole)).map(({ label, href }) => (
-            <Link
-              key={label}
-              href={href}
-              className={`drawer-nav-link${activePage === label ? " active" : ""}`}
-            >
+            <Link key={label} href={href} className={`drawer-nav-link${activePage === label ? " active" : ""}`}>
               {label}
             </Link>
           ))}
+        </div>
+
+        {/* Divider + Notifications in drawer */}
+        <div className="drawer-divider" />
+
+        <div className="drawer-notif-header">
+          <span style={{ color: '#e2e8f0', fontWeight: 700, fontSize: 13 }}>Notifications</span>
+          {unreadCount > 0 && (
+            <button type="button" className="notif-mark-all" onClick={async () => { await markAllRead(); }}>
+              Mark all read
+            </button>
+          )}
+        </div>
+
+        <div style={{ maxHeight: 200, overflowY: 'auto' }}>
+          {visibleNotifications.length === 0 ? (
+            <div className="drawer-notif-empty">No notifications yet</div>
+          ) : (
+            visibleNotifications.map(n => (
+              <div
+                key={n.id}
+                className={`drawer-notif-item${!n.is_read ? ' unread' : ''}`}
+                onClick={() => { handleNotificationClick(n); setMenuOpen(false); }}
+                role="button"
+                tabIndex={0}
+                onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { handleNotificationClick(n); setMenuOpen(false); } }}
+                aria-label={n.title}
+              >
+                <div style={{ marginTop: 2 }}><NotificationTypeIcon type={n.type} /></div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <p style={{ margin: 0, color: n.is_read ? '#94a3b8' : '#e2e8f0', fontSize: 13, fontWeight: n.is_read ? 400 : 600, lineHeight: 1.4, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {n.title}
+                  </p>
+                  <p style={{ margin: '2px 0 0', color: '#64748b', fontSize: 11 }}>{timeAgo(n.created_at)}</p>
+                </div>
+                {!n.is_read && <span style={styles.unreadDot} aria-hidden="true" />}
+              </div>
+            ))
+          )}
         </div>
 
         {/* Divider + profile + logout */}
@@ -403,7 +590,7 @@ const styles: Record<string, CSSProperties> = {
     justifyContent: "space-between",
     height: 64,
   },
-  headerLeft: { display: "flex", alignItems: "center", gap: 16 },
+  headerLeft:  { display: "flex", alignItems: "center", gap: 16 },
   headerRight: { display: "flex", alignItems: "center", gap: 4 },
   logoutBtn: {
     border: '1px solid rgba(148,163,184,0.4)',
@@ -415,12 +602,8 @@ const styles: Record<string, CSSProperties> = {
     fontWeight: 600,
     cursor: 'pointer',
   },
-  logoLink: {
-    display: "flex",
-    alignItems: "center",
-    textDecoration: "none",
-  },
-  logo: { display: "flex", alignItems: "center", gap: 8 },
+  logoLink:   { display: "flex", alignItems: "center", textDecoration: "none" },
+  logo:       { display: "flex", alignItems: "center", gap: 8 },
   desktopNav: { display: "flex", alignItems: "center", gap: 4, marginLeft: 16 },
   navLink: {
     position: "relative",
@@ -436,7 +619,7 @@ const styles: Record<string, CSSProperties> = {
     alignItems: "center",
     gap: 2,
   },
-  navLinkHover: { color: "#e2e8f0", background: "rgba(148,163,184,0.08)" },
+  navLinkHover:  { color: "#e2e8f0", background: "rgba(148,163,184,0.08)" },
   navLinkActive: { color: "#ffffff", fontWeight: 700 },
   navBadge: {
     position: 'absolute',
@@ -494,8 +677,64 @@ const styles: Record<string, CSSProperties> = {
     cursor: "pointer",
     padding: "8px",
     borderRadius: 8,
-    display: "flex",
+    // No display here — visibility is controlled entirely by .header-hamburger CSS class
     alignItems: "center",
     justifyContent: "center",
+  },
+
+  // ── Bell ─────────────────────────────────────────────────────────────────
+  bellBadge: {
+    position: 'absolute',
+    top: 4,
+    right: 4,
+    minWidth: 16,
+    height: 16,
+    borderRadius: 999,
+    background: '#ef4444',
+    color: '#fff',
+    fontSize: 9,
+    fontWeight: 700,
+    lineHeight: '16px',
+    textAlign: 'center',
+    padding: '0 4px',
+    boxShadow: '0 0 0 2px #0d1b2a',
+    pointerEvents: 'none',
+  },
+  bellDropdown: {
+    position: 'absolute',
+    top: 'calc(100% + 8px)',
+    right: 0,
+    // On small screens the dropdown must not overflow the left edge of the
+    // viewport. We anchor it to the right of the bell and clamp its width so
+    // it never exceeds the available screen width (100vw minus 16px gutter).
+    width: 'min(320px, calc(100vw - 16px))',
+    background: '#0f2136',
+    border: '1px solid rgba(148,163,184,0.14)',
+    borderRadius: 12,
+    boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
+    zIndex: 150,   // above the sticky header (z-index 100) and hamburger
+    overflow: 'hidden',
+  },
+  bellDropdownHeader: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: '12px 14px 10px',
+    borderBottom: '1px solid rgba(148,163,184,0.1)',
+  },
+  bellEmpty: {
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: '32px 16px',
+  },
+  unreadDot: {
+    width: 8,
+    height: 8,
+    borderRadius: '50%',
+    background: '#1d6ef5',
+    flexShrink: 0,
+    marginTop: 4,
   },
 };
