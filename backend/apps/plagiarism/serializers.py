@@ -6,7 +6,12 @@ from .models import PlagiarismReport, SimilarityMatch
 
 
 class SimilarityMatchSerializer(serializers.ModelSerializer):
-    """Serialize similarity match details for plagiarism reports."""
+    """Serialize similarity match details for plagiarism reports.
+
+    ai_moss_flag: True means the student's code structurally matched an
+    AI-generated reference solution. This is a signal for manual review,
+    not a verdict.
+    """
 
     student_a_name = serializers.SerializerMethodField()
     student_a_email = serializers.SerializerMethodField()
@@ -31,6 +36,7 @@ class SimilarityMatchSerializer(serializers.ModelSerializer):
             'max_similarity',
             'lines_matched',
             'moss_link',
+            'ai_moss_flag',
         ]
 
     @staticmethod
@@ -38,21 +44,32 @@ class SimilarityMatchSerializer(serializers.ModelSerializer):
         """Return the full name for a user."""
         return f"{user.first_name} {user.last_name}".strip()
 
+    def _get_student_name(self, submission):
+        if not submission:
+            return 'AI Reference'
+        return self._full_name(submission.student)
+
+    @staticmethod
+    def _get_student_email(submission):
+        if not submission:
+            return ''
+        return submission.student.email
+
     def get_student_a_name(self, obj):
         """Return the full name for submission A's student."""
-        return self._full_name(obj.submission_a.student)
+        return self._get_student_name(obj.submission_a)
 
     def get_student_a_email(self, obj):
         """Return the email for submission A's student."""
-        return obj.submission_a.student.email
+        return self._get_student_email(obj.submission_a)
 
     def get_student_b_name(self, obj):
         """Return the full name for submission B's student."""
-        return self._full_name(obj.submission_b.student)
+        return self._get_student_name(obj.submission_b)
 
     def get_student_b_email(self, obj):
         """Return the email for submission B's student."""
-        return obj.submission_b.student.email
+        return self._get_student_email(obj.submission_b)
 
 
 class PlagiarismReportSerializer(serializers.ModelSerializer):
