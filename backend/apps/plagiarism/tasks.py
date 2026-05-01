@@ -54,6 +54,34 @@ def run_plagiarism_check(self, report_id: int):
                 if moss_id and moss_id not in language_groups:
                     language_groups[moss_id] = []
 
+            # Load AI reference files into each language group
+            # References are named "ai_ref_{style}" so the parser knows they are
+            # not students
+            from .ai_generator import STYLES
+            from .models import AIReferenceSubmission
+
+            ai_references = AIReferenceSubmission.objects.filter(assignment=assignment)
+            ai_ref_student_ids = set()
+
+            for ref in ai_references:
+                lang = LANGUAGE_MOSS_ID.get(ref.language)
+                if not lang or lang not in language_groups:
+                    continue
+
+                # Use a sentinel student ID that cannot clash with real IDs
+                # Convention: AI references use negative IDs starting from -1
+                sentinel_id = -(list(STYLES.keys()).index(ref.style) + 1)
+                ai_ref_student_ids.add(sentinel_id)
+
+                local_name = f"{sentinel_id}_{ref.file_name}"
+                local_path = os.path.join(tmpdir, local_name)
+
+                content = get_file_content(ref.gcs_path)
+                with open(local_path, 'w', encoding='utf-8') as fp:
+                    fp.write(content)
+
+                language_groups[lang].append((local_path, sentinel_id))
+
             for sub in submissions:
                 student_id = sub.student_id
                 for f in sub.files.all():
@@ -94,8 +122,19 @@ def run_plagiarism_check(self, report_id: int):
             for match in all_matches:
                 sub_a = submission_map.get(match['student_a_id'])
                 sub_b = submission_map.get(match['student_b_id'])
-                if not sub_a or not sub_b:
+                is_ai_a = match['student_a_id'] in ai_ref_student_ids
+                is_ai_b = match['student_b_id'] in ai_ref_student_ids
+
+                # Skip if both sides are AI references (they matched each other)
+                if is_ai_a and is_ai_b:
                     continue
+
+                # Skip if neither side is identifiable
+                if sub_a is None and not is_ai_a:
+                    continue
+                if sub_b is None and not is_ai_b:
+                    continue
+
                 SimilarityMatch.objects.create(
                     report=report,
                     submission_a=sub_a,
@@ -105,6 +144,7 @@ def run_plagiarism_check(self, report_id: int):
                     similarity_b=match['similarity_b'],
                     lines_matched=match['lines_matched'],
                     moss_link=match['moss_link'],
+                    ai_moss_flag=is_ai_a or is_ai_b,
                 )
 
         report.status = 'complete'
