@@ -12,6 +12,7 @@ export interface SimilarityMatch {
   max_similarity: number;
   lines_matched: number;
   moss_link: string;
+  ai_moss_flag: boolean;
 }
 
 export interface PlagiarismReport {
@@ -24,4 +25,10 @@ export interface PlagiarismReport {
   error_message: string;
   match_count: number;
   matches: SimilarityMatch[];
+}
+
+export interface AIReferencesStatus {
+  has_references: boolean;
+  references: Record<string, number>;
+  generated_at: string | null;
 }
