@@ -26,6 +26,14 @@ const SUBSECTION_GROUPS: Record<string, number[]> = {
   B: [3, 4],
 };
 
+const ASSIGNMENT_LANGUAGES = [
+  "python",
+  "c",
+  "c++",
+  "java",
+  "javascript",
+];
+
 function getGroupsForSection(sectionIndex: number): number[] {
   const base = sectionIndex * 4 + 1;
   return [base, base + 1, base + 2, base + 3];
@@ -57,6 +65,7 @@ interface FormErrors {
   subject?: string;
   title?: string;
   year?: string;
+  languages?: string;
   deadline?: string;
 }
 
@@ -65,12 +74,14 @@ function validate(
   subject: string;
   title: string;
   year: string;
+  languages: string[];
   deadline: string;
 }): FormErrors {
   const errors: FormErrors = {};
   if (!fields.subject) errors.subject = "Subject is required.";
   if (!fields.title.trim()) errors.title = "Title is required.";
   if (!fields.year) errors.year = "Year is required.";
+  if (!fields.languages.length) errors.languages = "Select at least one language.";
   if (!fields.deadline) errors.deadline = "Deadline is required.";
   else if (new Date(fields.deadline) <= new Date())
     errors.deadline = "Deadline must be in the future.";
@@ -83,6 +94,7 @@ interface AssignmentPreviewProps {
   subjectName?: string;
   title: string;
   year?: AcademicYear | "";
+  languages: string[];
   targetingSummary: string;
   deadline?: string;
   allowLate: boolean;
@@ -92,6 +104,7 @@ function AssignmentPreview({
   subjectName,
   title,
   year,
+  languages,
   targetingSummary,
   deadline,
   allowLate,
@@ -116,6 +129,10 @@ function AssignmentPreview({
       <div style={styles.previewItem}>
         <span style={styles.previewLabel}>Year:</span>
         <span>{year || "—"}</span>
+      </div>
+      <div style={styles.previewItem}>
+        <span style={styles.previewLabel}>Languages:</span>
+        <span>{languages.length ? languages.join(", ") : "—"}</span>
       </div>
       <div style={styles.previewItem}>
         <span style={styles.previewLabel}>Targeting:</span>
@@ -268,6 +285,7 @@ function NewAssignmentForm() {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [year, setYear] = useState<AcademicYear | "">("");
+  const [languages, setLanguages] = useState<string[]>([]);
   const [targetSections, setTargetSections] = useState<string[]>([]);
   const [targetSubSections, setTargetSubSections] = useState<string[]>([]);
   const [targetGroups, setTargetGroups] = useState<number[]>([]);
@@ -354,12 +372,27 @@ function NewAssignmentForm() {
     );
   };
 
+  const handleLanguageToggle = (language: string) => {
+    setLanguages((prev) =>
+      prev.includes(language)
+        ? prev.filter((item) => item !== language)
+        : [...prev, language]
+    );
+    setErrors((prev) => ({ ...prev, languages: undefined }));
+  };
+
   // Submission
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitError(null);
 
-    const validationErrors = validate({ subject, title, year, deadline });
+    const validationErrors = validate({
+      subject,
+      title,
+      year,
+      languages,
+      deadline,
+    });
     if (Object.keys(validationErrors).length > 0) {
       setErrors(validationErrors);
       return;
@@ -373,6 +406,7 @@ function NewAssignmentForm() {
         title: title.trim(),
         description: description.trim() || undefined,
         target_year: year as AcademicYear,                            
+        languages,
         target_sections: targetSections.length > 0 ? targetSections : undefined, 
         target_groups: targetGroups.length > 0 ? targetGroups : undefined,       
         deadline: new Date(deadline).toISOString(),
@@ -487,6 +521,23 @@ function NewAssignmentForm() {
                 }
                 disabled={submitting}
               />
+            </Field>
+
+            <Field label="Languages" required>
+              <div style={styles.chipGroup}>
+                {ASSIGNMENT_LANGUAGES.map((language) => (
+                  <Chip
+                    key={language}
+                    label={language}
+                    selected={languages.includes(language)}
+                    onClick={() => handleLanguageToggle(language)}
+                    disabled={submitting}
+                  />
+                ))}
+              </div>
+              {errors.languages && (
+                <div style={styles.fieldError}>{errors.languages}</div>
+              )}
             </Field>
 
             <Field label="Year" required>
@@ -653,6 +704,7 @@ function NewAssignmentForm() {
             subjectName={selectedSubjectName}
             title={title}
             year={year}
+            languages={languages}
             targetingSummary={targetingSummary()}
             deadline={deadline}
             allowLate={allowLate}
