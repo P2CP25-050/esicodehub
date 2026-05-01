@@ -1,7 +1,11 @@
 import { CSSProperties } from "react";
 
 type SubmissionType = "Review Request" | "Help Request" | "Educational Sharing";
-type Language = "Python" | "JavaScript" | "Java" | "C++" | "SQL" | "TypeScript" | "C" | "Pascal" | "Other";
+type Language = "Python"| "C" | "C++"| "Java"| "JavaScript"| "TypeScript"|
+  "C#"| "Visual Basic"| "Fortran"| "ML"| "Haskell"|
+  "Lisp"| "Scheme"| "Pascal"| "Modula2"| "Ada"|
+  "Perl"| "TCL"| "MATLAB"| "VHDL"| "Verilog"|
+  "Spice"| "MIPS Assembly"| "x86 Assembly"| "HCL2";
 interface TypeColorEntry {
   bg: string;
   label: SubmissionType;
@@ -23,16 +27,33 @@ const TYPE_COLORS: Record<SubmissionType, TypeColorEntry> = {
 };
  
 const LANG_COLORS: Record<Language, string> = {
-  Python:     "#3572A5",
-  JavaScript: "#f1e05a",
-  Java:       "#b07219",
-  "C++":      "#f34b7d",
-  SQL:        "#e38c00",
-  TypeScript: "#2b7489",
-  C:          "#00ADD8",
-  Pascal:     "#dea584",
-  Other:      "#8e8e8e",
+  Python:           "#3572A5", 
+  C:                "#555555", 
+  "C++":            "#f34b7d", 
+  Java:             "#b07219", 
+  JavaScript:       "#f1e05a", 
+  TypeScript:       "#2b7489", 
+  "C#":             "#178600", 
+  "Visual Basic":   "#945db7", 
+  Fortran:          "#4d41b1", 
+  ML:               "#dc566d", 
+  Haskell:          "#5e5086", 
+  Lisp:             "#3fb68b", 
+  Scheme:           "#1e4aec", 
+  Pascal:           "#dea584", 
+  Modula2:          "#10253e", 
+  Ada:              "#02f88c", 
+  Perl:             "#0298c3", 
+  TCL:              "#e4cc98", 
+  MATLAB:           "#e16737", 
+  VHDL:             "#adb2cb", 
+  Verilog:          "#b2b7f8", 
+  Spice:            "#b58900", 
+  "MIPS Assembly":  "#6e4c13", 
+  "x86 Assembly":   "#e38c00", 
+  HCL2:             "#8e8e8e", 
 };
+
 export default function SubmissionPreview({
   title,
   language,
@@ -54,7 +75,7 @@ export default function SubmissionPreview({
               style={{
                 ...styles.tag,
                 background: LANG_COLORS[language],
-                color: language === "JavaScript" ? "#111" : "#fff",
+                color: language === "JavaScript" || language === "TCL" ? "#111" : "#fff",
               }}
             >
               {language}
@@ -122,5 +143,4 @@ const styles: Record<string, CSSProperties> = {
     alignItems: "center",
     gap: "8px",
   },
- 
 };
