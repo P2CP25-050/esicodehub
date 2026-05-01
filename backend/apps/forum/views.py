@@ -1,6 +1,6 @@
 from django.contrib.contenttypes.models import ContentType
 from django.db import transaction
-from django.db.models import Count, F, IntegerField, OuterRef, Subquery, Sum, Value
+from django.db.models import Count, F, IntegerField, OuterRef, Prefetch, Subquery, Sum, Value
 from django.db.models.functions import Coalesce
 from django.shortcuts import get_object_or_404
 from rest_framework import status
@@ -76,6 +76,74 @@ def _get_vote_score(obj, model):
     return result['score']
 
 
+def get_annotated_answers(question, user):
+    """
+    Return a queryset of top-level answers for the given question, annotated
+    with vote_score_db and user_vote_value, both resolved in the database so
+    no per answer queries are needed in the serializer.
+    Also prefetches replies and their authors to avoid queries in nested
+    """
+    answer_ct = ContentType.objects.get_for_model(Answer)
+
+    # Subquery: total vote score per answer
+    vote_score_subquery = (
+        Vote.objects.filter(
+            content_type=answer_ct,
+            object_id=OuterRef('pk'),
+        )
+        .values('object_id')
+        .annotate(total=Sum('value'))
+        .values('total')[:1]
+    )
+
+    replies_qs = (
+        Answer.objects.select_related('author')
+        .annotate(
+            vote_score_db=Coalesce(
+                Subquery(vote_score_subquery, output_field=IntegerField()),
+                Value(0),
+            ),
+            reply_count=Count('replies', distinct=True),
+        )
+        .order_by('created_at')
+    )
+
+    # Only annotate user_vote_value when there is an authenticated user —
+    # avoids a needless subquery for anonymous/unauthenticated contexts.
+    if user is not None and user.is_authenticated:
+        user_vote_subquery = (
+            Vote.objects.filter(
+                content_type=answer_ct,
+                object_id=OuterRef('pk'),
+                user=user,
+            )
+            .values('value')[:1]
+        )
+        replies_qs = replies_qs.annotate(
+            user_vote_value=Subquery(
+                user_vote_subquery, output_field=IntegerField()
+            )
+        )
+
+    qs = (
+        Answer.objects.filter(question=question, parent=None)
+        .select_related('author')
+        .prefetch_related(
+            Prefetch('replies', queryset=replies_qs, to_attr='prefetched_replies')
+        )
+        .annotate(
+            vote_score_db=Coalesce(
+                Subquery(vote_score_subquery, output_field=IntegerField()),
+                Value(0),
+            ),
+            reply_count=Count('replies', distinct=True),
+        )
+        .order_by('created_at')
+    )
+
+    return qs
+
+
 class QuestionListCreateView(APIView):
     """List questions with filtering and allow students to create questions."""
 
@@ -148,10 +216,7 @@ class QuestionDetailView(APIView):
     def get_object(self, pk):
         return get_object_or_404(
             _annotate_questions(
-                Question.objects.select_related('author').prefetch_related(
-                    'answers__author',
-                    'answers__replies__author',
-                )
+                Question.objects.select_related('author')
             ),
             pk=pk,
         )
@@ -161,9 +226,18 @@ class QuestionDetailView(APIView):
             view_count=F('view_count') + 1
         )
         question = self.get_object(pk)
+
+        # Build the fully-annotated answer queryset once, no per answer
+        # queries will be fired in AnswerSerializer for vote_score or
+        # user_vote when this queryset is passed via context.
+        annotated_answers = get_annotated_answers(question, request.user)
+
         serializer = QuestionDetailSerializer(
             question,
-            context={'request': request},
+            context={
+                'request': request,
+                'annotated_answers': annotated_answers,
+            },
         )
         return Response(serializer.data)
 
