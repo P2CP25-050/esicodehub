@@ -4,12 +4,11 @@ import Link from "next/link";
 
 import Header from "@/components/submissions/Header";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
-import { TagSidebar } from "@/components/forums/Tagsidebar";
-import { ForumToolbar } from "@/components/forums/Forumtoolbar";
-import { QuestionFeed } from "@/components/forums/Questionfeed";
+import { ForumToolbar } from "@/components/forum/Forumtoolbar";
+import { QuestionFeed } from "@/components/forum/Questionfeed";
 import { listQuestions, voteQuestion } from "@/services/forum";
 import type { QuestionListItem, ForumOrdering } from "@/services/forum";
-import { seededShuffle } from "@/utils/forum";
+import { seededShuffle, tagColor } from "@/utils/forum";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Page entry
@@ -141,15 +140,65 @@ function ForumContent() {
     <div className="min-h-screen bg-[#f0f4ff] font-sans text-[#1a2340]">
       <Header activePage="Forum" />
 
-      <TagSidebar
-        popularTags={popularTags}
-        activeTag={activeTag}
-        loading={loading}
-        onTagClick={toggleTag}
-        onClear={() => setActiveTag(undefined)}
-        isOpen={sidebarOpen}
-        onClose={() => setSidebarOpen(false)}
-      />
+      {/* Mobile drawer for tags and ask question — only shows when sidebarOpen is true */}
+      {sidebarOpen && (
+        <div className="fixed inset-0 z-30 bg-black/30 lg:hidden" onClick={() => setSidebarOpen(false)} />
+      )}
+      <aside
+        className={`
+          fixed top-0 left-0 z-40 h-full w-72 bg-white shadow-2xl
+          transform transition-transform duration-300 ease-in-out lg:hidden
+          ${sidebarOpen ? "translate-x-0" : "-translate-x-full"}
+        `}
+      >
+        <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100">
+          <span className="text-sm font-bold text-slate-700 uppercase tracking-widest">
+            Forum Menu
+          </span>
+          <button
+            onClick={() => setSidebarOpen(false)}
+            className="text-slate-400 hover:text-slate-600 transition-colors"
+          >
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+            </svg>
+          </button>
+        </div>
+        <div className="p-5 flex flex-col gap-4 overflow-y-auto max-h-[calc(100vh-64px)]">
+          <button
+            onClick={() => { router.push("/forum/new"); setSidebarOpen(false); }}
+            className="
+              w-full px-4 py-2.5 rounded-xl text-sm font-bold text-white
+              bg-blue-600 hover:bg-blue-700
+              shadow-[0_2px_8px_rgba(29,110,245,0.3)]
+              active:scale-95 transition-all
+            "
+          >
+            + Ask a Question
+          </button>
+          <div>
+            <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3">
+              Filter by Tag
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {popularTags.map((tag) => (
+                <button
+                  key={tag}
+                  onClick={() => { toggleTag(tag); setSidebarOpen(false); }}
+                  className={`
+                    text-xs px-3 py-1.5 rounded-full border font-medium transition-all
+                    ${activeTag === tag
+                      ? "bg-blue-600 text-white border-blue-600"
+                      : `${tagColor(tag)} hover:opacity-80`}
+                  `}
+                >
+                  {tag}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      </aside>
 
       <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6 sm:py-8 pb-20">
 
@@ -172,33 +221,49 @@ function ForumContent() {
                 : `${count} question${count !== 1 ? "s" : ""}${activeTag ? ` tagged "${activeTag}"` : ""}`}
             </p>
           </div>
-
-          <button
-            onClick={() => router.push("/forum/new")}
-            className="
-              px-4 sm:px-5 py-2.5 sm:py-3 rounded-xl text-sm font-bold text-white
-              bg-linear-to-r from-blue-600 to-blue-700
-              shadow-[0_4px_14px_rgba(29,110,245,0.35)]
-              hover:opacity-90 active:scale-95 transition-all whitespace-nowrap
-            "
-          >
-            + Ask a Question
-          </button>
         </div>
 
         {/* ── Body: sidebar + feed ── */}
         <div className="flex gap-6 items-start">
 
-          {/* Desktop sidebar rendered by TagSidebar (hidden on mobile) */}
-          <TagSidebar
-            popularTags={popularTags}
-            activeTag={activeTag}
-            loading={loading}
-            onTagClick={toggleTag}
-            onClear={() => setActiveTag(undefined)}
-            isOpen={false}        // drawer not used here — handled above
-            onClose={() => {}}
-          />
+          {/* Desktop sidebar — displayed inside the layout on desktop only */}
+          <aside className="hidden lg:flex flex-col gap-4 w-52 xl:w-56 shrink-0">
+            <button
+              onClick={() => router.push("/forum/new")}
+              className="
+                w-full px-4 py-2.5 rounded-xl text-sm font-bold text-white
+                bg-blue-600 hover:bg-blue-700
+                shadow-[0_2px_8px_rgba(29,110,245,0.3)]
+                active:scale-95 transition-all
+              "
+            >
+              + Ask a Question
+            </button>
+            <div className="bg-white rounded-2xl border border-slate-200 p-4 sticky top-6">
+              <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3">
+                Filter by Tag
+              </p>
+              {popularTags.length === 0 && !loading && (
+                <p className="text-xs text-slate-400">No tags yet.</p>
+              )}
+              <div className="flex flex-wrap gap-1.5">
+                {popularTags.map((tag) => (
+                  <button
+                    key={tag}
+                    onClick={() => toggleTag(tag)}
+                    className={`
+                      text-xs px-2.5 py-1 rounded-full border font-medium transition-all
+                      ${activeTag === tag
+                        ? "bg-blue-600 text-white border-blue-600"
+                        : `${tagColor(tag)} hover:opacity-80`}
+                    `}
+                  >
+                    {tag}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </aside>
 
           {/* ── Main feed ── */}
           <div className="flex-1 min-w-0">
