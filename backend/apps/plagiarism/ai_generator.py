@@ -2,9 +2,13 @@
 
 import os
 
-import google.generativeai as genai
+from google import genai
 
-genai.configure(api_key=os.getenv('GEMINI_API_KEY', ''))
+client = genai.Client(
+        vertexai=True,
+        project=os.getenv('PROJECT_NAME'),
+        location='us-central1'
+)
 
 EXTENSION_MAP = {
     'python':     'py',
@@ -78,8 +82,10 @@ def generate_reference_solution(
 
     prompt = prompt_template.format(language=language, description=description)
 
-    model = genai.GenerativeModel('gemini-1.5-flash')
-    response = model.generate_content(prompt)
+    response = client.models.generate_content(
+            model='gemini-2.5-flash-lite',
+            contents=prompt
+        )
 
     if not response.text:
         raise RuntimeError(
