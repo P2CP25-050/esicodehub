@@ -118,3 +118,11 @@ def get_file_content(gcs_path: str) -> str:
     bucket = client.bucket(settings.GS_BUCKET_NAME)
     blob = bucket.blob(gcs_path)
     return blob.download_as_text()
+
+
+def upload_file_content(gcs_path: str, content: str) -> None:
+    """Upload a plain text string to GCS at the given path."""
+    client = get_gcs_client()
+    bucket = client.bucket(settings.GS_BUCKET_NAME)
+    blob = bucket.blob(gcs_path)
+    blob.upload_from_string(content, content_type='text/plain; charset=utf-8')
