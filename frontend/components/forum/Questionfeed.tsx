@@ -1,5 +1,5 @@
 import type { QuestionListItem } from "@/services/forum";
-import { QuestionCard } from "@/components/forum/Questioncard";
+import { QuestionCard } from "@/components/forums/Questioncard";
 
 interface QuestionFeedProps {
   questions: QuestionListItem[];
