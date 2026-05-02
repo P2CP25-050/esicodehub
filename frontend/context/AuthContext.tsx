@@ -5,7 +5,6 @@ import {
   useState,
   ReactNode,
   useCallback,
-  useRef,
 } from 'react';
 import { useRouter } from 'next/router';
 import { refreshToken, getMe, logout as logoutApi } from '@/services/auth';
@@ -28,40 +27,49 @@ interface AuthContextValue {
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
-export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<AuthUser | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const router = useRouter();
-  const hasInitializedRef = useRef(false);
+// Module-scope singleton: survives React Strict Mode remount so refresh/getMe
+// are never called more than once per page load.
+let _authInitPromise: Promise<AuthUser | null> | null = null;
 
-  useEffect(() => {
-    if (hasInitializedRef.current) return;
-    hasInitializedRef.current = true;
-
-    let cancelled = false;
-
-    refreshToken()
+function getAuthInitPromise(): Promise<AuthUser | null> {
+  if (!_authInitPromise) {
+    _authInitPromise = refreshToken()
       .then((response) => {
         saveTokens({ access: response.data.access });
         return getMe();
       })
-      .then((profile) => {
-        if (!cancelled) setUser(profile.data);
-      })
+      .then((profile) => profile.data as AuthUser)
       .catch(() => {
-        if (!cancelled) {
-          clearTokens();
-          setUser(null);
-        }
-      })
-      .finally(() => {
-        if (!cancelled) setIsLoading(false);
+        clearTokens();
+        return null;
       });
+  }
+  return _authInitPromise;
+}
+
+/** Resets the cached init promise. Intended for test isolation only. */
+export function _resetAuthInit(): void {
+  _authInitPromise = null;
+}
+
+export function AuthProvider({ children }: { children: ReactNode }) {
+  const [user, setUser] = useState<AuthUser | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const router = useRouter();
+
+  useEffect(() => {
+    let cancelled = false;
+
+    getAuthInitPromise().then((resolvedUser) => {
+      if (!cancelled) {
+        setUser(resolvedUser);
+        setIsLoading(false);
+      }
+    });
 
     return () => {
       cancelled = true;
     };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const logout = useCallback(async () => {

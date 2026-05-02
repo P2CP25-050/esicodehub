@@ -1,6 +1,6 @@
 import React from 'react';
 import { render, screen, waitFor, act } from '@testing-library/react';
-import { AuthProvider, useAuth } from '@/context/AuthContext';
+import { AuthProvider, useAuth, _resetAuthInit } from '@/context/AuthContext';
 import * as authService from '@/services/auth';
 import * as tokensLib from '@/lib/tokens';
 
@@ -72,6 +72,8 @@ describe('AuthProvider', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    // Reset the module-scope init promise so each test gets a fresh auth init.
+    _resetAuthInit();
   });
 
   // ── Initial loading state ──────────────────────────────────────────────────
