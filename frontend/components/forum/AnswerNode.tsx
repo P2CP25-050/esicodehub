@@ -65,7 +65,7 @@ export function AnswerNode({
             ? "bg-green-50 border-2 border-green-300 shadow-sm"
             : depth === 0
               ? "bg-white border border-slate-200 shadow-sm"
-              : "bg-slate-50 border border-slate-150"}`}
+              : "bg-slate-50 border border-slate-200"}`}
       >
         {/* Accepted badge */}
         {answer.is_accepted && (
