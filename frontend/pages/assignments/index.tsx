@@ -5,7 +5,7 @@ import Link from "next/link";
 // ── Shared app components ──────────────────────────────────────────────────
 import Header from "@/components/submissions/Header";
 import {ProtectedRoute} from "@/components/ProtectedRoute";
-import { useAuth } from "@/hooks/useAuth";
+import { useAuth } from "@/context/AuthContext";
 
 // ── Assignment components ──────────────────────────────────────────────────
 import StudentAssignmentCard from "@/components/assignments/StudentAssignmentCard";

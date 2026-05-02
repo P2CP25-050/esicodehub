@@ -1,9 +1,10 @@
 import { useState, useEffect, useRef, ChangeEvent, CSSProperties } from "react";
+import Image from "next/image";
 
 import Link from "next/link";
 import Header from "@/components/submissions/Header";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
-import { useAuth } from "@/hooks/useAuth";
+import { useAuth } from "@/context/AuthContext";
 import {
   getProfile,
   updateBio,
@@ -206,7 +207,7 @@ function memberSince(dateStr: string): string {
 
 // ─── Profile Page ─────────────────────────────────────────────────────────────
 function ProfilePage() {
-  const { user } = useAuth();
+  const { user, isAuthenticated, isLoading } = useAuth();
 
 
   const [bio, setBio] = useState<string>("");
@@ -243,7 +244,7 @@ function ProfilePage() {
 
   // Load profile data
   useEffect(() => {
-    if (!user) return;
+    if (isLoading || !isAuthenticated || !user) return;
     (async () => {
       try {
         const [profile, statsData, activityData] = await Promise.all([
@@ -267,7 +268,7 @@ function ProfilePage() {
         setLoading(false);
       }
     })();
-  }, [user]);
+  }, [isAuthenticated, isLoading, user]);
 
   const bioChanged = bio !== savedBio;
 
@@ -356,10 +357,13 @@ function ProfilePage() {
                       <Spinner size={28} />
                     </div>
                   ) : avatarUrl ? (
-                    <img
+                    <Image
                       src={avatarUrl}
                       alt="Avatar"
-                      style={{ width: 96, height: 96, borderRadius: "50%", objectFit: "cover", border: "3px solid #e2e8f6" }}
+                      width={96}
+                      height={96}
+                      unoptimized
+                      style={{ borderRadius: "50%", objectFit: "cover", border: "3px solid #e2e8f6" }}
                     />
                   ) : (
                     <InitialsAvatar firstName={firstName} lastName={lastName} size={96} />
