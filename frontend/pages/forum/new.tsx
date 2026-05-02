@@ -4,11 +4,12 @@ import { useRouter } from "next/router";
 import { createQuestion } from "@/services/forum";
 import type { QuestionCreatePayload } from "@/services/forum";
 import Header from "@/components/submissions/Header";
+import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { MonacoEditor, LANGUAGES } from "@/components/forum/MonacoEditor";
 import { TagInput } from "@/components/forum/TagInput";
 import { FormField } from "@/components/forum/FormField";
 
-export default function NewQuestionPage() {
+function NewQuestionContent() {
   const router = useRouter();
 
   const [title, setTitle] = useState("");
@@ -251,5 +252,13 @@ export default function NewQuestionPage() {
         </div>
       </div>
     </>
+  );
+}
+
+export default function NewQuestionPage() {
+  return (
+    <ProtectedRoute>
+      <NewQuestionContent />
+    </ProtectedRoute>
   );
 }

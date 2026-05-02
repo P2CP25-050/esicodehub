@@ -8,14 +8,16 @@ import {
 } from "@/services/forum";
 import type { QuestionDetail } from "@/services/forum";
 import Header from "@/components/submissions/Header";
+import { ProtectedRoute } from "@/components/ProtectedRoute";
+import { useAuth } from "@/hooks/useAuth";
+import { LoadingSpinner } from "@/components/LoadingSpinner";
 import { QuestionDetailCard } from "@/components/forum/QuestionDetailCard";
 import { AnswerSection } from "@/components/forum/AnswerSection";
 import { QuestionStatsSidebar } from "@/components/forum/QuestionStatsSidebar";
 
-// Hard-coded for demo — replace with real auth context
-const CURRENT_USER_EMAIL = "me@example.com";
-
-export default function QuestionDetailPage() {
+function QuestionDetailContent() {
+  const { user } = useAuth();
+  const currentUserEmail = user?.email ?? "";
   const router = useRouter();
   const { id } = router.query;
   const questionId = Number(id);
@@ -56,6 +58,10 @@ export default function QuestionDetailPage() {
     },
     []
   );
+
+  if (!user) {
+    return <LoadingSpinner message="Loading user session" />;
+  }
 
   return (
     <>
@@ -98,14 +104,14 @@ export default function QuestionDetailPage() {
               <div className="lg:col-span-2 space-y-6">
                 <QuestionDetailCard
                   question={question}
-                  currentUserEmail={CURRENT_USER_EMAIL}
+                  currentUserEmail={currentUserEmail}
                   onVote={handleQuestionVote}
                   onDelete={handleDeleteQuestion}
                 />
 
                 <AnswerSection
                   question={question}
-                  currentUserEmail={CURRENT_USER_EMAIL}
+                  currentUserEmail={currentUserEmail}
                   onQuestionUpdate={handleQuestionUpdate}
                 />
               </div>
@@ -117,5 +123,13 @@ export default function QuestionDetailPage() {
         </div>
       </div>
     </>
+  );
+}
+
+export default function QuestionDetailPage() {
+  return (
+    <ProtectedRoute>
+      <QuestionDetailContent />
+    </ProtectedRoute>
   );
 }
