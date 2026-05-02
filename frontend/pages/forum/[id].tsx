@@ -53,6 +53,7 @@ function QuestionDetailContent() {
   const hasAccepted = (question?.answers ?? []).some((a) => a.is_accepted);
 
   const handleQuestionVote = async (v: 1 | -1) => {
+    if (questionId === null) return;
     setError("");
 
     try {
