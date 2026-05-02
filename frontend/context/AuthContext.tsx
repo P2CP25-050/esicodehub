@@ -16,6 +16,7 @@ export interface AuthUser {
   first_name: string;
   last_name: string;
   role: 'student' | 'professor';
+}
 
 interface AuthContextValue {
   user: AuthUser | null;
@@ -37,23 +38,37 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (hasInitializedRef.current) return;
     hasInitializedRef.current = true;
 
+    let cancelled = false;
+
     refreshToken()
       .then((response) => {
         saveTokens({ access: response.data.access });
         return getMe();
       })
-      .then((profile) => setUser(profile.data))
-      .catch(() => {
-        clearTokens();
-        setUser(null);
+      .then((profile) => {
+        if (!cancelled) setUser(profile.data);
       })
-      .finally(() => setIsLoading(false));
+      .catch(() => {
+        if (!cancelled) {
+          clearTokens();
+          setUser(null);
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setIsLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const logout = useCallback(async () => {
     try {
       await logoutApi();
+    } catch {
+      // ignore server errors — local cleanup must always proceed
     } finally {
       clearTokens();
       setUser(null);

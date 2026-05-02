@@ -37,6 +37,8 @@ const mockAuth = (overrides: Partial<ReturnType<typeof useAuthHook.useAuth>>) =>
     isLoading:       false,
     isAuthenticated: false,
     user:            null,
+    setUser:         jest.fn(),
+    logout:          jest.fn(),
     ...overrides,
   });
 };
