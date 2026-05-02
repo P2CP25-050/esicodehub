@@ -1,6 +1,4 @@
-
-import { CSSProperties, ReactNode} from "react";
-
+import { CSSProperties, ReactNode } from "react";
 
 interface FieldProps {
   label: string;
@@ -13,18 +11,45 @@ export default function Field({ label, required = false, hint, children }: Field
   return (
     <div style={styles.field}>
       <label style={styles.label}>
-        {label}
-        {required && <span style={styles.required}> *</span>}
-        {hint && <span style={styles.hint}> — {hint}</span>}
+        <span style={styles.labelText}>{label}</span>
+        {required && <span style={styles.required}>*</span>}
+        {hint && <span style={styles.hint}>{hint}</span>}
       </label>
-      {children}
+      <div style={styles.control}>{children}</div>
     </div>
   );
 }
 
 const styles: Record<string, CSSProperties> = {
-  field: { marginBottom: 22 },
-  label: { display: "block", fontSize: 13, fontWeight: 600, color: "#374151", marginBottom: 8 },
-  required: { color: "#ef4444" },
-  hint: { fontWeight: 400, color: "#94a3b8" },
+  field: {
+    marginBottom: 20,
+  },
+  label: {
+    display: "flex",
+    alignItems: "baseline",
+    gap: 6,
+    marginBottom: 7,
+  },
+  labelText: {
+    fontFamily: "'DM Sans', sans-serif",
+    fontSize: 12,
+    fontWeight: 500,
+    color: "#374151",
+    letterSpacing: "0.01em",
+  },
+  required: {
+    fontFamily: "'Space Mono', monospace",
+    fontSize: 11,
+    color: "#051650",
+    fontWeight: 700,
+  },
+  hint: {
+    fontFamily: "'DM Sans', sans-serif",
+    fontSize: 11,
+    color: "#9ca3af",
+    fontWeight: 400,
+  },
+  control: {
+    width: "100%",
+  },
 };

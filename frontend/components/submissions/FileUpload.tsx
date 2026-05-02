@@ -10,7 +10,7 @@ interface FileUploadProps {
   onFilesChange: (files: FileEntry[]) => void;
 }
 
-const MAX_TOTAL_BYTES = 50 * 1024 * 1024; // 50 MB
+const MAX_TOTAL_BYTES = 50 * 1024 * 1024;
 
 function formatSize(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
@@ -35,7 +35,6 @@ export default function FileUpload({ files, onFilesChange }: FileUploadProps) {
     onFilesChange([...existing.values()]);
   };
 
-  
   const handleDrop = (e: DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     const dropped: FileEntry[] = Array.from(e.dataTransfer.files).map((f) => ({
@@ -76,73 +75,59 @@ export default function FileUpload({ files, onFilesChange }: FileUploadProps) {
         style={styles.dropzone}
         onDragOver={(e) => {
           e.preventDefault();
-          (e.currentTarget as HTMLDivElement).style.borderColor = "#2563eb";
-          (e.currentTarget as HTMLDivElement).style.background = "#eff6ff";
+          (e.currentTarget as HTMLDivElement).style.borderColor = "#051650";
+          (e.currentTarget as HTMLDivElement).style.background = "#f0f4ff";
+          (e.currentTarget as HTMLDivElement).style.boxShadow = "3px 3px 0 #051650";
         }}
         onDragLeave={(e) => {
-          (e.currentTarget as HTMLDivElement).style.borderColor = "#d1d9e6";
-          (e.currentTarget as HTMLDivElement).style.background = "#f8faff";
+          (e.currentTarget as HTMLDivElement).style.borderColor = "#000";
+          (e.currentTarget as HTMLDivElement).style.background = "#fafafa";
+          (e.currentTarget as HTMLDivElement).style.boxShadow = "none";
         }}
         onDrop={(e) => {
-          (e.currentTarget as HTMLDivElement).style.borderColor = "#d1d9e6";
-          (e.currentTarget as HTMLDivElement).style.background = "#f8faff";
+          (e.currentTarget as HTMLDivElement).style.borderColor = "#000";
+          (e.currentTarget as HTMLDivElement).style.background = "#fafafa";
+          (e.currentTarget as HTMLDivElement).style.boxShadow = "none";
           handleDrop(e);
         }}
       >
-        <div style={styles.dropIcon}>
-          <svg width="44" height="44" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M30 4H12C10.9391 4 9.92172 4.42143 9.17157 5.17157C8.42143 5.92172 8 6.93913 8 8V40C8 41.0609 8.42143 42.0783 9.17157 42.8284C9.92172 43.5786 10.9391 44 12 44H36C37.0609 44 38.0783 43.5786 38.8284 42.8284C39.5786 42.0783 40 41.0609 40 40V14L30 4Z" stroke="#4285F4" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" />
-            <path d="M28 4V12C28 13.0609 28.4214 14.0783 29.1716 14.8284C29.9217 15.5786 30.9391 16 32 16H40" stroke="#4285F4" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" />
-            <path d="M24 24V36" stroke="#4285F4" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" />
-            <path d="M30 30L24 24L18 30" stroke="#4285F4" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" />
+        {/* Upload icon */}
+        <div style={styles.dropIconWrap}>
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#051650" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+            <polyline points="17 8 12 3 7 8" />
+            <line x1="12" y1="3" x2="12" y2="15" />
           </svg>
         </div>
-        <p style={styles.dropText}>Drag &amp; drop files or a folder here</p>
-        <p style={styles.dropHint}>Text/code files only · Max 50 MB total</p>
 
-        {/* Action buttons */}
+        <p style={styles.dropText}>Drag &amp; drop files or a folder here</p>
+        <p style={styles.dropHint}>Text / code files only · Max 50 MB total</p>
+
         <div style={styles.buttonRow}>
-          <button
-            type="button"
-            style={styles.btn}
-            onClick={() => fileInputRef.current?.click()}
-          >
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-              <polyline points="17 8 12 3 7 8" />
-              <line x1="12" y1="3" x2="12" y2="15" />
-            </svg>
+          <button type="button" style={styles.btn} onClick={() => fileInputRef.current?.click()}>
             Upload Files
           </button>
-          <button
-            type="button"
-            style={{ ...styles.btn, ...styles.btnSecondary }}
-            onClick={() => dirInputRef.current?.click()}
-          >
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
-            </svg>
+          <button type="button" style={{ ...styles.btn, ...styles.btnGhost }} onClick={() => dirInputRef.current?.click()}>
             Upload Directory
           </button>
         </div>
 
-        {/* Hidden inputs */}
         <input ref={fileInputRef} type="file" multiple style={{ display: "none" }} onChange={handleFileChange} />
         <input
           ref={dirInputRef}
           type="file"
           multiple
-          //  @ts-expect-error – webkitdirectory is non-standard
+          // @ts-expect-error – non-standard
           webkitdirectory=""
           style={{ display: "none" }}
           onChange={handleDirChange}
         />
       </div>
 
-      {/* Warning banner */}
+      {/* Warning */}
       {overLimit && (
         <div style={styles.warning}>
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
             <line x1="12" y1="9" x2="12" y2="13" />
             <line x1="12" y1="17" x2="12.01" y2="17" />
@@ -165,7 +150,7 @@ export default function FileUpload({ files, onFilesChange }: FileUploadProps) {
                 </div>
                 <span style={styles.fileSize}>{formatSize(entry.file.size)}</span>
                 <button type="button" style={styles.fileRemove} onClick={() => removeFile(i)} aria-label="Remove file">
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                     <line x1="18" y1="6" x2="6" y2="18" />
                     <line x1="6" y1="6" x2="18" y2="18" />
                   </svg>
@@ -174,12 +159,11 @@ export default function FileUpload({ files, onFilesChange }: FileUploadProps) {
             ))}
           </div>
 
-          {/* Footer */}
           <div style={styles.footer}>
             <span style={styles.footerCount}>
               {files.length} {files.length === 1 ? "file" : "files"}
             </span>
-            <span style={{ ...styles.footerSize, ...(overLimit ? styles.footerSizeOver : {}) }}>
+            <span style={{ ...styles.footerSize, ...(overLimit ? styles.footerOver : {}) }}>
               {formatSize(totalSize)} {overLimit ? "⚠ over limit" : "/ 50 MB"}
             </span>
           </div>
@@ -193,66 +177,89 @@ const styles: Record<string, CSSProperties> = {
   wrapper: {
     display: "flex",
     flexDirection: "column",
-    gap: 12,
-    fontFamily: "'Geist', 'Inter', system-ui, sans-serif",
+    gap: 10,
+    fontFamily: "'DM Sans', sans-serif",
   },
   dropzone: {
-    border: "2px dashed #d1d9e6",
-    borderRadius: 12,
-    padding: "32px 24px 24px",
+    border: "1.5px dashed #000",
+    padding: "28px 20px 22px",
     textAlign: "center",
+    background: "#fafafa",
     cursor: "default",
-    transition: "border-color .2s, background .2s",
-    background: "#f8faff",
+    transition: "border-color .15s, background .15s, box-shadow .15s",
   },
-  dropIcon: { display: "flex", justifyContent: "center", marginBottom: 12 },
-  dropText: { fontSize: 14, color: "#374151", margin: "0 0 4px", fontWeight: 500 },
-  dropHint: { fontSize: 12, color: "#94a3b8", margin: "0 0 18px" },
-  buttonRow: { display: "flex", gap: 8, justifyContent: "center", flexWrap: "wrap" },
+  dropIconWrap: {
+    display: "flex",
+    justifyContent: "center",
+    marginBottom: 10,
+  },
+  dropText: {
+    fontFamily: "'DM Sans', sans-serif",
+    fontSize: 13,
+    fontWeight: 500,
+    color: "#111",
+    margin: "0 0 4px",
+  },
+  dropHint: {
+    fontFamily: "'Space Mono', monospace",
+    fontSize: 10,
+    color: "#9ca3af",
+    letterSpacing: "0.08em",
+    textTransform: "uppercase",
+    margin: "0 0 16px",
+  },
+  buttonRow: {
+    display: "flex",
+    gap: 8,
+    justifyContent: "center",
+    flexWrap: "wrap",
+  },
   btn: {
     display: "inline-flex",
     alignItems: "center",
     gap: 6,
-    padding: "8px 16px",
-    borderRadius: 8,
-    border: "none",
-    background: "#2563eb",
+    padding: "8px 18px",
+    border: "1.5px solid #051650",
+    background: "#051650",
     color: "#fff",
-    fontSize: 13,
-    fontWeight: 600,
+    fontFamily: "'Space Mono', monospace",
+    fontSize: 10,
+    fontWeight: 700,
+    letterSpacing: "0.1em",
+    textTransform: "uppercase",
     cursor: "pointer",
-    transition: "background .15s",
+    transition: "background .15s, color .15s",
   },
-  btnSecondary: {
-    background: "#fff",
-    color: "#374151",
-    border: "1px solid #d1d9e6",
+  btnGhost: {
+    background: "transparent",
+    color: "#051650",
   },
   warning: {
     display: "flex",
     alignItems: "center",
     gap: 8,
-    padding: "10px 14px",
-    borderRadius: 8,
-    background: "#fff7ed",
-    border: "1px solid #fed7aa",
+    padding: "9px 12px",
+    border: "1.5px solid #000",
+    borderLeft: "4px solid #b45309",
+    background: "#fff8f0",
     color: "#92400e",
-    fontSize: 13,
+    fontFamily: "'DM Sans', sans-serif",
+    fontSize: 12,
     fontWeight: 500,
   },
   fileList: {
     display: "flex",
     flexDirection: "column",
-    gap: 6,
+    gap: 4,
   },
   fileItem: {
     display: "flex",
     alignItems: "center",
     gap: 10,
-    padding: "9px 12px",
-    background: "#f0f6ff",
-    borderRadius: 8,
-    border: "1px solid #dbeafe",
+    padding: "8px 12px",
+    background: "#f0f4ff",
+    border: "1px solid #c7d2fe",
+    borderLeft: "3px solid #051650",
   },
   fileInfo: {
     flex: 1,
@@ -262,32 +269,37 @@ const styles: Record<string, CSSProperties> = {
     gap: 1,
   },
   fileName: {
-    fontSize: 13,
-    fontWeight: 500,
-    color: "#1e3a5f",
+    fontFamily: "'DM Sans', sans-serif",
+    fontSize: 12,
+    fontWeight: 600,
+    color: "#051650",
     overflow: "hidden",
     textOverflow: "ellipsis",
     whiteSpace: "nowrap",
   },
   filePath: {
-    fontSize: 11,
+    fontFamily: "'Space Mono', monospace",
+    fontSize: 10,
     color: "#64748b",
     overflow: "hidden",
     textOverflow: "ellipsis",
     whiteSpace: "nowrap",
-    fontFamily: "monospace",
   },
-  fileSize: { fontSize: 12, color: "#64748b", whiteSpace: "nowrap" },
+  fileSize: {
+    fontFamily: "'Space Mono', monospace",
+    fontSize: 10,
+    color: "#64748b",
+    whiteSpace: "nowrap",
+  },
   fileRemove: {
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
     background: "none",
     border: "none",
-    color: "#94a3b8",
+    color: "#9ca3af",
     cursor: "pointer",
     padding: 4,
-    borderRadius: 4,
     lineHeight: 1,
     flexShrink: 0,
   },
@@ -295,10 +307,22 @@ const styles: Record<string, CSSProperties> = {
     display: "flex",
     justifyContent: "space-between",
     alignItems: "center",
-    padding: "6px 2px 0",
-    borderTop: "1px solid #e2e8f0",
+    paddingTop: 8,
+    borderTop: "1px solid #e5e7eb",
   },
-  footerCount: { fontSize: 12, color: "#64748b" },
-  footerSize: { fontSize: 12, fontWeight: 600, color: "#374151" },
-  footerSizeOver: { color: "#b45309" },
+  footerCount: {
+    fontFamily: "'Space Mono', monospace",
+    fontSize: 10,
+    color: "#9ca3af",
+    letterSpacing: "0.08em",
+    textTransform: "uppercase",
+  },
+  footerSize: {
+    fontFamily: "'Space Mono', monospace",
+    fontSize: 10,
+    fontWeight: 700,
+    color: "#374151",
+    letterSpacing: "0.05em",
+  },
+  footerOver: { color: "#b45309" },
 };
