@@ -29,9 +29,9 @@ export default function SuccessScreen({ title, onNewSubmission, onBack }: Succes
             All <span style={styles.accent}>done!</span>
           </h2>
 
-          <p style={styles.sub}>
-            Your submission <strong style={styles.strong}>"{title}"</strong> has been posted successfully and is now live.
-          </p>
+        <p style={styles.sub}>
+            Your submission <strong style={styles.strong}>&quot;{title}&quot;</strong> has been posted successfully and is now live.
+        </p>
 
           {/* Divider */}
           <div style={styles.divider} />
