@@ -15,7 +15,7 @@ import type { EditorProps } from '@monaco-editor/react';
 
 import { ProtectedRoute } from '@/components/ProtectedRoute';
 import Header from '@/components/submissions/Header';
-import { useAuth } from '@/hooks/useAuth';
+import { useAuth } from '@/context/AuthContext';
 import type {
   PersonalSubmission,
   PersonalSubmissionFile,

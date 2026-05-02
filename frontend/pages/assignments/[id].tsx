@@ -12,7 +12,7 @@ import axios from 'axios';
 
 import Header from '@/components/submissions/Header';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
-import { useAuth } from '@/hooks/useAuth';
+import { useAuth } from '@/context/AuthContext';
 import {
   getAssignment,
   getMySubmission,
