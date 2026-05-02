@@ -36,14 +36,25 @@ function QuestionDetailContent() {
 
   const hasAccepted = (question?.answers ?? []).some((a) => a.is_accepted);
 
-  const handleQuestionVote = (v: 1 | -1) => {
-    voteQuestion(questionId, v)
-      .then((q) => {
-        if (q && typeof q === "object" && "vote_score" in q) {
-          setQuestion((prev) => prev ? { ...prev, vote_score: q.vote_score } : null);
-        }
-      })
-      .catch(() => {});
+  const handleQuestionVote = async (v: 1 | -1) => {
+    setError("");
+
+    try {
+      const q = await voteQuestion(questionId, v);
+      if (q && typeof q === "object" && "vote_score" in q) {
+        setQuestion((prev) => prev ? { ...prev, vote_score: q.vote_score } : null);
+      }
+    } catch (err) {
+      try {
+        const refreshedQuestion = await getQuestion(questionId);
+        setQuestion(refreshedQuestion);
+      } catch {
+        // If the refresh fails too, keep the existing question state and surface the vote error.
+      }
+
+      setError("Failed to submit vote.");
+      throw err;
+    }
   };
 
   const handleDeleteQuestion = async () => {
