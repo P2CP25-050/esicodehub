@@ -173,12 +173,15 @@ class AssignmentDetailView(APIView):
     """Retrieve, update and delete a single assignment."""
 
     permission_classes = [IsAuthenticated]
-    updatable_fields = {'title', 'description', 'deadline', 'allow_late'}
-    immutable_fields = {
-        'target_year',
-        'target_sections',
-        'target_groups',
-        'subject',
+
+    updatable_fields = {
+        'title', 'description', 'deadline',
+        'allow_late', 'description_pdf',
+    }
+
+    targeting_fields = {
+        'target_year', 'target_sections',
+        'target_groups', 'subject',
     }
 
     def get_object(self, pk):
@@ -207,36 +210,35 @@ class AssignmentDetailView(APIView):
 
     def patch(self, request, pk):
         assignment = self.get_object(pk)
-
         if assignment.professor != request.user:
             return Response(
-                {
-                    'detail': (
-                        'You do not have permission to perform this action.'
-                    )
-                },
+                {'detail': 'You do not have permission to perform this action.'},
                 status=status.HTTP_403_FORBIDDEN,
             )
 
         incoming_fields = set(request.data.keys())
-        if incoming_fields & self.immutable_fields:
+
+        # Check targeting fields — only blocked after submissions exist
+        changing_targets = incoming_fields & self.targeting_fields
+        if changing_targets and assignment.submissions.exists():
             return Response(
                 {
                     'detail': (
-                        'Fields target_year, target_sections, target_groups '
-                        'and subject cannot be updated.'
+                        'Cannot change targeting fields after '
+                        'students have submitted.'
                     )
                 },
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        disallowed_fields = incoming_fields - self.updatable_fields
+        # Check for any completely unknown/disallowed fields
+        all_allowed_fields = self.updatable_fields | self.targeting_fields
+        disallowed_fields = incoming_fields - all_allowed_fields
         if disallowed_fields:
             return Response(
                 {
                     'detail': (
-                        'Only title, description, deadline and allow_late '
-                        'can be updated.'
+                        f'Fields {", ".join(disallowed_fields)} cannot be updated.'
                     )
                 },
                 status=status.HTTP_400_BAD_REQUEST,
@@ -249,7 +251,6 @@ class AssignmentDetailView(APIView):
         )
         serializer.is_valid(raise_exception=True)
         updated_assignment = serializer.save()
-
         detail_serializer = AssignmentDetailSerializer(updated_assignment)
         return Response(detail_serializer.data)
 
