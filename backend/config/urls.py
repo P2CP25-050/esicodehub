@@ -29,6 +29,7 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/', include('apps.core.urls')),
     path('api/auth/', include('apps.accounts.urls')),
+    path('api/profiles/', include('apps.accounts.public_urls')),
     path('api/subjects/', subject_list, name='subject-list'),
     path(
         'api/assignments/',
