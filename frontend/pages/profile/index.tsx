@@ -3,7 +3,7 @@ import { useState, useEffect, useRef, ChangeEvent, CSSProperties } from "react";
 import Link from "next/link";
 import Header from "@/components/submissions/Header";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
-import { useAuth } from "@/hooks/useAuth";
+import { useAuth } from "@/context/AuthContext";
 import {
   getProfile,
   updateBio,
@@ -206,7 +206,7 @@ function memberSince(dateStr: string): string {
 
 // ─── Profile Page ─────────────────────────────────────────────────────────────
 function ProfilePage() {
-  const { user } = useAuth();
+  const { user, isAuthenticated, isLoading } = useAuth();
 
 
   const [bio, setBio] = useState<string>("");
@@ -243,7 +243,7 @@ function ProfilePage() {
 
   // Load profile data
   useEffect(() => {
-    if (!user) return;
+    if (isLoading || !isAuthenticated || !user) return;
     (async () => {
       try {
         const [profile, statsData, activityData] = await Promise.all([
@@ -267,7 +267,7 @@ function ProfilePage() {
         setLoading(false);
       }
     })();
-  }, [user]);
+  }, [isAuthenticated, isLoading, user]);
 
   const bioChanged = bio !== savedBio;
 

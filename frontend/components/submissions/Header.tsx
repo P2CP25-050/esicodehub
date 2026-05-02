@@ -2,9 +2,7 @@ import { useState, CSSProperties, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from 'next/router';
-import { useAuth } from "@/hooks/useAuth";
-import { logout } from '@/services/auth';
-import { clearTokens } from '@/lib/tokens';
+import { useAuth } from "@/context/AuthContext";
 import { getProfile } from '@/services/profile/api';
 
 interface HeaderProps {
@@ -32,7 +30,7 @@ export default function Header({ activePage = "" }: HeaderProps) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const router = useRouter();
-  const { user } = useAuth();
+  const { user, logout: logoutContext } = useAuth();
 
   const userName = user ? `${user.first_name} ${user.last_name}` : "—";
   const userRole = user?.role ?? "student";
@@ -125,13 +123,7 @@ export default function Header({ activePage = "" }: HeaderProps) {
   }, [menuOpen]);
 
   const handleLogout = async () => {
-    try {
-      await logout();
-    } catch {
-    } finally {
-      clearTokens();
-      router.replace('/login');
-    }
+    await logoutContext();
   };
 
   return (

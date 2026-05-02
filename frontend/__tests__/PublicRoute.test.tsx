@@ -1,8 +1,8 @@
 import React from 'react';
 import { render, screen, waitFor } from '@testing-library/react';
 import { PublicRoute } from '@/components/PublicRoute';
-import * as useAuthHook from '@/hooks/useAuth';
-import type { AuthUser } from '@/hooks/useAuth';
+import * as useAuthHook from '@/context/AuthContext';
+import type { AuthUser } from '@/context/AuthContext';
 
 // ============================================================================
 // Mocks
