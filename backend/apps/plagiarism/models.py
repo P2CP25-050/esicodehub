@@ -82,6 +82,7 @@ class SimilarityMatch(models.Model):
             ),
             models.UniqueConstraint(
                 fields=['report', 'submission_a', 'submission_b', 'language'],
+                condition=models.Q(ai_moss_flag=False),
                 name='unique_similarity_pair_per_language',
             ),
         ]

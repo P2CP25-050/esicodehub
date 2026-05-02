@@ -8,11 +8,8 @@ import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { getAssignment } from "@/services/assignments";
 import type { Assignment } from "@/services/assignments";
 import {
-  generateAIReferences,
-  getAIReferencesStatus,
   getPlagiarismReport,
   triggerPlagiarismCheck,
-  type AIReferencesStatus,
   type PlagiarismReport,
   type PlagiarismStatus,
   type SimilarityMatch,
@@ -119,11 +116,6 @@ function PlagiarismReportContent() {
   const [reportError, setReportError] = useState<string | null>(null);
   const [triggering, setTriggering] = useState(false);
 
-  const [refsStatus, setRefsStatus] = useState<AIReferencesStatus | null>(null);
-  const [loadingRefs, setLoadingRefs] = useState(true);
-  const [generatingRefs, setGeneratingRefs] = useState(false);
-  const [refsError, setRefsError] = useState<string | null>(null);
-
   const [activeLanguage, setActiveLanguage] = useState<string | null>(null);
   const [sortDirection, setSortDirection] = useState<"desc" | "asc">("desc");
 
@@ -175,23 +167,6 @@ function PlagiarismReportContent() {
     [assignmentId]
   );
 
-  const fetchRefsStatus = useCallback(
-    async (options?: { silent?: boolean }) => {
-      if (assignmentId == null) return;
-      if (!options?.silent) setLoadingRefs(true);
-      try {
-        const data = await getAIReferencesStatus(assignmentId);
-        setRefsStatus(data);
-      } catch {
-        // silently ignore — references may not exist yet
-        setRefsStatus(null);
-      } finally {
-        if (!options?.silent) setLoadingRefs(false);
-      }
-    },
-    [assignmentId]
-  );
-
   useEffect(() => {
     if (!router.isReady) return;
 
@@ -205,8 +180,7 @@ function PlagiarismReportContent() {
 
     void loadAssignment();
     void fetchReport();
-    void fetchRefsStatus();
-  }, [assignmentId, router.isReady, loadAssignment, fetchReport, fetchRefsStatus]);
+  }, [assignmentId, router.isReady, loadAssignment, fetchReport]);
 
   useEffect(() => {
     if (!report) return;
@@ -218,37 +192,6 @@ function PlagiarismReportContent() {
 
     return () => window.clearInterval(interval);
   }, [report, fetchReport]);
-
-  useEffect(() => {
-    if (!generatingRefs || assignmentId == null) return;
-
-    const interval = window.setInterval(async () => {
-      try {
-        const data = await getAIReferencesStatus(assignmentId);
-        setRefsStatus(data);
-        if (data.has_references) {
-          setGeneratingRefs(false);
-        }
-      } catch {
-        setGeneratingRefs(false);
-      }
-    }, 3000);
-
-    return () => window.clearInterval(interval);
-  }, [assignmentId, generatingRefs]);
-
-  const handleGenerateRefs = async () => {
-    if (assignmentId == null || generatingRefs) return;
-    setGeneratingRefs(true);
-    setRefsError(null);
-    try {
-      await generateAIReferences(assignmentId);
-    } catch (error) {
-      setRefsError(getErrorMessage(error, "Failed to generate AI references."));
-      setGeneratingRefs(false);
-    }
-    // polling useEffect will stop generatingRefs when done
-  };
 
   const handleRunCheck = async () => {
     if (assignmentId == null || triggering) return;
@@ -281,6 +224,8 @@ function PlagiarismReportContent() {
     }
   };
 
+
+
   const languages = useMemo(() => {
     if (!report) return [] as string[];
     const mossLanguages = Object.keys(report.moss_urls ?? {});
@@ -303,11 +248,6 @@ function PlagiarismReportContent() {
     }
   }, [languages, activeLanguage]);
 
-  const flaggedCount = useMemo(() => {
-    if (!report) return 0;
-    return report.matches.filter((match) => match.max_similarity >= 70).length;
-  }, [report]);
-
   const languageGroupCount = useMemo(() => {
     if (!report) return 0;
     if (languages.length > 0) return languages.length;
@@ -321,17 +261,119 @@ function PlagiarismReportContent() {
     return report.matches.filter((match) => match.language === activeLanguage);
   }, [report, activeLanguage]);
 
-  const sortedMatches = useMemo(() => {
-    const copy = filteredMatches.slice().sort((a, b) => b.max_similarity - a.max_similarity);
-    if (sortDirection === "asc") return copy.reverse();
-    return copy;
+  const displayRows = useMemo(() => {
+    if (!filteredMatches.length) return [] as Array<{
+      key: string;
+      studentAName: string;
+      studentAEmail: string;
+      studentBName: string;
+      studentBEmail: string;
+      language: string;
+      similarityA: number;
+      similarityB: number;
+      maxSimilarity: number;
+      linesMatched: number | null;
+      mossLink: string | null;
+      isAiAggregate: boolean;
+      aiMatchCount: number;
+    }>;
+
+    const aiAggregates = new Map<string, {
+      studentName: string;
+      studentEmail: string;
+      language: string;
+      total: number;
+      count: number;
+    }>();
+
+    const rows = [] as Array<{
+      key: string;
+      studentAName: string;
+      studentAEmail: string;
+      studentBName: string;
+      studentBEmail: string;
+      language: string;
+      similarityA: number;
+      similarityB: number;
+      maxSimilarity: number;
+      linesMatched: number | null;
+      mossLink: string | null;
+      isAiAggregate: boolean;
+      aiMatchCount: number;
+    }>;
+
+    const isAiSide = (name: string, email: string) =>
+      name === "AI Reference" || !email;
+
+    filteredMatches.forEach((match) => {
+      if (!match.ai_moss_flag) {
+        rows.push({
+          key: `match-${match.id}`,
+          studentAName: match.student_a_name,
+          studentAEmail: match.student_a_email,
+          studentBName: match.student_b_name,
+          studentBEmail: match.student_b_email,
+          language: match.language,
+          similarityA: match.similarity_a,
+          similarityB: match.similarity_b,
+          maxSimilarity: match.max_similarity,
+          linesMatched: match.lines_matched,
+          mossLink: match.moss_link,
+          isAiAggregate: false,
+          aiMatchCount: 0,
+        });
+        return;
+      }
+
+      const aIsAi = isAiSide(match.student_a_name, match.student_a_email);
+      const studentName = aIsAi ? match.student_b_name : match.student_a_name;
+      const studentEmail = aIsAi ? match.student_b_email : match.student_a_email;
+      const studentSimilarity = aIsAi ? match.similarity_b : match.similarity_a;
+
+      const key = `${match.language}::${studentEmail || studentName}`;
+      const existing = aiAggregates.get(key);
+      if (existing) {
+        existing.total += studentSimilarity;
+        existing.count += 1;
+      } else {
+        aiAggregates.set(key, {
+          studentName,
+          studentEmail,
+          language: match.language,
+          total: studentSimilarity,
+          count: 1,
+        });
+      }
+    });
+
+    aiAggregates.forEach((item, key) => {
+      const mean = item.count ? item.total / item.count : 0;
+      rows.push({
+        key: `ai-${key}`,
+        studentAName: item.studentName,
+        studentAEmail: item.studentEmail,
+        studentBName: "AI Reference (mean)",
+        studentBEmail: "",
+        language: item.language,
+        similarityA: mean,
+        similarityB: mean,
+        maxSimilarity: mean,
+        linesMatched: null,
+        mossLink: null,
+        isAiAggregate: true,
+        aiMatchCount: item.count,
+      });
+    });
+
+    const sorted = rows.slice().sort((a, b) => b.maxSimilarity - a.maxSimilarity);
+    if (sortDirection === "asc") return sorted.reverse();
+    return sorted;
   }, [filteredMatches, sortDirection]);
 
-  const hasReferences = Boolean(refsStatus?.has_references);
-  const referenceEntries = useMemo(
-    () => Object.entries(refsStatus?.references ?? {}),
-    [refsStatus]
-  );
+  const flaggedCount = useMemo(() => {
+    if (!displayRows.length) return 0;
+    return displayRows.filter((row) => row.maxSimilarity >= 70).length;
+  }, [displayRows]);
 
   const deadlinePassed = useMemo(() => {
     if (!assignment) return false;
@@ -454,80 +496,6 @@ function PlagiarismReportContent() {
         )}
 
         {!showLoading && reportState === "none" && (
-          <div className="mt-6 rounded-3xl border border-slate-200 bg-white p-6 shadow-[0_10px_36px_rgba(15,23,42,0.06)]">
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-              <div className="space-y-2">
-                {loadingRefs ? (
-                  <div className="flex items-center gap-2 text-sm text-slate-500">
-                    <div className="h-4 w-4 animate-spin rounded-full border-2 border-slate-300 border-t-slate-700" />
-                    Checking AI references…
-                  </div>
-                ) : hasReferences ? (
-                  <>
-                    <p className="text-lg font-semibold text-slate-900">
-                      AI Reference Submissions
-                    </p>
-                    <div className="flex flex-wrap gap-2 text-sm text-slate-600">
-                      {referenceEntries.length > 0 ? (
-                        referenceEntries.map(([language, count]) => (
-                          <span
-                            key={language}
-                            className="inline-flex items-center gap-1 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700"
-                          >
-                            ✓ {language}: {count} references
-                          </span>
-                        ))
-                      ) : (
-                        <span className="text-sm text-slate-500">
-                          No reference files reported yet.
-                        </span>
-                      )}
-                    </div>
-                    <p className="text-xs text-slate-400">
-                      Generated {refsStatus?.generated_at
-                        ? formatDateTime(refsStatus.generated_at)
-                        : "—"}
-                    </p>
-                  </>
-                ) : (
-                  <>
-                    <p className="text-lg font-semibold text-slate-900">
-                      ⚠ No AI references generated yet
-                    </p>
-                    <p className="text-sm text-slate-500">
-                      Generate references before running a check to enable
-                      AI-assisted flagging.
-                    </p>
-                  </>
-                )}
-                {refsError && (
-                  <p className="text-xs font-semibold text-red-500">⚠ {refsError}</p>
-                )}
-              </div>
-              <div className="flex flex-col items-start gap-2">
-                <button
-                  onClick={handleGenerateRefs}
-                  disabled={generatingRefs || loadingRefs}
-                  className={`rounded-xl px-5 py-3 text-sm font-semibold transition-all ${
-                    generatingRefs || loadingRefs
-                      ? "cursor-not-allowed bg-slate-200 text-slate-500"
-                      : "bg-slate-900 text-white shadow-[0_12px_30px_rgba(15,23,42,0.2)] hover:-translate-y-0.5"
-                  }`}
-                >
-                  {hasReferences ? "Regenerate AI References" : "Generate AI References"}
-                </button>
-                {generatingRefs && (
-                  <div className="flex items-center gap-2 text-xs text-slate-500">
-                    <div className="h-3 w-3 animate-spin rounded-full border-2 border-slate-300 border-t-slate-700" />
-                    Generating references…
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-        )}
-
-        {!showLoading && reportState === "none" && (
           <div className="mt-6 rounded-3xl border border-slate-200 bg-white p-8 shadow-[0_10px_36px_rgba(15,23,42,0.06)]">
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
               <div>
@@ -613,14 +581,27 @@ function PlagiarismReportContent() {
                     {flaggedCount} pairs flagged across {languageGroupCount} language groups
                   </p>
                 </div>
-                <button
-                  onClick={() =>
-                    setSortDirection((prev) => (prev === "desc" ? "asc" : "desc"))
-                  }
-                  className="rounded-xl border border-slate-200 px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50"
-                >
-                  Sort: {sortDirection === "desc" ? "Highest similarity" : "Lowest similarity"}
-                </button>
+                <div className="flex flex-wrap items-center gap-2">
+                  <button
+                    onClick={handleRunCheck}
+                    disabled={!canRunCheck}
+                    className={`rounded-xl px-4 py-2 text-xs font-semibold transition-all ${
+                      canRunCheck
+                        ? "bg-slate-900 text-white shadow-[0_12px_30px_rgba(15,23,42,0.2)] hover:-translate-y-0.5"
+                        : "cursor-not-allowed bg-slate-200 text-slate-500"
+                    }`}
+                  >
+                    {triggering ? "Starting..." : "Run Again"}
+                  </button>
+                  <button
+                    onClick={() =>
+                      setSortDirection((prev) => (prev === "desc" ? "asc" : "desc"))
+                    }
+                    className="rounded-xl border border-slate-200 px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+                  >
+                    Sort: {sortDirection === "desc" ? "Highest similarity" : "Lowest similarity"}
+                  </button>
+                </div>
               </div>
 
               {languages.length > 1 && (
@@ -657,18 +638,18 @@ function PlagiarismReportContent() {
                   </tr>
                 </thead>
                 <tbody>
-                  {sortedMatches.length === 0 ? (
+                  {displayRows.length === 0 ? (
                     <tr>
                       <td colSpan={8} className="px-6 py-10 text-center text-sm text-slate-500">
                         No matches available for this language.
                       </td>
                     </tr>
                   ) : (
-                    sortedMatches.map((match) => {
-                      const tone = getSimilarityTone(match.max_similarity);
-                      const aiFlag = match.ai_moss_flag;
+                    displayRows.map((row) => {
+                      const tone = getSimilarityTone(row.maxSimilarity);
+                      const aiFlag = row.isAiAggregate;
                       return (
-                        <tr key={match.id} className={`border-b border-slate-100 ${tone.row}`}>
+                        <tr key={row.key} className={`border-b border-slate-100 ${tone.row}`}>
                           <td
                             className={`px-6 py-4 border-l-4 ${
                               aiFlag
@@ -677,51 +658,51 @@ function PlagiarismReportContent() {
                             }`}
                           >
                             <p className="font-semibold text-slate-900">
-                              {match.student_a_name}
+                              {row.studentAName}
                             </p>
                             <p className="mt-1 text-xs text-slate-500">
-                              {match.student_a_email}
+                              {row.studentAEmail || "—"}
                             </p>
                           </td>
                           <td className="px-6 py-4">
                             <p className="font-semibold text-slate-900">
-                              {match.student_b_name}
+                              {row.studentBName}
                             </p>
                             <p className="mt-1 text-xs text-slate-500">
-                              {match.student_b_email}
+                              {row.studentBEmail || "—"}
                             </p>
                           </td>
                           <td className="px-6 py-4">
                             <span
                               className={`inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold ${
-                                getLanguageBadgeStyle(match.language)
+                                getLanguageBadgeStyle(row.language)
                               }`}
                             >
-                              {match.language || "Unknown"}
+                              {row.language || "Unknown"}
                             </span>
                           </td>
                           <td className="px-6 py-4 text-sm font-semibold text-slate-700">
-                            {formatPercent(match.similarity_a)}
+                            {formatPercent(row.similarityA)}
                           </td>
                           <td className="px-6 py-4 text-sm font-semibold text-slate-700">
-                            {formatPercent(match.similarity_b)}
+                            {formatPercent(row.similarityB)}
                           </td>
                           <td className="px-6 py-4 text-sm text-slate-600">
-                            {match.lines_matched}
+                            {row.linesMatched ?? "—"}
                           </td>
                           <td className="px-6 py-4 text-sm">
                             {aiFlag ? (
                               <span className="inline-flex items-center rounded-full border border-purple-200 bg-purple-100 px-3 py-1 text-xs font-semibold text-purple-700">
-                                🤖 AI Match
+                                🤖 AI mean • {row.aiMatchCount} refs
                               </span>
                             ) : (
                               <span className="text-slate-400">—</span>
                             )}
                           </td>
                           <td className="px-6 py-4 text-sm">
-                            {match.moss_link ? (
+                            {row.mossLink ? (
                               <a
-                                href={match.moss_link}
+                                href={row.mossLink}
                                 target="_blank"
                                 rel="noreferrer"
                                 className="font-semibold text-slate-900 hover:text-slate-700"
@@ -750,6 +731,10 @@ function PlagiarismReportContent() {
               <p className="mt-3 text-xs text-slate-500">
                 AI reference matching indicates structural similarity to AI-generated code.
                 This is a signal for manual review — not a determination of academic misconduct.
+              </p>
+              <p className="mt-2 text-xs text-slate-500">
+                MOSS only reports matches with at least 10 lines in common, so some
+                low-overlap comparisons are not shown.
               </p>
               <p className="mt-3">
                 These results indicate code similarity, not confirmed plagiarism. Manual
