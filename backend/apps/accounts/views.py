@@ -373,7 +373,7 @@ def _build_public_recent_activity(user):
 
 
 @api_view(['GET'])
-@permission_classes([AllowAny])
+@permission_classes([IsAuthenticated])
 def profile_public(request, school_id):
     """Return a user's public profile by school_id."""
     user = get_object_or_404(User.objects.select_related('profile'), school_id=school_id)
@@ -397,7 +397,7 @@ def profile_public(request, school_id):
 
 
 @api_view(['GET'])
-@permission_classes([AllowAny])
+@permission_classes([IsAuthenticated])
 def profile_search(request):
     """Search verified users by name or school ID."""
     query = (request.query_params.get('q') or '').strip()
