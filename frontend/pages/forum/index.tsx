@@ -4,9 +4,9 @@ import Link from "next/link";
 
 import Header from "@/components/submissions/Header";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
-import { TagSidebar } from "@/components/forums/Tagsidebar";
-import { ForumToolbar } from "@/components/forums/Forumtoolbar";
-import { QuestionFeed } from "@/components/forums/Questionfeed";
+import { TagSidebar } from "@/components/forum/Tagsidebar";
+import { ForumToolbar } from "@/components/forum/Forumtoolbar";
+import { QuestionFeed } from "@/components/forum/Questionfeed";
 import { listQuestions, voteQuestion } from "@/services/forum";
 import type { QuestionListItem, ForumOrdering } from "@/services/forum";
 import { seededShuffle } from "@/utils/forum";
