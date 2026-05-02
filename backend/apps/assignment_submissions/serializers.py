@@ -87,6 +87,7 @@ class AssignmentListSerializer(serializers.ModelSerializer):
             'id',
             'title',
             'description',
+            'description_pdf',
             'subject',
             'target_year',
             'languages',
@@ -165,12 +166,18 @@ class AssignmentCreateSerializer(serializers.ModelSerializer):
     Used for creating and updating assignments.
     Validates that deadline is in the future on creation.
     Validates that target_sections and target_groups are mutually exclusive.
+    Validates that targeting fields cannot be changed after students have submitted.
+    Validates that assignment cannot be edited after deadline has passed.
     """
+
+    TARGETING_FIELDS = {'target_year', 'target_sections', 'target_groups'}
+
     class Meta:
         model = Assignment
         fields = [
             'title',
             'description',
+            'description_pdf',
             'subject',
             'target_year',
             'languages',
@@ -201,7 +208,6 @@ class AssignmentCreateSerializer(serializers.ModelSerializer):
 
     def validate_deadline(self, value):
         """Reject deadlines that are in the past on creation."""
-        # Only validate on creation, not on update
         if self.instance is None and value <= timezone.now():
             raise serializers.ValidationError(
                 'Deadline must be in the future.'
@@ -209,11 +215,31 @@ class AssignmentCreateSerializer(serializers.ModelSerializer):
         return value
 
     def validate(self, attrs):
-        """Ensure target_sections and target_groups are mutually exclusive."""
+        """
+        Ensure target_sections and target_groups are mutually exclusive.
+        Prevent editing after deadline has passed.
+        Prevent changing targeting fields after students have submitted.
+        """
+        instance = self.instance
+
+        # Cannot edit after deadline has passed
+        if instance and instance.deadline < timezone.now():
+            raise serializers.ValidationError(
+                'Cannot edit an assignment after its deadline has passed.'
+            )
+
+        # Cannot change targeting fields after students have submitted
+        if instance:
+            changing_targets = self.TARGETING_FIELDS.intersection(attrs.keys())
+            if changing_targets and instance.submissions.exists():
+                raise serializers.ValidationError(
+                    'Cannot change targeting after students have submitted.'
+                )
+
+        # target_sections and target_groups are mutually exclusive
         target_sections = attrs.get('target_sections')
         target_groups = attrs.get('target_groups')
 
-        # Both fields are considered non-empty when they are truthy (non-empty list/string)
         sections_set = bool(target_sections)
         groups_set = bool(target_groups)
 
