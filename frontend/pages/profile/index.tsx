@@ -2,7 +2,6 @@ import { useState, useEffect, useRef, ChangeEvent, CSSProperties } from "react";
 import Image from "next/image";
 
 import Link from "next/link";
-import Image from "next/image";
 import Header from "@/components/submissions/Header";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { useAuth } from "@/context/AuthContext";
