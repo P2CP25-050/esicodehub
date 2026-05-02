@@ -60,12 +60,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     let cancelled = false;
 
-    getAuthInitPromise().then((resolvedUser) => {
-      if (!cancelled) {
-        setUser(resolvedUser);
-        setIsLoading(false);
-      }
-    });
+    getAuthInitPromise()
+      .then((resolvedUser) => {
+        if (!cancelled) {
+          setUser(resolvedUser);
+          setIsLoading(false);
+        }
+      })
+      .catch(() => {
+        // getAuthInitPromise already handles all errors internally and
+        // resolves to null on failure, so this is a last-resort safety net.
+        if (!cancelled) setIsLoading(false);
+      });
 
     return () => {
       cancelled = true;
