@@ -257,7 +257,8 @@ class PublicProfileApiTests(TestCase):
         self.assertEqual(len(recent_activity['questions']), 5)
         self.assertEqual(len(recent_activity['answers']), 5)
         self.assertEqual(recent_activity['submissions'][0]['title'], 'Public submission 6')
-        self.assertNotIn('Private submission', {item['title'] for item in recent_activity['submissions']})
+        titles = {item['title'] for item in recent_activity['submissions']}
+        self.assertNotIn('Private submission', titles)
 
     def test_public_profile_omits_student_fields_for_professor(self):
         response = self.client.get(f'/api/profiles/{self.professor.school_id}/')
