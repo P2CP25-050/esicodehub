@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter } from 'next/router';
 import Head from 'next/head';
-import { useAuth } from '@/hooks/useAuth'; 
+import { useAuth } from '@/context/AuthContext'; 
 import { listSubmissions } from '@/services/submissions/submissions.api';
 import type { PersonalSubmission, SubmissionListParams } from '@/services/submissions/submissions.types';
 import SearchBar    from '@/components/submissions/SearchBar';
@@ -35,6 +35,7 @@ export default function SubmissionsPage() {
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const searchRef = useRef(search);
   const skipNextSearchDebounceRef = useRef(false);
+  const skipInitialSearchEffectRef = useRef(true);
 
   useEffect(() => {
     searchRef.current = search;
@@ -83,6 +84,11 @@ useEffect(() => {
 // Debounced search
 useEffect(() => {
   if (isLoading || !isAuthenticated) return;
+
+  if (skipInitialSearchEffectRef.current) {
+    skipInitialSearchEffectRef.current = false;
+    return;
+  }
 
   if (skipNextSearchDebounceRef.current) {
     skipNextSearchDebounceRef.current = false;
