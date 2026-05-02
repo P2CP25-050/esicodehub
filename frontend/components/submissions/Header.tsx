@@ -28,7 +28,10 @@ const normalizeAvatarUrl = (value: unknown): string | null => {
 export default function Header({ activePage = "" }: HeaderProps) {
   const [hoveredNav, setHoveredNav] = useState<string | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
-  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(() => {
+    if (typeof window === 'undefined') return null;
+    return normalizeAvatarUrl(window.localStorage.getItem(PROFILE_AVATAR_KEY));
+  });
   const router = useRouter();
   const { user, logout: logoutContext } = useAuth();
 
@@ -37,9 +40,6 @@ export default function Header({ activePage = "" }: HeaderProps) {
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
-
-    const fromStorage = normalizeAvatarUrl(window.localStorage.getItem(PROFILE_AVATAR_KEY));
-    setAvatarUrl(fromStorage);
 
     const onAvatarUpdated = (event: Event) => {
       const customEvent = event as CustomEvent<{ avatarUrl?: string | null }>;
@@ -113,8 +113,12 @@ export default function Header({ activePage = "" }: HeaderProps) {
 
   // Close drawer on route change
   useEffect(() => {
-    setMenuOpen(false);
-  }, [router.pathname]);
+    const handleRouteChange = () => setMenuOpen(false);
+    router.events.on('routeChangeStart', handleRouteChange);
+    return () => {
+      router.events.off('routeChangeStart', handleRouteChange);
+    };
+  }, [router.events]);
 
   // Prevent body scroll when drawer is open
   useEffect(() => {
