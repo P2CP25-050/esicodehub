@@ -61,6 +61,8 @@ def run_moss_for_language(
         raise ValueError(f"Unsupported MOSS language: {language}")
 
     m = mosspy.Moss(MOSS_USER_ID, moss_lang)
+    # Keep a high show limit, but use MOSS default ignore limit (10 lines).
+    m.setNumberOfMatchingFiles(2000)
     for local_path, _ in file_entries:
         m.addFile(local_path)
 
