@@ -24,6 +24,15 @@ function removeFromTree(answers: Answer[], id: number): Answer[] {
     .map((a) => ({ ...a, replies: removeFromTree(a.replies ?? [], id) }));
 }
 
+/** Mark exactly one answer as accepted (and clear all others) in the tree. */
+function updateAcceptedInTree(answers: Answer[], acceptedId: number): Answer[] {
+  return answers.map((a) => ({
+    ...a,
+    is_accepted: a.id === acceptedId,
+    replies: updateAcceptedInTree(a.replies ?? [], acceptedId),
+  }));
+}
+
 // ── Props ─────────────────────────────────────────────────────────────────────
 
 interface AnswerSectionProps {
@@ -58,7 +67,12 @@ export function AnswerSection({
 
   const handleAccept = (answerId: number) => {
     acceptAnswer(questionId, answerId)
-      .then((q) => onQuestionUpdate(() => q))
+      .then(() =>
+        onQuestionUpdate((q) => ({
+          ...q,
+          answers: updateAcceptedInTree(q.answers, answerId),
+        }))
+      )
       .catch(() => {});
   };
 

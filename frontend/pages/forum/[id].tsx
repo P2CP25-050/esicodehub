@@ -21,7 +21,10 @@ function QuestionDetailContent() {
   const router = useRouter();
 
   const [question, setQuestion] = useState<QuestionDetail | null>(null);
-  const [loading, setLoading] = useState(true);
+  // Starts as false because `isLoading` (derived below) is true while the
+  // router hasn't resolved, so the spinner shows on first render without
+  // needing loading=true here.
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
   // Derive a validated numeric id only after the router is ready.
@@ -33,21 +36,45 @@ function QuestionDetailContent() {
       ? Number(rawId)
       : null;
 
+  // Derive the "invalid id" error directly from router state so we avoid
+  // calling setState synchronously inside a useEffect (react-hooks/set-state-in-effect).
+  const idError =
+    router.isReady && questionId === null ? "Invalid question ID." : "";
+
+  // Treat the page as loading while the router hasn't resolved yet, or while a
+  // fetch is in flight.
+  const isLoading = !router.isReady || loading;
+
+  const displayError = idError || error;
+
   useEffect(() => {
-    // Wait for the router; show an error if the id is missing or invalid.
-    if (!router.isReady) return;
+    // Wait for the router. If the id is invalid we show the derived error instead.
+    if (!router.isReady || questionId === null) return;
 
-    if (questionId === null) {
-      setError("Invalid question ID.");
-      setLoading(false);
-      return;
-    }
+    let cancelled = false;
 
-    setLoading(true);
-    setError("");
-    getQuestion(questionId)
-      .then((q) => { setQuestion(q); setLoading(false); })
-      .catch(() => { setError("Failed to load question."); setLoading(false); });
+    const loadQuestion = async () => {
+      setLoading(true);
+      setError("");
+      try {
+        const q = await getQuestion(questionId);
+        if (!cancelled) {
+          setQuestion(q);
+        }
+      } catch {
+        if (!cancelled) {
+          setError("Failed to load question.");
+        }
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      }
+    };
+
+    void loadQuestion();
+
+    return () => { cancelled = true; };
   }, [router.isReady, questionId]);
 
   const hasAccepted = (question?.answers ?? []).some((a) => a.is_accepted);
@@ -100,7 +127,7 @@ function QuestionDetailContent() {
         <div className="max-w-screen-xl mx-auto px-4 sm:px-8 py-8">
 
           {/* Loading */}
-          {loading && (
+          {isLoading && !displayError && (
             <div className="flex items-center justify-center py-24">
               <div className="text-center space-y-3">
                 <svg
@@ -117,16 +144,16 @@ function QuestionDetailContent() {
           )}
 
           {/* Error */}
-          {error && !loading && (
+          {displayError && !isLoading && (
             <div className="bg-red-50 border border-red-200 rounded-xl p-6 text-center text-red-600">
-              <p className="font-bold">{error}</p>
+              <p className="font-bold">{displayError}</p>
               <Link href="/forum" className="text-sm text-red-400 hover:underline mt-2 block">
                 ← Back to Forum
               </Link>
             </div>
           )}
 
-          {question && !loading && questionId !== null && (
+          {question && !isLoading && questionId !== null && (
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
 
               {/* Main column */}

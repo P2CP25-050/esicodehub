@@ -1,4 +1,4 @@
-import MonacoEditor from "./MonacoEditor";
+import { MonacoEditor } from "./MonacoEditor";
 
 interface CodeBlockProps {
   code: string;
