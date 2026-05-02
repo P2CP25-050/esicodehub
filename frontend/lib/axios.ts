@@ -68,10 +68,21 @@ apiClient.interceptors.response.use(
         }
 
         const access = await refreshPromise;
-        if (access && originalRequest.headers) {
-          originalRequest.headers.set('Authorization', `Bearer ${access}`);
-          return apiClient(originalRequest);
+        if (!access) {
+          throw error;
         }
+
+        if (!originalRequest.headers) {
+          originalRequest.headers = {};
+        }
+
+        if (typeof originalRequest.headers.set === 'function') {
+          originalRequest.headers.set('Authorization', `Bearer ${access}`);
+        } else {
+          originalRequest.headers.Authorization = `Bearer ${access}`;
+        }
+
+        return apiClient(originalRequest);
       } catch (refreshError) {
         clearTokens();
         if (typeof window !== 'undefined') {
