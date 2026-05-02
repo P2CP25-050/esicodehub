@@ -4,7 +4,7 @@ import  Link  from "next/link";
 
 // ── Correct imports — existing project files only ────────────────────────────
 import { ProtectedRoute }   from "@/components/ProtectedRoute";
-import { useAuth }          from "@/hooks/useAuth";
+import { useAuth }          from "@/context/AuthContext";
 import Header               from "@/components/submissions/Header";
 import {
   getSubmission,
