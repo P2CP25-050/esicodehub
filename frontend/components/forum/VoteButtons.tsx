@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 interface VoteButtonsProps {
   score: number;
@@ -9,6 +9,11 @@ interface VoteButtonsProps {
 export function VoteButtons({ score, userVote, onVote }: VoteButtonsProps) {
   const [localScore, setLocalScore] = useState(score);
   const [localVote, setLocalVote] = useState<1 | -1 | null>(userVote);
+
+  // Sync whenever the parent supplies a server-corrected score or vote state
+  // (e.g. after voteQuestion() resolves and the parent calls setQuestion).
+  useEffect(() => { setLocalScore(score); }, [score]);
+  useEffect(() => { setLocalVote(userVote); }, [userVote]);
 
   const vote = (v: 1 | -1) => {
     const prev = localVote;

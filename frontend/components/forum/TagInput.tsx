@@ -9,6 +9,22 @@ const SUGGESTED_TAGS = [
   "linear-algebra", "calculus", "os", "networks", "compilers",
 ];
 
+/**
+ * Normalize a raw tag string into its stored form.
+ * Subject-code tags (e.g. "CS101", "MATH201") preserve their original
+ * casing so they display consistently; all other free-text tags are
+ * lower-cased and have whitespace collapsed to hyphens.
+ */
+function normalizeTag(raw: string): string {
+  const trimmed = raw.trim().replace(/\s+/g, "-").slice(0, 50);
+  // If the tag matches a known suggested tag (case-insensitive), return the
+  // canonical casing from the suggestions list so "cs101" → "CS101".
+  const canonical = SUGGESTED_TAGS.find(
+    (s) => s.toLowerCase() === trimmed.toLowerCase()
+  );
+  return canonical ?? trimmed.toLowerCase();
+}
+
 interface TagInputProps {
   tags: string[];
   onChange: (t: string[]) => void;
@@ -20,20 +36,33 @@ export function TagInput({ tags, onChange }: TagInputProps) {
   const [focused, setFocused] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
+  // Normalize stored tags to lowercase for comparison so that both
+  // "CS101" (from suggestions) and a manually typed "cs101" are treated
+  // as the same tag when checking for duplicates.
+  const tagsLower = tags.map((t) => t.toLowerCase());
+
   const handleChange = (val: string) => {
     setInput(val);
     setSuggestions(
       val.trim()
         ? SUGGESTED_TAGS.filter(
-            (t) => t.toLowerCase().includes(val.toLowerCase()) && !tags.includes(t)
+            (t) =>
+              t.toLowerCase().includes(val.toLowerCase()) &&
+              // Compare against normalized stored tags so already-added tags
+              // (stored as e.g. "cs101") are correctly excluded from suggestions
+              // even when the suggested tag is cased differently ("CS101").
+              !tagsLower.includes(t.toLowerCase())
           ).slice(0, 8)
         : []
     );
   };
 
   const addTag = (raw: string) => {
-    const t = raw.trim().toLowerCase().replace(/\s+/g, "-").slice(0, 50);
-    if (t && !tags.includes(t) && tags.length < 5) onChange([...tags, t]);
+    const t = normalizeTag(raw);
+    // Duplicate check uses normalized lowercase on both sides.
+    if (t && !tagsLower.includes(t.toLowerCase()) && tags.length < 5) {
+      onChange([...tags, t]);
+    }
     setInput("");
     setSuggestions([]);
   };

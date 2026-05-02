@@ -19,20 +19,36 @@ function QuestionDetailContent() {
   const { user } = useAuth();
   const currentUserEmail = user?.email ?? "";
   const router = useRouter();
-  const { id } = router.query;
-  const questionId = Number(id);
 
   const [question, setQuestion] = useState<QuestionDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
+  // Derive a validated numeric id only after the router is ready.
+  // router.query.id can be undefined (first render) or string[] (catch-all
+  // routes), so we reject anything that isn't a single numeric string.
+  const rawId = router.isReady ? router.query.id : undefined;
+  const questionId =
+    typeof rawId === "string" && /^\d+$/.test(rawId)
+      ? Number(rawId)
+      : null;
+
   useEffect(() => {
-    if (!questionId) return;
+    // Wait for the router; show an error if the id is missing or invalid.
+    if (!router.isReady) return;
+
+    if (questionId === null) {
+      setError("Invalid question ID.");
+      setLoading(false);
+      return;
+    }
+
     setLoading(true);
+    setError("");
     getQuestion(questionId)
       .then((q) => { setQuestion(q); setLoading(false); })
       .catch(() => { setError("Failed to load question."); setLoading(false); });
-  }, [questionId]);
+  }, [router.isReady, questionId]);
 
   const hasAccepted = (question?.answers ?? []).some((a) => a.is_accepted);
 
@@ -58,6 +74,7 @@ function QuestionDetailContent() {
   };
 
   const handleDeleteQuestion = async () => {
+    if (questionId === null) return;
     if (!confirm("Delete this question?")) return;
     await deleteQuestion(questionId);
     router.push("/forum");
@@ -108,7 +125,7 @@ function QuestionDetailContent() {
             </div>
           )}
 
-          {question && !loading && (
+          {question && !loading && questionId !== null && (
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
 
               {/* Main column */}
