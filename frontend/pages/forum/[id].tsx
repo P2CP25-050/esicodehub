@@ -9,7 +9,7 @@ import {
 import type { QuestionDetail } from "@/services/forum";
 import Header from "@/components/submissions/Header";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
-import { useAuth } from "@/hooks/useAuth";
+import { useAuth } from "@/context/AuthContext";
 import { LoadingSpinner } from "@/components/LoadingSpinner";
 import { QuestionDetailCard } from "@/components/forum/QuestionDetailCard";
 import { AnswerSection } from "@/components/forum/AnswerSection";
