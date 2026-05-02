@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, ChangeEvent, CSSProperties } from "react";
 
 import Link from "next/link";
+import Image from "next/image";
 import Header from "@/components/submissions/Header";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { useAuth } from "@/hooks/useAuth";
@@ -356,7 +357,7 @@ function ProfilePage() {
                       <Spinner size={28} />
                     </div>
                   ) : avatarUrl ? (
-                    <img
+                    <Image
                       src={avatarUrl}
                       alt="Avatar"
                       style={{ width: 96, height: 96, borderRadius: "50%", objectFit: "cover", border: "3px solid #e2e8f6" }}
