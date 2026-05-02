@@ -1,18 +1,4 @@
-import dynamic from "next/dynamic";
-
-const MonacoEditor = dynamic(
-  () => import("@monaco-editor/react").then((mod) => mod.default),
-  {
-    ssr: false,
-    loading: () => (
-      <div className="flex items-center justify-center h-40 bg-[#1e1e1e]">
-        <span className="text-xs text-slate-500 font-mono animate-pulse tracking-widest">
-          LOADING EDITOR…
-        </span>
-      </div>
-    ),
-  }
-);
+import MonacoEditor from "./MonacoEditor";
 
 interface CodeBlockProps {
   code: string;
