@@ -1,10 +1,17 @@
+import base64
+
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.core.files.uploadedfile import SimpleUploadedFile
+from django.test import TestCase
 from django.urls import reverse
 from rest_framework import status
-from rest_framework.test import APITestCase
+from rest_framework.test import APIClient, APITestCase
 
+from apps.accounts.models import Profile
+from apps.esi_db.models import EsiStudent
+from apps.forum.models import Answer, Question
+from apps.personal_submissions.models import PersonalSubmission
 
 User = get_user_model()
 
@@ -151,3 +158,167 @@ class ProfileAvatarTests(APITestCase):
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn('Only .jpg, .png, and .webp files are allowed.', response.data['avatar'])
+
+
+class PublicProfileApiTests(TestCase):
+    def setUp(self):
+        self.client = APIClient()
+
+        self.student = User.objects.create_user(
+            email='amine.bensalem@esi.dz',
+            password='pass1234',
+            role='student',
+            first_name='Amine',
+            last_name='Bensalem',
+            school_id='23/0145',
+            is_active=True,
+            is_verified=True,
+        )
+        self.professor = User.objects.create_user(
+            email='prof.alami@esi.dz',
+            password='pass1234',
+            role='professor',
+            first_name='Nadia',
+            last_name='Alami',
+            school_id='20/0001',
+            is_active=True,
+            is_verified=True,
+        )
+
+        profile, _ = Profile.objects.get_or_create(user=self.student)
+        profile.bio = 'Student bio'
+        profile.avatar_data = base64.b64encode(b'avatar-bytes').decode('ascii')
+        profile.avatar_content_type = 'image/png'
+        profile.save(update_fields=['bio', 'avatar_data', 'avatar_content_type'])
+
+        EsiStudent.objects.create(
+            school_id='23/0145',
+            first_name='Amine',
+            last_name='Bensalem',
+            email=self.student.email,
+            section='A',
+            group=3,
+            study_year='2CS',
+            status=EsiStudent.Status.INSCRIT,
+        )
+
+        for index in range(6):
+            PersonalSubmission.objects.create(
+                owner=self.student,
+                title=f'Public submission {index + 1}',
+                description='Public description',
+                language='python',
+                submission_type=PersonalSubmission.SubmissionType.REVIEW,
+                visibility=PersonalSubmission.Visibility.PUBLIC,
+                gcs_prefix=f'personal/{self.student.id}/{index + 1}/',
+            )
+
+            question = Question.objects.create(
+                author=self.student,
+                title=f'Question {index + 1}',
+                body='Question body',
+                tags=['python'],
+            )
+            Answer.objects.create(
+                question=question,
+                author=self.student,
+                body=f'Answer {index + 1}',
+                is_accepted=index % 2 == 0,
+            )
+
+        PersonalSubmission.objects.create(
+            owner=self.student,
+            title='Private submission',
+            description='Private description',
+            language='python',
+            submission_type=PersonalSubmission.SubmissionType.HELP,
+            visibility=PersonalSubmission.Visibility.PRIVATE,
+            gcs_prefix=f'personal/{self.student.id}/private/',
+        )
+
+    def test_public_profile_filters_private_submissions_and_hides_professor_fields(self):
+        response = self.client.get(f'/api/profiles/{self.student.school_id}/')
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['school_id'], self.student.school_id)
+        self.assertEqual(response.data['bio'], 'Student bio')
+        self.assertEqual(response.data['study_year'], '2CS')
+        self.assertEqual(response.data['section'], 'A')
+        self.assertEqual(response.data['group'], 3)
+        self.assertIn('avatar', response.data)
+
+        self.assertEqual(response.data['stats']['submissions_count'], 6)
+        self.assertEqual(response.data['stats']['questions_count'], 6)
+        self.assertEqual(response.data['stats']['answers_count'], 6)
+        self.assertEqual(response.data['stats']['accepted_answers_count'], 3)
+
+        recent_activity = response.data['recent_activity']
+        self.assertEqual(len(recent_activity['submissions']), 5)
+        self.assertEqual(len(recent_activity['questions']), 5)
+        self.assertEqual(len(recent_activity['answers']), 5)
+        self.assertEqual(recent_activity['submissions'][0]['title'], 'Public submission 6')
+        self.assertNotIn('Private submission', {item['title'] for item in recent_activity['submissions']})
+
+    def test_public_profile_omits_student_fields_for_professor(self):
+        response = self.client.get(f'/api/profiles/{self.professor.school_id}/')
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertNotIn('study_year', response.data)
+        self.assertNotIn('section', response.data)
+        self.assertNotIn('group', response.data)
+        self.assertEqual(response.data['recent_activity'], {})
+
+
+class PublicProfileSearchApiTests(TestCase):
+    def setUp(self):
+        self.client = APIClient()
+
+    def test_search_returns_only_verified_users_and_limits_results(self):
+        for index in range(21):
+            User.objects.create_user(
+                email=f'amine{index}@esi.dz',
+                password='pass1234',
+                role='student',
+                first_name='Amine',
+                last_name=f'Alpha{index:02d}',
+                school_id=f'24/{index:04d}',
+                is_active=True,
+                is_verified=True,
+            )
+
+        User.objects.create_user(
+            email='unverified.amine@esi.dz',
+            password='pass1234',
+            role='student',
+            first_name='Amine',
+            last_name='Hidden',
+            school_id='24/9999',
+            is_active=False,
+            is_verified=False,
+        )
+
+        response = self.client.get('/api/profiles/search/?q=amine')
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data), 20)
+        self.assertTrue(all(item['role'] == 'student' for item in response.data))
+        self.assertNotIn('24/9999', {item['school_id'] for item in response.data})
+
+    def test_search_matches_school_id(self):
+        user = User.objects.create_user(
+            email='school.match@esi.dz',
+            password='pass1234',
+            role='professor',
+            first_name='Nada',
+            last_name='Messaoudi',
+            school_id='99/0001',
+            is_active=True,
+            is_verified=True,
+        )
+
+        response = self.client.get('/api/profiles/search/?q=99/0001')
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data), 1)
+        self.assertEqual(response.data[0]['school_id'], user.school_id)
+        self.assertEqual(response.data[0]['study_year'], None)
