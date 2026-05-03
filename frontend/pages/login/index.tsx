@@ -2,9 +2,10 @@
 
 import { useState } from "react";
 import { useRouter } from "next/router";
-import { login } from '@/services/auth';
+import { login, getMe } from '@/services/auth';
 import { saveTokens } from '@/lib/tokens';
 import { AxiosError } from 'axios';
+import { useAuth } from '@/context/AuthContext';
 
 import Particles from "@/components/auth/Particles";
 import PillButton from "@/components/auth/PillButton";
@@ -87,6 +88,7 @@ function Message({ text, type }: { text: string; type: "error" | "success" }) {
 // ─── Main Component ───────────────────────────────────────
 function LoginPageContent() {
   const router = useRouter();
+  const { setUser } = useAuth();
   const [page] = useState<Page>("Login");
   const [cardKey] = useState(0);
 
@@ -139,7 +141,16 @@ function LoginPageContent() {
     setLoginLoading(true);
     try {
       const { data } = await login({ email, password });
-      saveTokens({ access: data.access, refresh: "" });
+      saveTokens({ access: data.access });
+      if (data.user) {
+        setUser(data.user);
+      } else {
+        try {
+          const me = await getMe();
+          setUser(me.data);
+        } catch {
+        }
+      }
       router.push("/home");
     } catch (error: unknown) {
       if (error instanceof AxiosError) {

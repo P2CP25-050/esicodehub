@@ -6,6 +6,8 @@ const apiClient = axios.create({
   withCredentials: true,
 });
 
+let refreshPromise: Promise<string | null> | null = null;
+
 
 
 
@@ -44,23 +46,40 @@ apiClient.interceptors.response.use(
       originalRequest._retry = true;
 
       try {
-        const refreshClient = axios.create({
-          baseURL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api',
-          withCredentials: true,
-          headers: {
-            'Content-Type': 'application/json',
-          },
-        });
+        if (!refreshPromise) {
+          refreshPromise = (async () => {
+            const refreshClient = axios.create({
+              baseURL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api',
+              withCredentials: true,
+              headers: {
+                'Content-Type': 'application/json',
+              },
+            });
 
-        const response = await refreshClient.post('/auth/token/refresh/', {});
+            const response = await refreshClient.post('/auth/token/refresh/', {});
+            const access = response.data?.access ?? null;
+            if (access) {
+              saveTokens({ access });
+            }
+            return access;
+          })().finally(() => {
+            refreshPromise = null;
+          });
+        }
 
-        saveTokens({ access: response.data.access });
+        const access = await refreshPromise;
+        if (!access) {
+          throw error;
+        }
 
-        if (originalRequest.headers) {
-          originalRequest.headers.set(
-            'Authorization',
-            `Bearer ${response.data.access}`
-          );
+        if (!originalRequest.headers) {
+          originalRequest.headers = {};
+        }
+
+        if (typeof originalRequest.headers.set === 'function') {
+          originalRequest.headers.set('Authorization', `Bearer ${access}`);
+        } else {
+          originalRequest.headers.Authorization = `Bearer ${access}`;
         }
 
         return apiClient(originalRequest);

@@ -23,7 +23,18 @@ class Assignment(models.Model):
     subject = models.ForeignKey('accounts.Subject', on_delete=models.PROTECT)
     title = models.CharField(max_length=255)
     description = models.TextField(blank=True)
+    description_pdf = models.CharField(
+        max_length=500,
+        blank=True,
+        null=True,
+        help_text='GCS path to the assignment description PDF file.',
+        )
     target_year = models.CharField(max_length=3, choices=TargetYear.choices)
+    languages = models.JSONField(
+        default=list,
+        blank=True,
+        help_text='List of programming languages for this assignment. e.g. ["python", "c"]',
+    )
     target_sections = models.JSONField(default=list, blank=True)
     target_groups = models.JSONField(default=list, blank=True)
     deadline = models.DateTimeField()
@@ -55,6 +66,36 @@ class Assignment(models.Model):
         if timezone.now() <= self.deadline:
             return True
         return self.allow_late
+
+    def get_targeted_students(self):
+        """Return active user accounts targeted by this assignment."""
+        from django.contrib.auth import get_user_model
+        from apps.esi_db.models import EsiStudent
+
+        esi_students = EsiStudent.objects.filter(study_year=self.target_year)
+
+        if self.target_sections:
+            target_sections = [
+                str(section).strip()
+                for section in self.target_sections
+                if str(section).strip()
+            ]
+            esi_students = esi_students.filter(section__in=target_sections)
+
+        if self.target_groups:
+            target_groups = [
+                int(str(group).strip())
+                for group in self.target_groups
+                if str(group).strip().isdigit()
+            ]
+            esi_students = esi_students.filter(group__in=target_groups)
+
+        school_ids = esi_students.values_list('school_id', flat=True)
+        User = get_user_model()
+        return User.objects.filter(
+            role=User.Role.STUDENT,
+            school_id__in=school_ids,
+        )
 
     def __str__(self):
         return f"{self.title} ({self.target_year}) by {self.professor.email}"
