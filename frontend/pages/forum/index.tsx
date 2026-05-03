@@ -146,7 +146,7 @@ function ForumContent() {
 
   return (
     <div className="min-h-screen bg-[#f0f4ff] font-sans text-[#1a2340]">
-      <Header activePage="Forum" />
+      <Header activePage="Q&A Forums" />
 
       <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6 sm:py-8 pb-20">
         {/* Breadcrumb */}
