@@ -3,7 +3,7 @@ import Head from 'next/head';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
-import { useAuth } from '@/hooks/useAuth';
+import { useAuth } from '@/context/AuthContext';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
 
 // ─── Animated counter hook ───────────────────────────────────────────────────

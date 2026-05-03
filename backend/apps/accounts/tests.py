@@ -235,6 +235,7 @@ class PublicProfileApiTests(TestCase):
             visibility=PersonalSubmission.Visibility.PRIVATE,
             gcs_prefix=f'personal/{self.student.id}/private/',
         )
+        self.client.force_authenticate(user=self.student)
 
     def test_public_profile_filters_private_submissions_and_hides_professor_fields(self):
         response = self.client.get(f'/api/profiles/{self.student.school_id}/')
@@ -273,6 +274,17 @@ class PublicProfileApiTests(TestCase):
 class PublicProfileSearchApiTests(TestCase):
     def setUp(self):
         self.client = APIClient()
+        self.requester = User.objects.create_user(
+            email='requester@esi.dz',
+            password='pass1234',
+            role='student',
+            first_name='Requester',
+            last_name='User',
+            school_id='00/0000',
+            is_active=True,
+            is_verified=True,
+        )
+        self.client.force_authenticate(user=self.requester)
 
     def test_search_returns_only_verified_users_and_limits_results(self):
         for index in range(21):

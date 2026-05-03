@@ -1,5 +1,6 @@
 from django.urls import path
 from .views import (
+    AssignmentDescriptionPDFUploadView,
     AssignmentDetailView,
     AssignmentListCreateView,
     ProfessorSubmissionDetailView,
@@ -14,6 +15,13 @@ urlpatterns = [
     # Assignment CRUD
     path('', AssignmentListCreateView.as_view(), name='assignment-list-create'),
     path('<int:pk>/', AssignmentDetailView.as_view(), name='assignment-detail'),
+
+    # PDF description upload
+    path(
+        '<int:pk>/upload-description/',
+        AssignmentDescriptionPDFUploadView.as_view(),
+        name='assignment-upload-description',
+    ),
 
     # Student submission endpoints
     path('<int:pk>/submit/', StudentSubmitView.as_view(), name='student-submit'),

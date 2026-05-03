@@ -14,7 +14,7 @@ import type { IDisposable, editor as MonacoEditorNS } from 'monaco-editor';
 
 import Header from '@/components/submissions/Header';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
-import { useAuth } from '@/hooks/useAuth';
+import { useAuth } from '@/context/AuthContext';
 import {
   createOrReplaceReview,
   getReviews,

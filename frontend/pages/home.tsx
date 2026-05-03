@@ -8,7 +8,7 @@ import UpcomingDeadlines from "@/components/home/UpcomingDeadlines";
 import QuickStats from "@/components/home/QuickStats";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import type { Assignment } from "@/services/assignments/assignments.types";
-import { useAuth } from "@/hooks/useAuth";
+import { useAuth } from "@/context/AuthContext";
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -96,7 +96,7 @@ function buildStats(
 function HomePageContent() {
   // useAuth is the single source of truth — it reads from the same context
   // that the Header and ProtectedRoute already use, so role is always correct.
-  const { user } = useAuth();
+  const { user, isAuthenticated, isLoading } = useAuth();
 
   const [submissionsLoading, setSubmissionsLoading] = useState(true);
   const [assignmentsLoading, setAssignmentsLoading] = useState(true);
@@ -107,6 +107,7 @@ function HomePageContent() {
   const [submissionCount,    setSubmissionCount]    = useState(0);
 
   useEffect(() => {
+    if (isLoading || !isAuthenticated) return;
     async function fetchData() {
       const [subsResult, assignResult] = await Promise.allSettled([
         import("../services/submissions").then((m) => m.listSubmissions({ page: 1 })),
@@ -138,7 +139,7 @@ function HomePageContent() {
     }
 
     fetchData();
-  }, []);
+  }, [isAuthenticated, isLoading]);
 
   // Derive display values from the auth user
   const role      = user?.role === "professor" ? "professor" : "student";

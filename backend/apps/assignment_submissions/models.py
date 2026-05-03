@@ -23,6 +23,12 @@ class Assignment(models.Model):
     subject = models.ForeignKey('accounts.Subject', on_delete=models.PROTECT)
     title = models.CharField(max_length=255)
     description = models.TextField(blank=True)
+    description_pdf = models.CharField(
+        max_length=500,
+        blank=True,
+        null=True,
+        help_text='GCS path to the assignment description PDF file.',
+        )
     target_year = models.CharField(max_length=3, choices=TargetYear.choices)
     languages = models.JSONField(
         default=list,
