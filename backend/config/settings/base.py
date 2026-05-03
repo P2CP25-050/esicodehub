@@ -51,6 +51,7 @@ INSTALLED_APPS = [
     'apps.personal_submissions',
     'apps.assignment_submissions',
     'apps.forum',
+    'apps.notifications',
     'apps.plagiarism',
 ]
 

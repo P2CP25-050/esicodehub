@@ -141,12 +141,9 @@ function RegisterPageContent() {
   }, []);
 
   // ── Role-based redirect ──
-  const redirectToDashboard = useCallback(
-    (_role: Role) => {
-      router.push('/home');
-    },
-    [router]
-  );
+  const redirectToDashboard = useCallback(() => {
+    router.push('/home');
+  }, [router]);
 
   // ── 60s resend cooldown timer ──
   const startCooldown = useCallback(() => {
@@ -260,7 +257,7 @@ function RegisterPageContent() {
       saveTokens(res.data);
       // redirect based on role from backend response
       goTo("success");
-      setTimeout(() => redirectToDashboard(res.data.user.role), 1800);
+      setTimeout(() => redirectToDashboard(), 1800);
     } catch (err: unknown) {
 	if (err instanceof AxiosError) {
 		const status = err.response?.status;

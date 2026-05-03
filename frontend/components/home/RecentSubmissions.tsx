@@ -1,7 +1,6 @@
 import Link from "next/link";
 import SkeletonCard from "./SkeletonCard";
-// Review 4: reuse the shared relative-time helper instead of a local duplicate
-import { relativeTime } from "../../utils/time";
+import { timeAgo } from "../../utils/time";
 
 const LANG_COLORS: Record<string, { bg: string; text: string }> = {
   Python:     { bg: "#3572A5", text: "#fff" },
@@ -41,7 +40,7 @@ function SubmissionCard({ sub }: { sub: Submission }) {
         <span className="inline-block w-4 h-4 rounded-full bg-gradient-to-br from-[#1d6ef5] to-[#00c6ff] text-white text-[8px] font-bold flex items-center justify-center leading-none">
           {(sub.owner_name ?? "?")[0].toUpperCase()}
         </span>
-        {sub.owner_name ?? "Unknown"} · {relativeTime(sub.created_at)}
+        {sub.owner_name ?? "Unknown"} · {timeAgo(sub.created_at)}
       </p>
       <span
         className="inline-block px-2.5 py-0.5 rounded-full text-[11px] font-bold"

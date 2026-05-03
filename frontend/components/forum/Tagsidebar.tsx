@@ -9,7 +9,6 @@ interface TagSidebarProps {
   // Mobile drawer
   isOpen: boolean;
   onClose: () => void;
-  onAskQuestion?: () => void;
 }
 
 export function TagSidebar({
@@ -20,7 +19,6 @@ export function TagSidebar({
   onClear,
   isOpen,
   onClose,
-  onAskQuestion,
 }: TagSidebarProps) {
   return (
     <>
@@ -42,7 +40,7 @@ export function TagSidebar({
       >
         <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100">
           <span className="text-sm font-bold text-slate-700 uppercase tracking-widest">
-            Forum Menu
+            Filter by Tag
           </span>
           <button
             onClick={onClose}
@@ -54,54 +52,20 @@ export function TagSidebar({
           </button>
         </div>
 
-        <div className="p-5 flex flex-col gap-4">
-          {onAskQuestion && (
-            <button
-              onClick={() => { onAskQuestion(); onClose(); }}
-              className="
-                w-full px-4 py-2.5 rounded-xl text-sm font-bold text-white
-                bg-blue-600 hover:bg-blue-700
-                shadow-[0_2px_8px_rgba(29,110,245,0.3)]
-                active:scale-95 transition-all
-              "
-            >
-              + Ask a Question
-            </button>
-          )}
-
-          <div>
-            <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3">
-              Filter by Tag
-            </p>
-            <TagList
-              popularTags={popularTags}
-              activeTag={activeTag}
-              onTagClick={(tag) => { onTagClick(tag); onClose(); }}
-              onClear={() => { onClear(); onClose(); }}
-              className="flex flex-wrap gap-2"
-              clearLabel="✕ Clear filter"
-              clearClassName="text-xs px-3 py-1.5 rounded-full border font-medium bg-red-50 text-red-500 border-red-200"
-              tagClassName="text-xs px-3 py-1.5 rounded-full border font-medium transition-all"
-            />
-          </div>
-        </div>
+        <TagList
+          popularTags={popularTags}
+          activeTag={activeTag}
+          onTagClick={(tag) => { onTagClick(tag); onClose(); }}
+          onClear={() => { onClear(); onClose(); }}
+          className="p-5 flex flex-wrap gap-2 overflow-y-auto"
+          clearLabel="✕ Clear filter"
+          clearClassName="text-xs px-3 py-1.5 rounded-full border font-medium bg-red-50 text-red-500 border-red-200"
+          tagClassName="text-xs px-3 py-1.5 rounded-full border font-medium transition-all"
+        />
       </aside>
 
       {/* ── Desktop sidebar ── */}
       <aside className="hidden lg:flex flex-col gap-4 w-52 xl:w-56 shrink-0 sticky top-6">
-        {onAskQuestion && (
-          <button
-            onClick={onAskQuestion}
-            className="
-              w-full px-4 py-2.5 rounded-xl text-sm font-bold text-white
-              bg-blue-600 hover:bg-blue-700
-              shadow-[0_2px_8px_rgba(29,110,245,0.3)]
-              active:scale-95 transition-all
-            "
-          >
-            + Ask a Question
-          </button>
-        )}
         <div className="bg-white rounded-2xl border border-slate-200 p-4">
           <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3">
             Filter by Tag

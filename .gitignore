@@ -8,3 +8,5 @@ data/
 **/static/
 
 gcs-credentials.json
+
+github-sa-key.json

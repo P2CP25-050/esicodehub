@@ -12,7 +12,7 @@ import axios from 'axios';
 
 import Header from '@/components/submissions/Header';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
-import { useAuth } from '@/hooks/useAuth';
+import { useAuth } from '@/context/AuthContext';
 import {
   getAssignment,
   getMySubmission,
@@ -24,7 +24,7 @@ import type {
   Assignment,
   AssignmentSubmission,
 } from '@/services/assignments';
-import { relativeTime } from '@/utils/time';
+import { timeAgo } from '@/utils/time';
 
 const formatDateTime = (value: string): string => {
   const date = new Date(value);
@@ -76,7 +76,7 @@ const getCountdown = (deadlineValue: string): string => {
 
   if (Number.isNaN(diff)) return 'Unavailable';
   if (diff <= 0) {
-    return `Deadline passed ${relativeTime(deadlineValue)}`;
+    return `Deadline passed ${timeAgo(deadlineValue)}`;
   }
 
   const days = Math.floor(diff / 86_400_000);
@@ -209,6 +209,9 @@ function AssignmentDetailPageContent() {
   const canSubmit = Boolean(assignment?.is_open);
   const hasSubmission = Boolean(mySubmission);
   const showSubmissionClosed = Boolean(assignment && !assignment.is_open);
+  const deadlinePassed = assignment
+    ? new Date(assignment.deadline).getTime() <= Date.now()
+    : false;
 
   useEffect(() => {
     if (!toast) return;
@@ -557,6 +560,11 @@ function AssignmentDetailPageContent() {
     void router.push('/assignments');
   };
 
+  const handleRunPlagiarism = () => {
+    if (!assignmentId || !deadlinePassed) return;
+    void router.push(`/assignments/${assignmentId}/plagiarism`);
+  };
+
   if (!router.isReady || loadingAssignment || (loadingRoleData && !initialDataLoaded)) {
     return <LoadingSkeleton />;
   }
@@ -665,27 +673,51 @@ function AssignmentDetailPageContent() {
                       Professor: {assignment.professor_name}
                     </p>
                     <p className="mt-1 text-xs text-slate-400">
-                      Posted {relativeTime(assignment.created_at)}
+                      Posted {timeAgo(assignment.created_at)}
                     </p>
                   </div>
                 </div>
 
-                {isProfessor && isCreator && (
+                {(isProfessor || isCreator) && (
                   <div className="flex flex-wrap items-center gap-2">
-                    <Link
-                      href={`/assignments/${assignment.id}/edit`}
-                      className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50"
-                    >
-                      Edit
-                    </Link>
-                    <button
-                      type="button"
-                      onClick={handleDeleteAssignment}
-                      disabled={deleteLoading}
-                      className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-2 text-sm font-semibold text-rose-700 transition-colors hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-60"
-                    >
-                      {deleteLoading ? 'Deleting...' : 'Delete'}
-                    </button>
+                    {isProfessor && (
+                      <button
+                        type="button"
+                        onClick={handleRunPlagiarism}
+                        disabled={!deadlinePassed}
+                        title={
+                          deadlinePassed
+                            ? 'Run plagiarism check'
+                            : 'Available after the deadline passes.'
+                        }
+                        className={
+                          'rounded-xl px-4 py-2 text-sm font-semibold transition-colors ' +
+                          (deadlinePassed
+                            ? 'bg-slate-900 text-white hover:bg-slate-800'
+                            : 'cursor-not-allowed bg-slate-200 text-slate-500')
+                        }
+                      >
+                        Run Plagiarism Check
+                      </button>
+                    )}
+                    {isCreator && (
+                      <Link
+                        href={`/assignments/${assignment.id}/edit`}
+                        className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50"
+                      >
+                        Edit
+                      </Link>
+                    )}
+                    {isCreator && (
+                      <button
+                        type="button"
+                        onClick={handleDeleteAssignment}
+                        disabled={deleteLoading}
+                        className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-2 text-sm font-semibold text-rose-700 transition-colors hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-60"
+                      >
+                        {deleteLoading ? 'Deleting...' : 'Delete'}
+                      </button>
+                    )}
                   </div>
                 )}
               </div>

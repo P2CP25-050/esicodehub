@@ -2,9 +2,7 @@ import { useState, CSSProperties, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from 'next/router';
-import { useAuth } from "@/hooks/useAuth";
-import { logout } from '@/services/auth';
-import { clearTokens } from '@/lib/tokens';
+import { useAuth } from "@/context/AuthContext";
 import { getProfile } from '@/services/profile/api';
 
 interface HeaderProps {
@@ -30,18 +28,18 @@ const normalizeAvatarUrl = (value: unknown): string | null => {
 export default function Header({ activePage = "" }: HeaderProps) {
   const [hoveredNav, setHoveredNav] = useState<string | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
-  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(() => {
+    if (typeof window === 'undefined') return null;
+    return normalizeAvatarUrl(window.localStorage.getItem(PROFILE_AVATAR_KEY));
+  });
   const router = useRouter();
-  const { user } = useAuth();
+  const { user, logout: logoutContext } = useAuth();
 
   const userName = user ? `${user.first_name} ${user.last_name}` : "—";
   const userRole = user?.role ?? "student";
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
-
-    const fromStorage = normalizeAvatarUrl(window.localStorage.getItem(PROFILE_AVATAR_KEY));
-    setAvatarUrl(fromStorage);
 
     const onAvatarUpdated = (event: Event) => {
       const customEvent = event as CustomEvent<{ avatarUrl?: string | null }>;
@@ -115,8 +113,12 @@ export default function Header({ activePage = "" }: HeaderProps) {
 
   // Close drawer on route change
   useEffect(() => {
-    setMenuOpen(false);
-  }, [router.pathname]);
+    const handleRouteChange = () => setMenuOpen(false);
+    router.events.on('routeChangeStart', handleRouteChange);
+    return () => {
+      router.events.off('routeChangeStart', handleRouteChange);
+    };
+  }, [router.events]);
 
   // Prevent body scroll when drawer is open
   useEffect(() => {
@@ -125,13 +127,7 @@ export default function Header({ activePage = "" }: HeaderProps) {
   }, [menuOpen]);
 
   const handleLogout = async () => {
-    try {
-      await logout();
-    } catch {
-    } finally {
-      clearTokens();
-      router.replace('/login');
-    }
+    await logoutContext();
   };
 
   return (
