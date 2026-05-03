@@ -1,3 +1,5 @@
+import os
+import re
 import requests
 from bs4 import BeautifulSoup
 
@@ -40,15 +42,25 @@ def parse_moss_results(moss_url: str) -> list[dict]:
             continue
 
         def extract(link):
-            # link text is like "23_main.py (72%)"
+            # link text is like "23_main.py (72%)" or may include a path
             text = link.get_text()
             try:
                 pct = int(text.split('(')[1].rstrip('%)'))
                 filename = text.split('(')[0].strip()
-                student_id = int(filename.split('_')[0])
-                return student_id, pct
             except (IndexError, ValueError):
                 return None, None
+
+            base_name = os.path.basename(filename)
+            match = re.match(r'(-?\d+)_', base_name)
+            if not match:
+                return None, None
+
+            try:
+                student_id = int(match.group(1))
+            except ValueError:
+                return None, None
+
+            return student_id, pct
 
         sid_a, pct_a = extract(link_a)
         sid_b, pct_b = extract(link_b)

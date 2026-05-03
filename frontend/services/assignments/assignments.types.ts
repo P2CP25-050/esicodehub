@@ -10,6 +10,7 @@ export interface Assignment {
   description: string;
   subject: Subject;
   target_year: string;
+  languages: string[];
   target_sections: string[];
   target_groups: number[];
   deadline: string;
@@ -27,6 +28,7 @@ export interface AssignmentCreatePayload {
   description?: string;
   subject: number;
   target_year: string;
+  languages: string[];
   target_sections?: string[];
   target_groups?: number[];
   deadline: string;

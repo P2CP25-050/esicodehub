@@ -29,12 +29,23 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/', include('apps.core.urls')),
     path('api/auth/', include('apps.accounts.urls')),
+    path('api/profiles/', include('apps.accounts.public_urls')),
     path('api/subjects/', subject_list, name='subject-list'),
-    path('api/assignments/', include('apps.assignment_submissions.urls')),
+    path(
+        'api/assignments/',
+        include(
+            [
+                path('', include('apps.assignment_submissions.urls')),
+                path('', include('apps.plagiarism.urls')),
+            ]
+        ),
+    ),
     path(
         'api/personal-submissions/',
         include('apps.personal_submissions.urls'),
     ),
+    path('api/forum/', include('apps.forum.urls')),
+    path('api/notifications/', include('apps.notifications.urls')),
     path('api/auth/token/', TokenObtainPairView.as_view()),
     path('api/auth/token/refresh/', TokenRefreshView.as_view()),
 ]

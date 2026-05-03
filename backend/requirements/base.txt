@@ -41,3 +41,4 @@ google-cloud-storage==3.10.1
 google-crc32c==1.7.1
 redis==7.4.0
 typing-extensions==4.15.0
+google-genai==1.74.0

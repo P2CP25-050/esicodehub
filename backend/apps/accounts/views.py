@@ -1,6 +1,8 @@
 from django.core.mail import send_mail
 from django.contrib.auth import authenticate
 from django.conf import settings
+from django.db.models import Q
+from django.shortcuts import get_object_or_404
 from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
@@ -16,8 +18,12 @@ from apps.accounts.serializers import (
     LoginSerializer,
     ProfileUpdateSerializer,
     UserProfileSerializer,
+    PublicProfileSerializer,
+    ProfileSearchResultSerializer,
 )
+from apps.forum.models import Answer, Question
 from apps.esi_db.models import EsiStudent, EsiProfessor
+from apps.personal_submissions.models import PersonalSubmission
 
 
 def _set_refresh_cookie(response, refresh_token):
@@ -332,6 +338,94 @@ def profile(request):
         request.user.refresh_from_db()
 
     serializer = UserProfileSerializer(request.user, context={'request': request})
+    return Response(serializer.data)
+
+
+def _build_public_profile_stats(user):
+    return {
+        'submissions_count': PersonalSubmission.objects.filter(
+            owner=user,
+            visibility=PersonalSubmission.Visibility.PUBLIC,
+        ).count(),
+        'questions_count': Question.objects.filter(author=user).count(),
+        'answers_count': Answer.objects.filter(author=user).count(),
+        'accepted_answers_count': Answer.objects.filter(
+            author=user,
+            is_accepted=True,
+        ).count(),
+    }
+
+
+def _build_public_recent_activity(user):
+    if user.role != User.Role.STUDENT:
+        return {}
+
+    return {
+        'submissions': PersonalSubmission.objects.filter(
+            owner=user,
+            visibility=PersonalSubmission.Visibility.PUBLIC,
+        ).order_by('-created_at')[:5],
+        'questions': Question.objects.filter(author=user).order_by('-created_at')[:5],
+        'answers': Answer.objects.select_related('question').filter(
+            author=user,
+        ).order_by('-created_at')[:5],
+    }
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def profile_public(request, school_id):
+    """Return a user's public profile by school_id."""
+    user = get_object_or_404(User.objects.select_related('profile'), school_id=school_id)
+
+    student_map = {}
+    if user.role == User.Role.STUDENT and user.school_id:
+        student = EsiStudent.objects.filter(school_id=user.school_id).first()
+        if student is not None:
+            student_map[user.school_id] = student
+
+    serializer = PublicProfileSerializer(
+        user,
+        context={
+            'request': request,
+            'stats': _build_public_profile_stats(user),
+            'recent_activity': _build_public_recent_activity(user),
+            'student_map': student_map,
+        },
+    )
+    return Response(serializer.data)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def profile_search(request):
+    """Search verified users by name or school ID."""
+    query = (request.query_params.get('q') or '').strip()
+    if not query:
+        return Response([])
+
+    queryset = (
+        User.objects.filter(is_verified=True)
+        .select_related('profile')
+        .filter(
+            Q(first_name__icontains=query)
+            | Q(last_name__icontains=query)
+            | Q(school_id__icontains=query)
+        )
+        .order_by('last_name', 'first_name', 'school_id')[:20]
+    )
+
+    school_ids = [user.school_id for user in queryset if user.school_id]
+    student_map = {
+        student.school_id: student
+        for student in EsiStudent.objects.filter(school_id__in=school_ids)
+    }
+
+    serializer = ProfileSearchResultSerializer(
+        queryset,
+        many=True,
+        context={'request': request, 'student_map': student_map},
+    )
     return Response(serializer.data)
 
 
