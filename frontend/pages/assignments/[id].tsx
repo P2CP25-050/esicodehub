@@ -24,7 +24,7 @@ import type {
   Assignment,
   AssignmentSubmission,
 } from '@/services/assignments';
-import { relativeTime } from '@/utils/time';
+import { timeAgo } from '@/utils/time';
 
 const formatDateTime = (value: string): string => {
   const date = new Date(value);
@@ -76,7 +76,7 @@ const getCountdown = (deadlineValue: string): string => {
 
   if (Number.isNaN(diff)) return 'Unavailable';
   if (diff <= 0) {
-    return `Deadline passed ${relativeTime(deadlineValue)}`;
+    return `Deadline passed ${timeAgo(deadlineValue)}`;
   }
 
   const days = Math.floor(diff / 86_400_000);
@@ -673,7 +673,7 @@ function AssignmentDetailPageContent() {
                       Professor: {assignment.professor_name}
                     </p>
                     <p className="mt-1 text-xs text-slate-400">
-                      Posted {relativeTime(assignment.created_at)}
+                      Posted {timeAgo(assignment.created_at)}
                     </p>
                   </div>
                 </div>
