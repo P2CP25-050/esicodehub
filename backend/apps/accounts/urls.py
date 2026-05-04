@@ -10,4 +10,6 @@ urlpatterns = [
     path('me/', views.me, name='me'),
     path('profile/', views.profile, name='profile'),
     path('token/refresh/', views.token_refresh, name='token-refresh'),
+    path('forgot-password/', views.ForgotPasswordView.as_view(), name='forgot-password'),
+    path('reset-password/', views.ResetPasswordView.as_view(), name='reset-password'),
 ]
