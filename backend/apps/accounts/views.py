@@ -1,3 +1,7 @@
+import os
+from rest_framework.views import APIView
+from rest_framework.permissions import AllowAny
+from django.core.mail import send_mail
 from django.contrib.auth import authenticate
 from django.conf import settings
 from django.db.models import Q
@@ -8,8 +12,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.serializers import TokenRefreshSerializer
-
-from apps.accounts.models import User, EmailVerification, Profile
+from apps.accounts.models import User, EmailVerification, Profile, PasswordResetToken
 from apps.accounts.serializers import (
     RegisterSerializer,
     VerifyEmailSerializer,
@@ -431,3 +434,119 @@ def subject_list(request):
     subjects = Subject.objects.all().order_by('code')
     data = [{'id': s.id, 'name': s.name, 'code': s.code} for s in subjects]
     return Response(data)
+
+
+class ForgotPasswordView(APIView):
+    """
+    Request a password reset link via email.
+    Always returns 200 to prevent user enumeration.
+    """
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        email = request.data.get('email', '').strip().lower()
+        if not email:
+            return Response(
+                {'error': 'Email is required.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        # Always return the same message whether email exists or not
+        # This prevents attackers from discovering which emails are registered
+        try:
+            user = User.objects.get(email=email, is_verified=True)
+        except User.DoesNotExist:
+            return Response(
+                {'message': 'If this email exists, a reset link has been sent.'}
+            )
+
+        # Invalidate all existing unused tokens for this user
+        PasswordResetToken.objects.filter(
+            user=user,
+            is_used=False,
+        ).update(is_used=True)
+
+        # Create a fresh token
+        token = PasswordResetToken.generate_token()
+        PasswordResetToken.objects.create(user=user, token=token)
+
+        # Build the reset URL
+        frontend_url = os.getenv('FRONTEND_URL', 'http://localhost:3000')
+        reset_url = f"{frontend_url}/reset-password?token={token}"
+
+        # send_password_reset_email.delay(user.email, reset_url)
+        send_mail(
+            subject='ESI Code Hub – Password Reset',
+            message=(
+                f'Hello {user.first_name},\n\n'
+                f'You requested a password reset. Click the link below to set a new password:\n\n'
+                f'{reset_url}\n\n'
+                f'This link expires in 1 hour.\n\n'
+                f'If you did not request this, please ignore this email.'
+            ),
+            from_email=None,  # uses DEFAULT_FROM_EMAIL
+            recipient_list=[user.email],
+        )
+
+        return Response(
+            {'message': 'If this email exists, a reset link has been sent.'}
+        )
+
+
+class ResetPasswordView(APIView):
+    """
+    Confirm a password reset using the token from the email link.
+    Validates the token, updates the password, and marks the token as used.
+    """
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        token_str = request.data.get('token', '')
+        password = request.data.get('password', '')
+        password2 = request.data.get('password_confirm', '')
+
+        if not all([token_str, password, password2]):
+            return Response(
+                {'error': 'All fields are required.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        if password != password2:
+            return Response(
+                {'error': 'Passwords do not match.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        if len(password) < 8:
+            return Response(
+                {'error': 'Password must be at least 8 characters.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        try:
+            token = PasswordResetToken.objects.select_related('user').get(
+                token=token_str,
+            )
+        except PasswordResetToken.DoesNotExist:
+            return Response(
+                {'error': 'Invalid or expired reset link.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        if not token.is_valid():
+            return Response(
+                {'error': 'This reset link has expired. Please request a new one.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        # Update the password and mark the token as used
+        user = token.user
+        user.set_password(password)
+        user.save(update_fields=['password'])
+
+        token.is_used = True
+        token.save(update_fields=['is_used'])
+
+        return Response(
+            {'message': 'Password reset successfully. You can now log in.'}
+        )
