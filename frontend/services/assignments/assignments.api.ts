@@ -46,7 +46,7 @@ export const uploadAssignmentDescriptionPdf = async (
   file: File
 ): Promise<Assignment> => {
   const formData = new FormData();
-  formData.append('description_pdf', file);
+  formData.append('description_pdf', file, file.name);
   const res = await apiClient.patch<Assignment>(
     `/assignments/${assignmentId}/`,
     formData
