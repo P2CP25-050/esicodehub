@@ -47,6 +47,15 @@ const formatFileSize = (value: number): string => {
 const formatPlural = (count: number, word: string): string =>
   `${count} ${word}${count === 1 ? '' : 's'}`;
 
+const normalizeFilePath = (value: string): string =>
+  value.replace(/\\/g, '/').replace(/^\/+/, '');
+
+const getUploadPath = (file: File): string => {
+  const webkitPath = (file as File & { webkitRelativePath?: string }).webkitRelativePath;
+  const rawPath = webkitPath && webkitPath.trim().length > 0 ? webkitPath : file.name;
+  return normalizeFilePath(rawPath);
+};
+
 const getDeadlineBadge = (assignment: Assignment) => {
   const now = new Date();
   const deadline = new Date(assignment.deadline);
@@ -515,11 +524,8 @@ function AssignmentDetailPageContent() {
     setSectionError(null);
 
     try {
-      await submitToAssignment(
-        assignmentId,
-        selectedFiles,
-        selectedFiles.map((file) => file.name)
-      );
+      const filePaths = selectedFiles.map(getUploadPath);
+      await submitToAssignment(assignmentId, selectedFiles, filePaths);
       await reloadStudentSubmission();
       setSelectedFiles([]);
       setFileInputKey((previous) => previous + 1);

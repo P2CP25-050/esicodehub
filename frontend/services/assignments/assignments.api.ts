@@ -61,19 +61,24 @@ export const deleteAssignment = async (id: number): Promise<void> => {
 export const submitToAssignment = async (
   id: number,
   files: File[],
-  filePaths: string[]
+  filePaths?: string[]
 ): Promise<AssignmentSubmission> => {
-  if (files.length !== filePaths.length) {
-    throw new Error(
-      `files and filePaths length mismatch: got ${files.length} files and ${filePaths.length} paths`
-    );
-  }
+  const normalizePath = (value: string): string =>
+    value.replace(/\\/g, '/').replace(/^\/+/, '');
+
+  const resolvedPaths =
+    filePaths && filePaths.length === files.length
+      ? filePaths.map((path, index) => {
+          const trimmed = path?.trim();
+          return trimmed ? normalizePath(trimmed) : files[index].name;
+        })
+      : files.map((file) => file.name);
 
   const formData = new FormData();
 
   files.forEach((file, index) => {
-    formData.append('files', file);
-    formData.append('file_paths', filePaths[index]);
+    formData.append('files', file, file.name);
+    formData.append('file_paths', resolvedPaths[index]);
   });
 
   const res = await apiClient.post<AssignmentSubmission>(
