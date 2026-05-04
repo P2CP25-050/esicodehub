@@ -25,7 +25,7 @@ import {
   getFileContent,
   getSubmission,
 } from '@/services/submissions/submissions.api';
-import { relativeTime } from '@/utils/time';
+import { timeAgo } from '@/utils/time';
 
 const MonacoEditor = dynamic<EditorProps>(
   () => import('@monaco-editor/react').then((module) => module.default),
@@ -835,7 +835,7 @@ function SubmissionDetailPage() {
                     <Badge label={submission.language} />
                     <Badge label={submission.submission_type} />
                     <Badge label={submission.visibility} />
-                    <Badge label={relativeTime(submission.created_at)} />
+                    <Badge label={timeAgo(submission.created_at)} />
                     {submission.owner ? (
                       <Badge
                         label={`${submission.owner.first_name} ${submission.owner.last_name}`}
