@@ -41,6 +41,19 @@ export const updateAssignment = async (
   return res.data;
 };
 
+export const uploadAssignmentDescriptionPdf = async (
+  assignmentId: number,
+  file: File
+): Promise<Assignment> => {
+  const formData = new FormData();
+  formData.append('description_pdf', file);
+  const res = await apiClient.patch<Assignment>(
+    `/assignments/${assignmentId}/`,
+    formData
+  );
+  return res.data;
+};
+
 export const deleteAssignment = async (id: number): Promise<void> => {
   await apiClient.delete(`/assignments/${id}/`);
 };
