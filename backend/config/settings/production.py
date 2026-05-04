@@ -7,17 +7,17 @@ DEBUG = False
 
 ALLOWED_HOSTS = [
     'api.esicodehub.tech',
-    '*.run.app',
+    '.run.app',
 ]
 
 
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'esicodehub',
-        'USER': 'esicodehub_user',
+        'NAME': os.getenv('POSTGRES_DB', 'esicodehub'),
+        'USER': os.getenv('POSTGRES_USER', 'esicodehub_user'),
         'PASSWORD': os.getenv('POSTGRES_PASSWORD'),
-        'HOST': '/cloudsql/esicodehub:europe-west1:esicodehub-db',
+        'HOST': os.getenv('DATABASE_HOST', '/cloudsql/esicodehub:europe-west1:esicodehub-db'),
         'PORT': '5432',
     }
 }
@@ -37,6 +37,7 @@ CSRF_TRUSTED_ORIGINS = [
 AUTH_COOKIE_SECURE = True
 AUTH_COOKIE_SAMESITE = 'None'
 SESSION_COOKIE_SECURE = True
+CSRF_COOKIE_SECURE = True
 
 
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
@@ -49,8 +50,6 @@ DEFAULT_FROM_EMAIL = f'ESIcodeHub <{os.getenv("EMAIL_HOST_USER")}>'
 
 
 GS_BUCKET_NAME = os.getenv('GCS_BUCKET_NAME')
-GCS_CREDENTIALS_PATH = None
-GS_CREDENTIALS = None
 
 
 CELERY_BROKER_URL = os.getenv('REDIS_URL')
