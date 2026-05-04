@@ -31,6 +31,20 @@ def _get_credentials_path() -> str:
     return credentials_path
 
 
+def _use_adc() -> bool:
+    # Cloud Run/GAE provide Application Default Credentials without a JSON key file.
+    if os.getenv('GOOGLE_APPLICATION_CREDENTIALS'):
+        return False
+    if getattr(settings, 'GCS_CREDENTIALS_PATH', None) or getattr(settings, 'GS_CREDENTIALS', None):
+        return False
+    return bool(
+        os.getenv('GOOGLE_CLOUD_PROJECT')
+        or os.getenv('K_SERVICE')
+        or os.getenv('K_REVISION')
+        or os.getenv('GAE_ENV')
+    )
+
+
 def validate_gcs_configuration() -> list[str]:
     issues = []
 
@@ -38,23 +52,24 @@ def validate_gcs_configuration() -> list[str]:
         issues.append('GCS_BUCKET_NAME is not set.')
 
     credentials_path = None
-    try:
-        credentials_path = _get_credentials_path()
-    except ImproperlyConfigured as exc:
-        issues.append(str(exc))
+    if not _use_adc():
+        try:
+            credentials_path = _get_credentials_path()
+        except ImproperlyConfigured as exc:
+            issues.append(str(exc))
 
-    if credentials_path:
-        if not os.path.exists(credentials_path):
-            issues.append(
-                f'GCS credentials file not found at: {credentials_path}. '
-                'Ensure docker-compose volume mapping is correct.'
-            )
-        else:
-            try:
-                with open(credentials_path, 'r', encoding='utf-8') as handle:
-                    json.load(handle)
-            except Exception as exc:
-                issues.append(f'GCS credentials file is not valid JSON: {exc}')
+        if credentials_path:
+            if not os.path.exists(credentials_path):
+                issues.append(
+                    f'GCS credentials file not found at: {credentials_path}. '
+                    'Ensure docker-compose volume mapping is correct.'
+                )
+            else:
+                try:
+                    with open(credentials_path, 'r', encoding='utf-8') as handle:
+                        json.load(handle)
+                except Exception as exc:
+                    issues.append(f'GCS credentials file is not valid JSON: {exc}')
 
     return issues
 
@@ -63,6 +78,14 @@ def get_gcs_client():
     issues = validate_gcs_configuration()
     if issues:
         raise ImproperlyConfigured(' '.join(issues))
+
+    if _use_adc():
+        try:
+            return storage.Client()
+        except Exception as exc:
+            raise ImproperlyConfigured(
+                f'Failed to initialize Google Cloud Storage client: {exc}'
+            ) from exc
 
     credentials_path = _get_credentials_path()
     try:

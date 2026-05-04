@@ -6,7 +6,7 @@ ENV PYTHONUNBUFFERED 1
 WORKDIR /app/backend
 
 COPY requirements/base.txt .
-COPY requirements/production.txt .
+COPY requirements/prod.txt .
 
 RUN apk update && \
     apk add --no-cache \
@@ -18,7 +18,7 @@ RUN apk update && \
     libmagic \
     libffi-dev && \
     pip install --no-cache-dir --upgrade pip setuptools wheel && \
-    pip install --no-cache-dir -r production.txt
+    pip install --no-cache-dir -r prod.txt
 
 COPY . .
 
