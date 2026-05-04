@@ -39,7 +39,8 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
-frontend/.tmp/
+/.tmp/
+*.tmp
 
 
 backend/gunicorn.ctl
