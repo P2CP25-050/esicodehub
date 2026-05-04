@@ -46,25 +46,49 @@ export const uploadAssignmentDescriptionPdf = async (
   file: File,
   metadata?: Partial<AssignmentUpdatePayload>
 ): Promise<Assignment> => {
-  const formData = new FormData();
-  formData.append('description_pdf', file, file.name);
+  const readPdfAsDataUrl = (input: File): Promise<string> =>
+    new Promise((resolve, reject) => {
+      if (typeof FileReader === 'undefined') {
+        reject(new Error('FileReader is not available in this environment.'));
+        return;
+      }
+
+      const reader = new FileReader();
+      reader.onload = () => {
+        if (typeof reader.result === 'string') {
+          resolve(reader.result);
+        } else {
+          reject(new Error('Failed to read PDF file.'));
+        }
+      };
+      reader.onerror = () => {
+        reject(reader.error ?? new Error('Failed to read PDF file.'));
+      };
+      reader.readAsDataURL(input);
+    });
+
+  const payload: Record<string, string | boolean> = {
+    description_pdf: await readPdfAsDataUrl(file),
+  };
+
   if (metadata) {
     if (metadata.title !== undefined) {
-      formData.append('title', metadata.title);
+      payload.title = metadata.title;
     }
     if (metadata.description !== undefined) {
-      formData.append('description', metadata.description);
+      payload.description = metadata.description;
     }
     if (metadata.deadline !== undefined) {
-      formData.append('deadline', metadata.deadline);
+      payload.deadline = metadata.deadline;
     }
     if (metadata.allow_late !== undefined) {
-      formData.append('allow_late', String(metadata.allow_late));
+      payload.allow_late = metadata.allow_late;
     }
   }
+
   const res = await apiClient.patch<Assignment>(
     `/assignments/${assignmentId}/`,
-    formData
+    payload
   );
   return res.data;
 };
