@@ -1,7 +1,6 @@
 import os
 from rest_framework.views import APIView
 from rest_framework.permissions import AllowAny
-from django.core.mail import send_mail
 from django.contrib.auth import authenticate
 from django.conf import settings
 from django.db.models import Q
@@ -23,7 +22,7 @@ from apps.accounts.serializers import (
     PublicProfileSerializer,
     ProfileSearchResultSerializer,
 )
-from apps.accounts.tasks import send_verification_email
+from apps.accounts.tasks import send_verification_email, send_password_reset_email
 from apps.forum.models import Answer, Question
 from apps.esi_db.models import EsiStudent, EsiProfessor
 from apps.personal_submissions.models import PersonalSubmission
@@ -474,20 +473,7 @@ class ForgotPasswordView(APIView):
         frontend_url = os.getenv('FRONTEND_URL', 'http://localhost:3000')
         reset_url = f"{frontend_url}/reset-password?token={token}"
 
-        # send_password_reset_email.delay(user.email, reset_url)
-        send_mail(
-            subject='ESI Code Hub – Password Reset',
-            message=(
-                f'Hello {user.first_name},\n\n'
-                f'You requested a password reset. Click the link below to set a new password:\n\n'
-                f'{reset_url}\n\n'
-                f'This link expires in 1 hour.\n\n'
-                f'If you did not request this, please ignore this email.'
-            ),
-            from_email=None,  # uses DEFAULT_FROM_EMAIL
-            recipient_list=[user.email],
-        )
-
+        send_password_reset_email.delay(user.email, reset_url)
         return Response(
             {'message': 'If this email exists, a reset link has been sent.'}
         )
