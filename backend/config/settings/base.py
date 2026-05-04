@@ -53,6 +53,7 @@ INSTALLED_APPS = [
     'apps.forum',
     'apps.notifications',
     'apps.plagiarism',
+    'apps.reports',
 ]
 
 AUTH_USER_MODEL = 'accounts.User'
@@ -193,3 +194,6 @@ CELERY_RESULT_BACKEND = 'django-db'
 CELERY_ACCEPT_CONTENT = ['json']
 CELERY_TASK_SERIALIZER = 'json'
 CELERY_RESULT_SERIALIZER = 'json'
+
+BACKEND_URL = os.getenv('BACKEND_URL', 'http://localhost:8000')
+ADMIN_EMAIL = os.getenv('ADMIN_EMAIL', 'od_houam@esi.dz')
