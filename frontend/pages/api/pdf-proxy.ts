@@ -47,7 +47,7 @@ export default async function handler(
 
     const arrayBuffer = await upstream.arrayBuffer();
     res.status(200).send(Buffer.from(arrayBuffer));
-  } catch (error) {
+  } catch {
     res.status(500).json({ detail: 'Failed to proxy PDF.' });
   }
 }

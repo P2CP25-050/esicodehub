@@ -12,6 +12,10 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Ignore vendored/generated assets.
+    "public/pdfjs/**",
+    "plagiarism_files/**",
+    ".tmp/**",
   ]),
 ]);
 
