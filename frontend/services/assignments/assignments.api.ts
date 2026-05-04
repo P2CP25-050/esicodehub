@@ -43,10 +43,25 @@ export const updateAssignment = async (
 
 export const uploadAssignmentDescriptionPdf = async (
   assignmentId: number,
-  file: File
+  file: File,
+  metadata?: Partial<AssignmentUpdatePayload>
 ): Promise<Assignment> => {
   const formData = new FormData();
   formData.append('description_pdf', file, file.name);
+  if (metadata) {
+    if (metadata.title !== undefined) {
+      formData.append('title', metadata.title);
+    }
+    if (metadata.description !== undefined) {
+      formData.append('description', metadata.description);
+    }
+    if (metadata.deadline !== undefined) {
+      formData.append('deadline', metadata.deadline);
+    }
+    if (metadata.allow_late !== undefined) {
+      formData.append('allow_late', String(metadata.allow_late));
+    }
+  }
   const res = await apiClient.patch<Assignment>(
     `/assignments/${assignmentId}/`,
     formData

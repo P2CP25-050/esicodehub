@@ -215,7 +215,12 @@ function AssignmentEditPageContent() {
       });
 
       if (selectedPdf) {
-        await uploadAssignmentDescriptionPdf(assignmentId, selectedPdf);
+        await uploadAssignmentDescriptionPdf(assignmentId, selectedPdf, {
+          title: title.trim(),
+          description: description.trim(),
+          deadline: new Date(deadline).toISOString(),
+          allow_late: assignment?.allow_late ?? false,
+        });
       }
 
       await mutate();

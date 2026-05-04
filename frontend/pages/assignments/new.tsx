@@ -484,7 +484,12 @@ function NewAssignmentForm() {
       });
       if (selectedPdf) {
         try {
-          await uploadAssignmentDescriptionPdf(assignment.id, selectedPdf);
+          await uploadAssignmentDescriptionPdf(assignment.id, selectedPdf, {
+            title: assignment.title,
+            description: assignment.description ?? "",
+            deadline: assignment.deadline,
+            allow_late: assignment.allow_late,
+          });
         } catch (error: unknown) {
           setCreatedAssignmentId(assignment.id);
           setSubmitError(
