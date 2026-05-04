@@ -2,10 +2,9 @@
 
 import { useState } from "react";
 import { useRouter } from "next/router";
-import { login, getMe } from '@/services/auth';
+import { login } from '@/services/auth';
 import { saveTokens } from '@/lib/tokens';
 import { AxiosError } from 'axios';
-import { useAuth } from '@/context/AuthContext';
 
 import Particles from "@/components/auth/Particles";
 import PillButton from "@/components/auth/PillButton";
@@ -88,7 +87,6 @@ function Message({ text, type }: { text: string; type: "error" | "success" }) {
 // ─── Main Component ───────────────────────────────────────
 function LoginPageContent() {
   const router = useRouter();
-  const { setUser } = useAuth();
   const [page] = useState<Page>("Login");
   const [cardKey] = useState(0);
 
@@ -142,15 +140,6 @@ function LoginPageContent() {
     try {
       const { data } = await login({ email, password });
       saveTokens({ access: data.access });
-      if (data.user) {
-        setUser(data.user);
-      } else {
-        try {
-          const me = await getMe();
-          setUser(me.data);
-        } catch {
-        }
-      }
       router.push("/home");
     } catch (error: unknown) {
       if (error instanceof AxiosError) {
@@ -292,7 +281,7 @@ function LoginPageContent() {
                 animation: "pageSlide 0.4s cubic-bezier(0.22,1,0.36,1) both",
               }}
             >
-              <BackButton onClick={() => router.back()} />
+              <BackButton onClick={() => router.push("/home")} />
 
               {/* Logo */}
               <div
@@ -367,27 +356,25 @@ function LoginPageContent() {
                   animation: "fadeUp 0.5s 0.3s both",
                 }}
               >
-                <button
-                  type="button"
-                  onClick={() => router.push("/ForgotPassword")}
-                  style={{
-                    background: "none",
-                    border: "none",
-                    color: "#555",
-                    fontSize: 13,
-                    fontFamily: "'Rajdhani', sans-serif",
-                    fontWeight: 600,
-                    cursor: "pointer",
-                    padding: 0,
-                    transition: "color 0.2s",
-                  }}
-                  onMouseEnter={(e) =>
-                    (e.currentTarget.style.color = "#3b82f6")
-                  }
-                  onMouseLeave={(e) => (e.currentTarget.style.color = "#555")}
+               <button
+                   type="button"
+                   onClick={() => router.push("/forgot-password")}
+                   style={{
+                  background: "none",
+                  border: "none",
+                  color: "#555",
+                  fontSize: 13,
+                  fontFamily: "'Rajdhani', sans-serif",
+                  fontWeight: 600,
+                  cursor: "pointer",
+                  padding: 0,
+                  transition: "color 0.2s",
+                   }}
+                   onMouseEnter={(e) => (e.currentTarget.style.color = "#3b82f6")}
+                   onMouseLeave={(e) => (e.currentTarget.style.color = "#555")}
                 >
-                  Forgot password?
-                </button>
+                   Forgot password?
+                  </button>
               </div>
 
               <PillButton
