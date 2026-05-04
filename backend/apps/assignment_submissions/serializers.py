@@ -1,6 +1,8 @@
 from django.utils import timezone
 from rest_framework import serializers
 
+from apps.personal_submissions.gcs import get_signed_url
+
 from .models import (
     Assignment,
     AssignmentSubmission,
@@ -78,6 +80,12 @@ class AssignmentListSerializer(serializers.ModelSerializer):
     # Full name of the professor who created the assignment
     professor_name = serializers.SerializerMethodField()
 
+    # Signed URL for the assignment PDF (if any)
+    description_pdf = serializers.SerializerMethodField()
+
+    # 7 days in seconds
+    SIGNED_URL_EXPIRATION = 7 * 24 * 60 * 60
+
     # Total number of submissions for this assignment
     submission_count = serializers.SerializerMethodField()
 
@@ -126,6 +134,19 @@ class AssignmentListSerializer(serializers.ModelSerializer):
     def get_professor_name(self, obj):
         """Return the full name of the professor."""
         return f"{obj.professor.first_name} {obj.professor.last_name}"
+
+    def get_description_pdf(self, obj):
+        """Return a signed URL when a PDF exists, otherwise null."""
+        if not obj.description_pdf:
+            return None
+        if str(obj.description_pdf).startswith('http'):
+            return obj.description_pdf
+        return get_signed_url(
+            obj.description_pdf,
+            expiration=self.SIGNED_URL_EXPIRATION,
+            response_type='application/pdf',
+            response_disposition='inline',
+        )
 
     def get_submission_count(self, obj):
         """Return the total number of submissions for this assignment."""

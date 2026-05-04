@@ -73,12 +73,27 @@ def get_gcs_client():
         ) from exc
 
 
-def upload_file(file_obj, gcs_path: str) -> str:
+def upload_file(
+    file_obj,
+    gcs_path: str,
+    content_type: str | None = None,
+    content_disposition: str | None = None,
+) -> str:
     """Upload a file to GCS and return the full GCS path."""
     client = get_gcs_client()
     bucket = client.bucket(settings.GS_BUCKET_NAME)
     blob = bucket.blob(gcs_path)
-    blob.upload_from_file(file_obj, rewind=True)
+
+    if content_type:
+        blob.content_type = content_type
+    if content_disposition:
+        blob.content_disposition = content_disposition
+
+    blob.upload_from_file(file_obj, rewind=True, content_type=content_type)
+
+    if content_disposition:
+        blob.patch()
+
     return gcs_path
 
 
@@ -100,7 +115,12 @@ def delete_directory(prefix: str) -> None:
         blob.delete()
 
 
-def get_signed_url(gcs_path: str, expiration: int = 3600) -> str:
+def get_signed_url(
+    gcs_path: str,
+    expiration: int = 3600,
+    response_type: str | None = None,
+    response_disposition: str | None = None,
+) -> str:
     """Generate a signed URL for temporary file access."""
     from datetime import timedelta
     client = get_gcs_client()
@@ -108,7 +128,9 @@ def get_signed_url(gcs_path: str, expiration: int = 3600) -> str:
     blob = bucket.blob(gcs_path)
     return blob.generate_signed_url(
         expiration=timedelta(seconds=expiration),
-        method='GET'
+        method='GET',
+        response_type=response_type,
+        response_disposition=response_disposition,
     )
 
 

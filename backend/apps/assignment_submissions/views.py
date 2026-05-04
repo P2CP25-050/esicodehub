@@ -737,7 +737,12 @@ class AssignmentDescriptionPDFUploadView(APIView):
 
         # Build GCS path and upload
         gcs_path = f'assignments/{assignment.id}/description.pdf'
-        upload_file(file, gcs_path)
+        upload_file(
+            file,
+            gcs_path,
+            content_type='application/pdf',
+            content_disposition='inline',
+        )
 
         # Save GCS path to the assignment
         assignment.description_pdf = gcs_path
