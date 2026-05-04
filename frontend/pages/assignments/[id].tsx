@@ -102,6 +102,12 @@ const getCountdown = (deadlineValue: string): string => {
   return `${parts.join(' ')} remaining`;
 };
 
+const getPdfViewerUrl = (url: string): string => {
+  const proxyUrl = `/api/pdf-proxy?url=${encodeURIComponent(url)}`;
+  return `/pdfjs/web/viewer.html?file=${encodeURIComponent(proxyUrl)}`;
+};
+
+
 const getSubmissionLineCommentsCount = (submission?: AssignmentSubmission | null): number => {
   if (!submission?.reviews?.length) return 0;
   return submission.reviews.reduce(
@@ -190,6 +196,7 @@ function AssignmentDetailPageContent() {
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [toast, setToast] = useState<{ type: 'success' | 'error' | 'info'; message: string } | null>(null);
   const [fileInputKey, setFileInputKey] = useState(0);
+  const [pdfModalOpen, setPdfModalOpen] = useState(false);
   const hasLoadedRoleDataRef = useRef(false);
   const reviewNotificationReadyRef = useRef(false);
   const latestReviewSignatureRef = useRef('none');
@@ -227,6 +234,15 @@ function AssignmentDetailPageContent() {
     const timer = window.setTimeout(() => setToast(null), 2600);
     return () => window.clearTimeout(timer);
   }, [toast]);
+
+  useEffect(() => {
+    if (!pdfModalOpen) return;
+    const handleKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setPdfModalOpen(false);
+    };
+    window.addEventListener('keydown', handleKey);
+    return () => window.removeEventListener('keydown', handleKey);
+  }, [pdfModalOpen]);
 
   useEffect(() => {
     if (!router.isReady) return;
@@ -736,14 +752,12 @@ function AssignmentDetailPageContent() {
 
               {assignment.description_pdf && (
                 <div className="mt-4 flex flex-wrap items-center gap-3">
-                  <a
-                    href={assignment.description_pdf}
-                    target="_blank"
-                    rel="noopener noreferrer"
+                  <button
+                    onClick={() => setPdfModalOpen(true)}
                     className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50"
                   >
-                    📄 View assignment PDF
-                  </a>
+                    📄 View PDF
+                  </button>
                   <a
                     href={assignment.description_pdf}
                     download
@@ -1175,6 +1189,43 @@ function AssignmentDetailPageContent() {
           )}
         </div>
       </main>
+
+      {pdfModalOpen && assignment.description_pdf && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
+          onClick={() => setPdfModalOpen(false)}
+        >
+          <div
+            className="relative flex h-[90vh] w-[90vw] max-w-5xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="flex items-center justify-between border-b border-slate-200 bg-white px-5 py-3">
+              <span className="text-sm font-semibold text-slate-700">Assignment PDF</span>
+              <div className="flex items-center gap-3">
+                <a
+                  href={assignment.description_pdf}
+                  download
+                  className="text-xs font-semibold text-slate-500 transition-colors hover:text-slate-900"
+                >
+                  ⬇ Download
+                </a>
+                <button
+                  onClick={() => setPdfModalOpen(false)}
+                  className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-600 transition-colors hover:bg-slate-50"
+                >
+                  ✕ Close
+                </button>
+              </div>
+            </div>
+
+            <iframe
+              src={getPdfViewerUrl(assignment.description_pdf)}
+              className="h-full w-full border-none"
+              title="PDF Viewer"
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 }
