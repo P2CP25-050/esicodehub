@@ -1,4 +1,3 @@
-from django.core.mail import send_mail
 from django.contrib.auth import authenticate
 from django.conf import settings
 from django.db.models import Q
@@ -21,6 +20,7 @@ from apps.accounts.serializers import (
     PublicProfileSerializer,
     ProfileSearchResultSerializer,
 )
+from apps.accounts.tasks import send_verification_email
 from apps.forum.models import Answer, Question
 from apps.esi_db.models import EsiStudent, EsiProfessor
 from apps.personal_submissions.models import PersonalSubmission
@@ -68,12 +68,7 @@ def _create_and_send_verification(user):
     """Generate a 6-digit code, save EmailVerification, and send email."""
     code = EmailVerification.generate_code()
     EmailVerification.objects.create(user=user, code=code)
-    send_mail(
-        subject='ESI Code Hub – Email Verification',
-        message=f'Your verification code is: {code}',
-        from_email=None,  # uses DEFAULT_FROM_EMAIL
-        recipient_list=[user.email],
-    )
+    send_verification_email.delay(user.email, code)
 
 
 @api_view(['POST'])
