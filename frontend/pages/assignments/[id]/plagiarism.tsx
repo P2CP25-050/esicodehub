@@ -445,7 +445,7 @@ function PlagiarismReportContent() {
   const showLoading = loadingAssignment || (loadingReport && reportState === "loading");
 
   return (
-    <div className="relative min-h-screen bg-[#f5f7ff]" style={{ fontFamily: "'Outfit', sans-serif" }}>
+    <div className="relative min-h-screen bg-[#f5f7ff]">
       <style jsx global>{`
         @keyframes reportFadeUp {
           from { opacity: 0; transform: translateY(14px); }
@@ -472,10 +472,7 @@ function PlagiarismReportContent() {
       <Header activePage="Assignments" />
 
       <main className="relative mx-auto max-w-6xl px-4 pb-16 pt-8 sm:px-6">
-        <nav
-          className="flex flex-wrap items-center gap-2 text-xs uppercase tracking-[0.2em] text-slate-400"
-          style={{ fontFamily: "'JetBrains Mono', monospace" }}
-        >
+        <nav className="flex flex-wrap items-center gap-2 text-xs uppercase tracking-[0.2em] text-slate-400">
           <Link href="/" className="font-semibold text-slate-500 hover:text-slate-800">
             Home
           </Link>
@@ -508,19 +505,13 @@ function PlagiarismReportContent() {
                   Plagiarism Radar
                 </span>
               </div>
-              <h1
-                className="text-3xl font-semibold text-slate-900 sm:text-4xl"
-                style={{ fontFamily: "'Instrument Serif', serif" }}
-              >
+              <h1 className="text-3xl font-semibold text-slate-900 sm:text-4xl">
                 Plagiarism Report
               </h1>
               <p className="text-sm text-slate-600">
                 {assignment ? `Assignment: ${assignment.title}` : "Assignment loading..."}
               </p>
-              <div
-                className="flex flex-wrap gap-2 text-[0.7rem] text-slate-500"
-                style={{ fontFamily: "'JetBrains Mono', monospace" }}
-              >
+              <div className="flex flex-wrap gap-2 text-[0.7rem] text-slate-500">
                 <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1">
                   Assignment ID: {assignmentId ?? "..."}
                 </span>
@@ -655,10 +646,7 @@ function PlagiarismReportContent() {
                 <p className="mt-1 text-sm text-slate-500">
                   Run the check after the deadline to generate similarity pairs.
                 </p>
-                <div
-                  className="mt-4 flex flex-wrap gap-2 text-[0.7rem] text-slate-500"
-                  style={{ fontFamily: "'JetBrains Mono', monospace" }}
-                >
+                <div className="mt-4 flex flex-wrap gap-2 text-[0.7rem] text-slate-500">
                   <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1">
                     Step 1: Run check
                   </span>
@@ -692,10 +680,7 @@ function PlagiarismReportContent() {
               <p className="mt-2 text-sm text-slate-500">
                 Refreshes automatically every 5 seconds while the analysis runs.
               </p>
-              <div
-                className="mt-4 flex flex-wrap justify-center gap-2 text-[0.7rem] text-slate-500"
-                style={{ fontFamily: "'JetBrains Mono', monospace" }}
-              >
+              <div className="mt-4 flex flex-wrap justify-center gap-2 text-[0.7rem] text-slate-500">
                 <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1">
                   Step 1: Build references
                 </span>
