@@ -48,7 +48,7 @@ export default function ForumPlaceholder() {
         {/* Center overlay badge */}
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-20">
           <div className="bg-white border border-[#6c47ff]/20 rounded-2xl shadow-[0_8px_32px_rgba(108,71,255,0.15)] px-6 py-4 text-center">
-            <div className="text-2xl mb-1">🚀</div>
+            <div className="text-2xl mb-1"></div>
             <p className="text-sm font-bold text-[#6c47ff]">Forum Coming Soon</p>
             <p className="text-xs text-[#94a3b8] mt-0.5">Sprint 6</p>
           </div>

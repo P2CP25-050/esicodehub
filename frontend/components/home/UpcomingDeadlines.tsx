@@ -110,7 +110,7 @@ export default function UpcomingDeadlines({ assignments, loading, error }: Upcom
         ) : assignments.length === 0 ? (
           <div className="flex-1 flex items-center justify-center">
             <div className="text-center px-6 py-8">
-              <div className="text-4xl mb-3">🎉</div>
+              <div className="text-4xl mb-3"></div>
               <p className="text-sm text-[#64748b]">No upcoming deadlines.</p>
             </div>
           </div>
