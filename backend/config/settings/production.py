@@ -53,8 +53,6 @@ GS_BUCKET_NAME = os.getenv('GCS_BUCKET_NAME')
 
 
 CELERY_BROKER_URL = os.getenv('REDIS_URL')
-CELERY_BROKER_USE_SSL = True
-CELERY_REDIS_BACKEND_USE_SSL = True
 
 
 SECURE_SSL_REDIRECT = False  # Cloud Run handles HTTPS termination
