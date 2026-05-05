@@ -39,6 +39,29 @@ class Question(models.Model):
         return timezone.now() >= self.created_at + timedelta(hours=24)
 
 
+class QuestionView(models.Model):
+    question = models.ForeignKey(
+        Question,
+        on_delete=models.CASCADE,
+        related_name='question_views',
+    )
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='forum_question_views',
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'forum_question_views'
+        constraints = [
+            models.UniqueConstraint(
+                fields=['question', 'user'],
+                name='unique_question_view_per_user',
+            )
+        ]
+
+
 class Answer(models.Model):
     question = models.ForeignKey(
         Question,
