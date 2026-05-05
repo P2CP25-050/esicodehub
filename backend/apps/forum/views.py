@@ -226,7 +226,7 @@ class QuestionDetailView(APIView):
 
         if request.user.is_authenticated and request.user != question.author:
             with transaction.atomic():
-                _, created = QuestionView.objects.get_or_create(
+                created = QuestionView.objects.get_or_create(
                     question=question,
                     user=request.user,
                 )
