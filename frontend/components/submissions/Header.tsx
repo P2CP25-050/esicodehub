@@ -2,7 +2,7 @@ import { useState, CSSProperties, useEffect, useRef } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from 'next/router';
-import { useAuth } from "@/hooks/useAuth";
+import { useAuth } from "@/context/AuthContext";
 import { logout } from '@/services/auth';
 import { clearTokens } from '@/lib/tokens';
 import { getProfile } from '@/services/profile/api';
@@ -16,7 +16,7 @@ interface HeaderProps {
 const NAV_LINKS = [
   { label: "Submissions", href: "/submissions",  roles: ["student", "professor"] },
   { label: "Assignments", href: "/assignments",  roles: ["student", "professor"] },
-  { label: "Q&A Forums",  href: "/forums",       roles: ["student"] },
+  { label: "Q&A Forums",  href: "/forum",       roles: ["student"] },
   { label: "Insights",    href: "/insights",     roles: ["student", "professor"] },
 ];
 
@@ -29,7 +29,6 @@ const normalizeAvatarUrl = (value: unknown): string | null => {
   return trimmed.length > 0 ? trimmed : null;
 };
 
-/** Returns a human-readable "time ago" string for an ISO date. */
 function timeAgo(isoDate: string): string {
   const diff = Math.floor((Date.now() - new Date(isoDate).getTime()) / 1000);
   if (diff < 60)  return 'just now';
@@ -38,13 +37,12 @@ function timeAgo(isoDate: string): string {
   return `${Math.floor(diff / 86400)}d ago`;
 }
 
-/** Icon that varies by notification type. */
 function NotificationTypeIcon({ type }: { type: string }) {
   const icons: Record<string, { path: string; color: string }> = {
     success: { color: '#22c55e', path: 'M5 13l4 4L19 7' },
     warning: { color: '#f59e0b', path: 'M12 9v4m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z' },
     error:   { color: '#ef4444', path: 'M6 18L18 6M6 6l12 12' },
-    info:    { color: '#3b82f6', path: 'M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z' },
+    info:    { color: '#60a5fa', path: 'M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z' },
   };
   const icon = icons[type] ?? icons.info;
   return (
@@ -67,26 +65,20 @@ export default function Header({ activePage = "" }: HeaderProps) {
   const userName = user ? `${user.first_name} ${user.last_name}` : "—";
   const userRole = user?.role ?? "student";
 
-  // ── Avatar from localStorage / API ──────────────────────────────────────
   useEffect(() => {
     if (typeof window === 'undefined') return;
-
     const fromStorage = normalizeAvatarUrl(window.localStorage.getItem(PROFILE_AVATAR_KEY));
     setAvatarUrl(fromStorage);
-
     const onAvatarUpdated = (event: Event) => {
       const customEvent = event as CustomEvent<{ avatarUrl?: string | null }>;
       setAvatarUrl(normalizeAvatarUrl(customEvent.detail?.avatarUrl ?? null));
     };
-
     const onStorage = (event: StorageEvent) => {
       if (event.key !== PROFILE_AVATAR_KEY) return;
       setAvatarUrl(normalizeAvatarUrl(event.newValue));
     };
-
     window.addEventListener(AVATAR_UPDATED_EVENT, onAvatarUpdated as EventListener);
     window.addEventListener('storage', onStorage);
-
     return () => {
       window.removeEventListener(AVATAR_UPDATED_EVENT, onAvatarUpdated as EventListener);
       window.removeEventListener('storage', onStorage);
@@ -96,7 +88,6 @@ export default function Header({ activePage = "" }: HeaderProps) {
   useEffect(() => {
     if (!user) return;
     let cancelled = false;
-
     (async () => {
       try {
         const profile = await getProfile();
@@ -109,11 +100,9 @@ export default function Header({ activePage = "" }: HeaderProps) {
         }
       } catch { /* Non-fatal */ }
     })();
-
     return () => { cancelled = true; };
   }, [user]);
 
-  // ── Close bell dropdown on outside click ─────────────────────────────────
   useEffect(() => {
     if (!bellOpen) return;
     const handler = (e: MouseEvent) => {
@@ -125,10 +114,7 @@ export default function Header({ activePage = "" }: HeaderProps) {
     return () => document.removeEventListener('mousedown', handler);
   }, [bellOpen]);
 
-  // ── Close drawer on route change ──────────────────────────────────────────
   useEffect(() => { setMenuOpen(false); }, [router.pathname]);
-
-  // ── Prevent body scroll when drawer is open ───────────────────────────────
   useEffect(() => {
     document.body.style.overflow = menuOpen ? "hidden" : "";
     return () => { document.body.style.overflow = ""; };
@@ -151,8 +137,8 @@ export default function Header({ activePage = "" }: HeaderProps) {
         <div style={{ width: '100%', height: '100%', borderRadius: '50%', backgroundImage: `url(${avatarUrl})`, backgroundPosition: 'center', backgroundRepeat: 'no-repeat', backgroundSize: 'cover' }} />
       ) : (
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-          <circle cx="12" cy="8" r="4" stroke="#c8d6f0" strokeWidth="2" />
-          <path d="M4 20c0-4 3.6-7 8-7s8 3 8 7" stroke="#c8d6f0" strokeWidth="2" strokeLinecap="round" />
+          <circle cx="12" cy="8" r="4" stroke="#64748b" strokeWidth="2" />
+          <path d="M4 20c0-4 3.6-7 8-7s8 3 8 7" stroke="#64748b" strokeWidth="2" strokeLinecap="round" />
         </svg>
       )}
     </div>
@@ -162,7 +148,6 @@ export default function Header({ activePage = "" }: HeaderProps) {
 
   return (
     <>
-      {/* ── Responsive style overrides ── */}
       <style>{`
         .header-desktop-nav { display: flex; }
         .header-logout-btn  { display: flex; }
@@ -171,7 +156,7 @@ export default function Header({ activePage = "" }: HeaderProps) {
 
         @media (max-width: 1024px) {
           .header-desktop-nav .nav-link {
-            padding: 8px 10px !important;
+            padding: 6px 10px !important;
             font-size: 13px !important;
           }
         }
@@ -190,8 +175,8 @@ export default function Header({ activePage = "" }: HeaderProps) {
           height: 100%;
           width: 260px;
           background: #0d1b2a;
-          border-left: 1px solid rgba(148,163,184,0.12);
-          box-shadow: -8px 0 32px rgba(0,0,0,0.5);
+          border-left: 1px solid rgba(148,163,184,0.2);
+          box-shadow: -8px 0 32px rgba(0,0,0,0.4);
           z-index: 200;
           display: flex;
           flex-direction: column;
@@ -204,7 +189,7 @@ export default function Header({ activePage = "" }: HeaderProps) {
         .mobile-overlay {
           position: fixed;
           inset: 0;
-          background: rgba(0,0,0,0.55);
+          background: rgba(0,0,0,0.75);
           z-index: 199;
           opacity: 0;
           pointer-events: none;
@@ -217,17 +202,18 @@ export default function Header({ activePage = "" }: HeaderProps) {
           align-items: center;
           color: #94a3b8;
           text-decoration: none;
-          font-size: 15px;
+          font-family: 'DM Sans', sans-serif;
+          font-size: 14px;
           font-weight: 500;
-          padding: 14px 24px;
+          padding: 12px 24px;
           border-left: 3px solid transparent;
           transition: color .15s, background .15s, border-color .15s;
         }
         .drawer-nav-link:hover,
-        .drawer-nav-link.active { color: #ffffff; background: rgba(148,163,184,0.08); }
+        .drawer-nav-link.active { color: #ffffff; background: rgba(148,163,184,0.1); }
         .drawer-nav-link.active { border-left-color: #1d6ef5; font-weight: 700; }
 
-        .drawer-divider { height: 1px; background: rgba(148,163,184,0.12); margin: 12px 24px; }
+        .drawer-divider { height: 1px; background: rgba(148,163,184,0.15); margin: 12px 24px; }
 
         .drawer-profile {
           display: flex;
@@ -242,16 +228,27 @@ export default function Header({ activePage = "" }: HeaderProps) {
           border: 1px solid rgba(148,163,184,0.4);
           background: transparent;
           color: #e2e8f0;
-          border-radius: 8px;
-          padding: 10px 10px;
-          font-size: 13px;
-          font-weight: 600;
+          font-family: 'Space Mono', monospace;
+          font-size: 10px;
+          font-weight: 700;
+          letter-spacing: 0.1em;
+          text-transform: uppercase;
+          padding: 10px;
           cursor: pointer;
           text-align: center;
+          transition: background .15s, color .15s, border-color .15s;
         }
-        .drawer-logout-btn:hover { background: rgba(148,163,184,0.08); }
+        .drawer-logout-btn:hover { background: rgba(148,163,184,0.1); border-color: #1d6ef5; color: #fff; }
 
-        /* ── Bell dropdown ── */
+        .header-logout-btn:hover { background: rgba(148,163,184,0.1) !important; border-color: #1d6ef5 !important; color: #fff !important; }
+
+        .header-profile-btn:hover { background: rgba(148,163,184,0.08) !important; }
+        .header-profile-btn:hover .profile-icon-ring { border-color: #1d6ef5 !important; }
+
+        .header-hamburger-btn:hover { background: rgba(148,163,184,0.1) !important; border-radius: 6px; }
+
+        .drawer-profile:hover { background: rgba(148,163,184,0.1); color: #fff; }
+
         .notif-item {
           display: flex;
           align-items: flex-start;
@@ -259,19 +256,22 @@ export default function Header({ activePage = "" }: HeaderProps) {
           padding: 10px 14px;
           cursor: pointer;
           transition: background .12s;
-          border-bottom: 1px solid rgba(148,163,184,0.08);
+          border-bottom: 1px solid rgba(148,163,184,0.1);
         }
         .notif-item:last-child { border-bottom: none; }
-        .notif-item:hover { background: rgba(148,163,184,0.07); }
-        .notif-item.unread { background: rgba(29,110,245,0.06); }
-        .notif-item.unread:hover { background: rgba(29,110,245,0.1); }
+        .notif-item:hover { background: rgba(148,163,184,0.08); }
+        .notif-item.unread { background: rgba(29,110,245,0.08); }
+        .notif-item.unread:hover { background: rgba(29,110,245,0.15); }
 
         .notif-mark-all {
           background: none;
           border: none;
-          color: #1d6ef5;
-          font-size: 12px;
-          font-weight: 600;
+          color: #60a5fa;
+          font-family: 'Space Mono', monospace;
+          font-size: 9px;
+          font-weight: 700;
+          letter-spacing: 0.08em;
+          text-transform: uppercase;
           cursor: pointer;
           padding: 0;
         }
@@ -283,16 +283,14 @@ export default function Header({ activePage = "" }: HeaderProps) {
           border: none;
           cursor: pointer;
           padding: 8px;
-          border-radius: 8px;
           display: flex;
           align-items: center;
           justify-content: center;
           color: #94a3b8;
           transition: background .15s, color .15s;
         }
-        .bell-btn:hover { background: rgba(148,163,184,0.08); color: #e2e8f0; }
+        .bell-btn:hover { background: rgba(148,163,184,0.1); color: #fff; }
 
-        /* ── Mobile drawer notifications section ── */
         .drawer-notif-header {
           display: flex;
           align-items: center;
@@ -306,22 +304,22 @@ export default function Header({ activePage = "" }: HeaderProps) {
           padding: 10px 24px;
           cursor: pointer;
           transition: background .12s;
-          border-bottom: 1px solid rgba(148,163,184,0.07);
+          border-bottom: 1px solid rgba(148,163,184,0.1);
         }
         .drawer-notif-item:last-child { border-bottom: none; }
-        .drawer-notif-item:hover { background: rgba(148,163,184,0.06); }
-        .drawer-notif-item.unread { background: rgba(29,110,245,0.06); }
-        .drawer-notif-item.unread:hover { background: rgba(29,110,245,0.1); }
+        .drawer-notif-item:hover { background: rgba(148,163,184,0.08); }
+        .drawer-notif-item.unread { background: rgba(29,110,245,0.08); }
+        .drawer-notif-item.unread:hover { background: rgba(29,110,245,0.15); }
         .drawer-notif-empty {
           padding: 16px 24px;
-          color: #64748b;
+          color: #94a3b8;
+          font-family: 'DM Sans', sans-serif;
           font-size: 13px;
         }
       `}</style>
 
       <header style={styles.header}>
         <div style={styles.headerInner}>
-          {/* ── Left: logo + desktop nav ── */}
           <div style={styles.headerLeft}>
             <Link href="/" style={styles.logoLink}>
               <span style={styles.logo}>
@@ -345,7 +343,11 @@ export default function Header({ activePage = "" }: HeaderProps) {
                     key={label}
                     href={href}
                     className="nav-link"
-                    style={{ ...styles.navLink, ...(isActive ? styles.navLinkActive : {}), ...(isHovered && !isActive ? styles.navLinkHover : {}) }}
+                    style={{
+                      ...styles.navLink,
+                      ...(isActive ? styles.navLinkActive : {}),
+                      ...(isHovered && !isActive ? styles.navLinkHover : {})
+                    }}
                     onMouseEnter={() => setHoveredNav(label)}
                     onMouseLeave={() => setHoveredNav(null)}
                   >
@@ -357,10 +359,7 @@ export default function Header({ activePage = "" }: HeaderProps) {
             </nav>
           </div>
 
-          {/* ── Right: bell + logout + profile (desktop) + hamburger (mobile) ── */}
           <div style={styles.headerRight}>
-
-            {/* ── Notification Bell ── */}
             <div ref={bellRef} className="header-bell" style={{ position: 'relative' }}>
               <button
                 type="button"
@@ -368,13 +367,10 @@ export default function Header({ activePage = "" }: HeaderProps) {
                 aria-label={`Notifications${unreadCount > 0 ? ` (${unreadCount} unread)` : ''}`}
                 onClick={() => setBellOpen(v => !v)}
               >
-                {/* Bell SVG */}
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
                   <path d="M13.73 21a2 2 0 0 1-3.46 0" />
                 </svg>
-
-                {/* Unread badge */}
                 {unreadCount > 0 && (
                   <span style={styles.bellBadge}>
                     {unreadCount > 99 ? '99+' : unreadCount}
@@ -382,12 +378,12 @@ export default function Header({ activePage = "" }: HeaderProps) {
                 )}
               </button>
 
-              {/* ── Dropdown ── */}
               {bellOpen && (
                 <div style={styles.bellDropdown}>
-                  {/* Dropdown header */}
                   <div style={styles.bellDropdownHeader}>
-                    <span style={{ color: '#e2e8f0', fontWeight: 700, fontSize: 14 }}>Notifications</span>
+                    <span style={{ fontFamily: "'Space Mono', monospace", fontSize: 9, fontWeight: 700, letterSpacing: '0.2em', textTransform: 'uppercase', color: '#60a5fa' }}>
+                      Notifications
+                    </span>
                     {unreadCount > 0 && (
                       <button
                         type="button"
@@ -398,16 +394,14 @@ export default function Header({ activePage = "" }: HeaderProps) {
                       </button>
                     )}
                   </div>
-
-                  {/* Notification list */}
                   <div style={{ overflowY: 'auto', maxHeight: 360 }}>
                     {visibleNotifications.length === 0 ? (
                       <div style={styles.bellEmpty}>
-                        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#475569" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#64748b" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
                           <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
                           <path d="M13.73 21a2 2 0 0 1-3.46 0" />
                         </svg>
-                        <span style={{ color: '#64748b', fontSize: 13, marginTop: 8 }}>No notifications yet</span>
+                        <span style={{ color: '#64748b', fontSize: 12, marginTop: 8, fontFamily: "'DM Sans', sans-serif" }}>No notifications yet</span>
                       </div>
                     ) : (
                       visibleNotifications.map(n => (
@@ -420,22 +414,17 @@ export default function Header({ activePage = "" }: HeaderProps) {
                           onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') handleNotificationClick(n); }}
                           aria-label={n.title}
                         >
-                          {/* Type icon */}
                           <div style={{ marginTop: 2 }}>
                             <NotificationTypeIcon type={n.type} />
                           </div>
-
-                          {/* Text */}
                           <div style={{ flex: 1, minWidth: 0 }}>
-                            <p style={{ margin: 0, color: n.is_read ? '#94a3b8' : '#e2e8f0', fontSize: 13, fontWeight: n.is_read ? 400 : 600, lineHeight: 1.4, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            <p style={{ margin: 0, color: n.is_read ? '#94a3b8' : '#f1f5f9', fontSize: 13, fontWeight: n.is_read ? 400 : 600, fontFamily: "'DM Sans', sans-serif", lineHeight: 1.4, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                               {n.title}
                             </p>
-                            <p style={{ margin: '2px 0 0', color: '#64748b', fontSize: 11 }}>
+                            <p style={{ margin: '2px 0 0', color: '#64748b', fontSize: 11, fontFamily: "'DM Sans', sans-serif" }}>
                               {timeAgo(n.created_at)}
                             </p>
                           </div>
-
-                          {/* Unread dot */}
                           {!n.is_read && <span style={styles.unreadDot} aria-hidden="true" />}
                         </div>
                       ))
@@ -449,12 +438,12 @@ export default function Header({ activePage = "" }: HeaderProps) {
               type="button"
               onClick={handleLogout}
               style={styles.logoutBtn}
-              className="header-logout-btn"
+              className="header-logout-btn header-logout-btn"
             >
               Logout
             </button>
 
-            <Link href="/profile" style={styles.profileBtn} aria-label="Go to profile">
+            <Link href="/profile" style={styles.profileBtn} className="header-profile-btn" aria-label="Go to profile">
               {renderProfileIcon()}
               <div style={styles.profileInfo} className="header-profile-info">
                 <span style={styles.profileName}>{userName}</span>
@@ -464,13 +453,13 @@ export default function Header({ activePage = "" }: HeaderProps) {
 
             <button
               type="button"
-              className="header-hamburger"
+              className="header-hamburger header-hamburger-btn"
               onClick={() => setMenuOpen(v => !v)}
               aria-label={menuOpen ? "Close menu" : "Open menu"}
               aria-expanded={menuOpen}
               style={styles.hamburger}
             >
-              <svg width="22" height="22" viewBox="0 0 22 22" fill="none" style={{ transition: "transform .2s" }}>
+              <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
                 {menuOpen ? (
                   <>
                     <line x1="4" y1="4" x2="18" y2="18" stroke="#e2e8f0" strokeWidth="2" strokeLinecap="round" />
@@ -489,23 +478,19 @@ export default function Header({ activePage = "" }: HeaderProps) {
         </div>
       </header>
 
-      {/* ── Mobile overlay ── */}
       <div
         className={`mobile-overlay${menuOpen ? " open" : ""}`}
         onClick={() => setMenuOpen(false)}
         aria-hidden="true"
       />
 
-      {/* ── Mobile drawer ── */}
       <nav className={`mobile-drawer${menuOpen ? " open" : ""}`} aria-label="Mobile navigation">
-        {/* Drawer header */}
-        <div style={{ padding: "4px 24px 16px", borderBottom: "1px solid rgba(148,163,184,0.12)" }}>
+        <div style={{ padding: "4px 24px 16px", borderBottom: "1px solid rgba(148,163,184,0.15)" }}>
           <Link href="/" aria-label="Go to homepage">
             <Image src="/esicodehub-logo.png" alt="Logo" width={52} height={28} className="object-contain" />
           </Link>
         </div>
 
-        {/* Nav links */}
         <div style={{ flex: 1, paddingTop: 8 }}>
           {NAV_LINKS.filter(({ roles }) => roles.includes(userRole)).map(({ label, href }) => (
             <Link key={label} href={href} className={`drawer-nav-link${activePage === label ? " active" : ""}`}>
@@ -514,11 +499,10 @@ export default function Header({ activePage = "" }: HeaderProps) {
           ))}
         </div>
 
-        {/* Divider + Notifications in drawer */}
         <div className="drawer-divider" />
 
         <div className="drawer-notif-header">
-          <span style={{ color: '#e2e8f0', fontWeight: 700, fontSize: 13 }}>Notifications</span>
+          <span style={{ fontFamily: "'Space Mono', monospace", fontSize: 9, fontWeight: 700, letterSpacing: '0.2em', textTransform: 'uppercase', color: '#60a5fa' }}>Notifications</span>
           {unreadCount > 0 && (
             <button type="button" className="notif-mark-all" onClick={async () => { await markAllRead(); }}>
               Mark all read
@@ -542,10 +526,10 @@ export default function Header({ activePage = "" }: HeaderProps) {
               >
                 <div style={{ marginTop: 2 }}><NotificationTypeIcon type={n.type} /></div>
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <p style={{ margin: 0, color: n.is_read ? '#94a3b8' : '#e2e8f0', fontSize: 13, fontWeight: n.is_read ? 400 : 600, lineHeight: 1.4, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  <p style={{ margin: 0, color: n.is_read ? '#94a3b8' : '#f1f5f9', fontSize: 13, fontWeight: n.is_read ? 400 : 600, fontFamily: "'DM Sans', sans-serif", lineHeight: 1.4, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                     {n.title}
                   </p>
-                  <p style={{ margin: '2px 0 0', color: '#64748b', fontSize: 11 }}>{timeAgo(n.created_at)}</p>
+                  <p style={{ margin: '2px 0 0', color: '#64748b', fontSize: 11, fontFamily: "'DM Sans', sans-serif" }}>{timeAgo(n.created_at)}</p>
                 </div>
                 {!n.is_read && <span style={styles.unreadDot} aria-hidden="true" />}
               </div>
@@ -553,7 +537,6 @@ export default function Header({ activePage = "" }: HeaderProps) {
           )}
         </div>
 
-        {/* Divider + profile + logout */}
         <div className="drawer-divider" />
 
         <Link href="/profile" className="drawer-profile" aria-label="Go to profile">
@@ -575,12 +558,11 @@ export default function Header({ activePage = "" }: HeaderProps) {
 const styles: Record<string, CSSProperties> = {
   header: {
     background: "#0d1b2a",
+    borderBottom: "1px solid rgba(148,163,184,0.2)",
     padding: "0 28px",
     position: "sticky",
     top: 0,
     zIndex: 100,
-    boxShadow: "0 2px 16px rgba(0,0,0,0.4)",
-    borderRadius: "0 0 16px 16px",
   },
   headerInner: {
     maxWidth: 1200,
@@ -593,14 +575,17 @@ const styles: Record<string, CSSProperties> = {
   headerLeft:  { display: "flex", alignItems: "center", gap: 16 },
   headerRight: { display: "flex", alignItems: "center", gap: 4 },
   logoutBtn: {
-    border: '1px solid rgba(148,163,184,0.4)',
-    background: 'transparent',
-    color: '#e2e8f0',
-    borderRadius: 8,
-    padding: '8px 10px',
-    fontSize: 12,
-    fontWeight: 600,
-    cursor: 'pointer',
+    border: "1px solid rgba(148,163,184,0.4)",
+    background: "transparent",
+    color: "#e2e8f0",
+    fontFamily: "'Space Mono', monospace",
+    fontSize: 10,
+    fontWeight: 700,
+    letterSpacing: "0.1em",
+    textTransform: "uppercase",
+    padding: "8px 10px",
+    cursor: "pointer",
+    transition: "background .15s, color .15s, border-color .15s",
   },
   logoLink:   { display: "flex", alignItems: "center", textDecoration: "none" },
   logo:       { display: "flex", alignItems: "center", gap: 8 },
@@ -609,34 +594,18 @@ const styles: Record<string, CSSProperties> = {
     position: "relative",
     color: "#94a3b8",
     textDecoration: "none",
+    fontFamily: "'DM Sans', sans-serif",
     fontSize: 14,
     fontWeight: 500,
     padding: "8px 14px",
-    borderRadius: 8,
     transition: "color .15s, background .15s",
     display: "flex",
     flexDirection: "column",
     alignItems: "center",
     gap: 2,
   },
-  navLinkHover:  { color: "#e2e8f0", background: "rgba(148,163,184,0.08)" },
+  navLinkHover:  { color: "#ffffff", background: "rgba(148,163,184,0.08)" },
   navLinkActive: { color: "#ffffff", fontWeight: 700 },
-  navBadge: {
-    position: 'absolute',
-    top: -3,
-    right: -4,
-    minWidth: 18,
-    height: 18,
-    borderRadius: 999,
-    background: '#ef4444',
-    color: '#fff',
-    fontSize: 10,
-    fontWeight: 700,
-    lineHeight: '18px',
-    textAlign: 'center',
-    padding: '0 5px',
-    boxShadow: '0 0 0 2px #0d1b2a',
-  },
   navActiveBar: {
     position: "absolute",
     bottom: -1,
@@ -644,8 +613,7 @@ const styles: Record<string, CSSProperties> = {
     transform: "translateX(-50%)",
     width: 24,
     height: 3,
-    borderRadius: 2,
-    background: "linear-gradient(90deg, #1d6ef5, #00c6ff)",
+    background: "#1d6ef5",
   },
   profileBtn: {
     display: "flex",
@@ -655,8 +623,9 @@ const styles: Record<string, CSSProperties> = {
     border: "none",
     padding: "8px 12px",
     cursor: "pointer",
-    borderRadius: 10,
     textDecoration: "none",
+    transition: "background .15s",
+    borderRadius: 8,
   },
   profileIcon: {
     width: 36,
@@ -669,20 +638,18 @@ const styles: Record<string, CSSProperties> = {
     flexShrink: 0,
   },
   profileInfo: { display: "flex", flexDirection: "column", alignItems: "flex-start", gap: 1 },
-  profileName: { color: "#e2e8f0", fontSize: 13, fontWeight: 600, lineHeight: 1.3, whiteSpace: "nowrap" },
-  profileRole: { color: "#94a3b8", fontSize: 12, fontWeight: 400, lineHeight: 1.2, whiteSpace: "nowrap" },
+  profileName: { color: "#e2e8f0", fontSize: 13, fontWeight: 600, fontFamily: "'DM Sans', sans-serif", lineHeight: 1.3, whiteSpace: "nowrap" },
+  profileRole: { color: "#94a3b8", fontSize: 12, fontWeight: 400, fontFamily: "'DM Sans', sans-serif", lineHeight: 1.2, whiteSpace: "nowrap" },
   hamburger: {
     background: "none",
     border: "none",
     cursor: "pointer",
     padding: "8px",
-    borderRadius: 8,
-    // No display here — visibility is controlled entirely by .header-hamburger CSS class
     alignItems: "center",
     justifyContent: "center",
+    transition: "background .15s",
+    borderRadius: 6,
   },
-
-  // ── Bell ─────────────────────────────────────────────────────────────────
   bellBadge: {
     position: 'absolute',
     top: 4,
@@ -704,15 +671,11 @@ const styles: Record<string, CSSProperties> = {
     position: 'absolute',
     top: 'calc(100% + 8px)',
     right: 0,
-    // On small screens the dropdown must not overflow the left edge of the
-    // viewport. We anchor it to the right of the bell and clamp its width so
-    // it never exceeds the available screen width (100vw minus 16px gutter).
     width: 'min(320px, calc(100vw - 16px))',
     background: '#0f2136',
-    border: '1px solid rgba(148,163,184,0.14)',
-    borderRadius: 12,
+    border: '1px solid rgba(148,163,184,0.2)',
     boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
-    zIndex: 150,   // above the sticky header (z-index 100) and hamburger
+    zIndex: 150,
     overflow: 'hidden',
   },
   bellDropdownHeader: {
