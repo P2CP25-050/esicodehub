@@ -2,4 +2,7 @@ from django.apps import AppConfig
 
 
 class PersonalSubmissionsConfig(AppConfig):
-    name = 'personal_submissions'
+    name = 'apps.personal_submissions'
+
+    def ready(self):
+        from . import checks  # noqa: F401

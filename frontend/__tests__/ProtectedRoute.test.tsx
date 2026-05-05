@@ -1,8 +1,8 @@
 import React from 'react';
 import { render, screen, waitFor } from '@testing-library/react';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
-import * as useAuthHook from '@/hooks/useAuth';
-import type { AuthUser } from '@/hooks/useAuth';
+import * as useAuthHook from '@/context/AuthContext';
+import type { AuthUser } from '@/context/AuthContext';
 
 // ============================================================================
 // Mocks
@@ -37,6 +37,8 @@ const mockAuth = (overrides: Partial<ReturnType<typeof useAuthHook.useAuth>>) =>
     isLoading:       false,
     isAuthenticated: false,
     user:            null,
+    setUser:         jest.fn(),
+    logout:          jest.fn(),
     ...overrides,
   });
 };
@@ -80,7 +82,7 @@ describe('ProtectedRoute', () => {
 
   // ── Unauthenticated ────────────────────────────────────────────────────────
 
-  it('redirects to /login when not authenticated', async () => {
+  it('redirects to / when not authenticated', async () => {
     mockAuth({ isLoading: false, isAuthenticated: false });
 
     render(
@@ -89,9 +91,7 @@ describe('ProtectedRoute', () => {
       </ProtectedRoute>
     );
 
-    await waitFor(() =>
-      expect(mockReplace).toHaveBeenCalledWith('/login')
-    );
+    await waitFor(() => expect(mockReplace).toHaveBeenCalledWith('/'));
   });
 
   it('does NOT render children when not authenticated', async () => {
@@ -162,7 +162,7 @@ describe('ProtectedRoute', () => {
 
   // ── Wrong role ─────────────────────────────────────────────────────────────
 
-  it('redirects professor to /dashboard/professor when accessing student page', async () => {
+  it('redirects professor to /assignments when accessing student page', async () => {
     mockAuth({ isLoading: false, isAuthenticated: true, user: professorUser });
 
     render(
@@ -171,13 +171,12 @@ describe('ProtectedRoute', () => {
       </ProtectedRoute>
     );
 
-    // ✅ fixed: /dashboard/professor not /dashboard/teacher
     await waitFor(() =>
-      expect(mockReplace).toHaveBeenCalledWith('/dashboard/professor')
+      expect(mockReplace).toHaveBeenCalledWith('/assignments')
     );
   });
 
-  it('redirects student to /dashboard/student when accessing professor page', async () => {
+  it('redirects student to /assignments when accessing professor page', async () => {
     mockAuth({ isLoading: false, isAuthenticated: true, user: studentUser });
 
     render(
@@ -187,7 +186,7 @@ describe('ProtectedRoute', () => {
     );
 
     await waitFor(() =>
-      expect(mockReplace).toHaveBeenCalledWith('/dashboard/student')
+      expect(mockReplace).toHaveBeenCalledWith('/assignments')
     );
   });
 

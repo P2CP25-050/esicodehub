@@ -24,9 +24,20 @@ import type {
 export const listSubmissions = async (
   params?: SubmissionListParams
 ): Promise<PaginatedResponse<PersonalSubmission>> => {
+  const requestParams = params
+    ? {
+        language: params.language,
+        // Backend list endpoint expects `type` and `course` query params.
+        type: params.type ,
+        course: params.course ,
+        search: params.search,
+        page: params.page,
+      }
+    : undefined;
+
   const res = await apiClient.get<PaginatedResponse<PersonalSubmission>>(
     '/personal-submissions/',
-    { params }
+    { params: requestParams }
   );
   return res.data;
 };
@@ -38,7 +49,7 @@ export const listSubmissions = async (
  * @example
  * const submission = await getSubmission(5);
  * console.log(submission.title);           // "Bubble Sort"
- * console.log(submission.submission_type); // "review_request"
+ * console.log(submission.submission_type); // "review"
  * console.log(submission.course_tag);      // "Algorithms"
  * console.log(submission.visibility);      // "public"
  */

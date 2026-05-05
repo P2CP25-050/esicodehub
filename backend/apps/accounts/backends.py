@@ -6,17 +6,14 @@ User = get_user_model()
 
 
 class EmailBackend(ModelBackend):
-    def authenticate(self, request, email=None, password=None, **kwargs):
-        """ Custom authentication backend that allows Django to authenticate
-         users using email instead of the default username field"""
+    def authenticate(self, request, username=None, email=None, password=None, **kwargs):
+        # Django admin passes email as 'username', handle both cases
+        email = email or username
         try:
             user = User.objects.get(email=email)
         except User.DoesNotExist:
-            # Email not found
             return None
 
         if user.check_password(password):
-            # Password matches
             return user
-        # Password is wrong
         return None

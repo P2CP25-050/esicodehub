@@ -19,14 +19,12 @@ load_dotenv(override=False)
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
-# This one is to help with imports, e.g., from apps.accounts.models import User
-sys.path.insert(0, os.path.join(BASE_DIR, 'apps'))
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/6.0/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = os.getenv('SECRET_KEY')
+SECRET_KEY = os.getenv('SECRET_KEY') or os.getenv('DJANGO_SECRET_KEY')
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
@@ -43,13 +41,19 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'django_celery_results',
     'corsheaders',
-    'core',
-    'accounts',
+    'apps.core',
+    'apps.accounts',
     'rest_framework',
     'rest_framework_simplejwt',
-    'esi_db',
-    'personal_submissions',
+    'apps.esi_db',
+    'apps.personal_submissions',
+    'apps.assignment_submissions',
+    'apps.forum',
+    'apps.notifications',
+    'apps.plagiarism',
+    'apps.reports',
 ]
 
 AUTH_USER_MODEL = 'accounts.User'
@@ -59,6 +63,7 @@ CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",
     "http://127.0.0.1:3000",
 ]
+CORS_ALLOW_CREDENTIALS = True
 
 MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware',
@@ -140,7 +145,7 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/6.0/howto/static-files/
 
-STATIC_URL = 'static/'
+STATIC_URL = '/static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 
 from datetime import timedelta
@@ -149,6 +154,8 @@ REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'rest_framework_simplejwt.authentication.JWTAuthentication',
     ),
+    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
+    'PAGE_SIZE': 20,
 }
 
 SIMPLE_JWT = {
@@ -156,8 +163,37 @@ SIMPLE_JWT = {
     'REFRESH_TOKEN_LIFETIME': timedelta(days=7),
 }
 
+
+def _env_bool(name, default=False):
+    value = os.getenv(name)
+    if value is None:
+        return default
+    return value.lower() in ('1', 'true', 'yes', 'on')
+
+
+AUTH_REFRESH_COOKIE_NAME = os.getenv('AUTH_REFRESH_COOKIE_NAME', 'refresh_token')
+AUTH_REFRESH_COOKIE_PATH = os.getenv('AUTH_REFRESH_COOKIE_PATH', '/api/auth/token/refresh/')
+AUTH_COOKIE_SAMESITE = os.getenv('AUTH_COOKIE_SAMESITE', 'Lax')
+AUTH_COOKIE_SECURE = _env_bool('AUTH_COOKIE_SECURE', default=not DEBUG)
+
+TESTING = 'test' in sys.argv
+
 GS_BUCKET_NAME = os.getenv('GCS_BUCKET_NAME')
-GS_CREDENTIALS = os.getenv('GCS_CREDENTIALS_PATH')
+GCS_CREDENTIALS_PATH = os.getenv('GCS_CREDENTIALS_PATH') or os.getenv('GOOGLE_APPLICATION_CREDENTIALS')
+if GCS_CREDENTIALS_PATH:
+    os.environ.setdefault('GOOGLE_APPLICATION_CREDENTIALS', GCS_CREDENTIALS_PATH)
+
+# Kept for compatibility with existing code paths that reference GS_CREDENTIALS.
+GS_CREDENTIALS = GCS_CREDENTIALS_PATH
 GS_FILE_OVERWRITE = False
 GS_DEFAULT_ACL = None
 GS_EXPIRATION = 3600
+
+CELERY_BROKER_URL = os.getenv('REDIS_URL', 'redis://redis:6379/0')
+CELERY_RESULT_BACKEND = 'django-db'
+CELERY_ACCEPT_CONTENT = ['json']
+CELERY_TASK_SERIALIZER = 'json'
+CELERY_RESULT_SERIALIZER = 'json'
+
+BACKEND_URL = os.getenv('BACKEND_URL', 'http://localhost:8000')
+ADMIN_EMAIL = os.getenv('ADMIN_EMAIL', 'od_houam@esi.dz')

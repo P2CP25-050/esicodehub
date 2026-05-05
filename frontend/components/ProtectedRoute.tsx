@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { useRouter } from 'next/router';
-import { useAuth } from '@/hooks/useAuth';
+import { useAuth } from '@/context/AuthContext';
 import { LoadingSpinner } from './LoadingSpinner';
 
 //types
@@ -23,19 +23,15 @@ export const ProtectedRoute = ({
     // Still checking session — don't redirect yet
     if (isLoading) return;
 
-    // Not logged in => send to login
+    // Not logged in => send to landing page
     if (!isAuthenticated) {
-      router.replace('/login');
+      router.replace('/');
       return;
     }
 
-    // Logged in but wrong role → send to their own dashboard
+    // Logged in but wrong role -> send to a valid app page.
     if (allowedRole && user?.role !== allowedRole) {
-      router.replace(
-        user?.role === 'professor'
-          ? '/dashboard/professor'
-          : '/dashboard/student'
-      );
+      router.replace('/assignments');
     }
   }, [isLoading, isAuthenticated, user, allowedRole, router]);
 

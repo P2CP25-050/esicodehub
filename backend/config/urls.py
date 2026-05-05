@@ -18,16 +18,42 @@ from django.contrib import admin
 from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
-from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
+from rest_framework_simplejwt.views import (
+    TokenObtainPairView,
+    TokenRefreshView,
+)
+
+from apps.accounts.views import subject_list
 
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/', include('apps.core.urls')),
     path('api/auth/', include('apps.accounts.urls')),
+    path('api/profiles/', include('apps.accounts.public_urls')),
+    path('api/subjects/', subject_list, name='subject-list'),
+    path(
+        'api/assignments/',
+        include(
+            [
+                path('', include('apps.assignment_submissions.urls')),
+                path('', include('apps.plagiarism.urls')),
+            ]
+        ),
+    ),
+    path(
+        'api/personal-submissions/',
+        include('apps.personal_submissions.urls'),
+    ),
+    path('api/forum/', include('apps.forum.urls')),
+    path('api/notifications/', include('apps.notifications.urls')),
+    path('api/reports/', include('apps.reports.urls')),
     path('api/auth/token/', TokenObtainPairView.as_view()),
     path('api/auth/token/refresh/', TokenRefreshView.as_view()),
 ]
 
 
 if settings.DEBUG:
-    urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
+    urlpatterns += static(
+        settings.STATIC_URL,
+        document_root=settings.STATIC_ROOT,
+    )

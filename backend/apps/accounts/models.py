@@ -108,6 +108,8 @@ class Profile(models.Model):
         null=True,
         blank=True,
     )
+    avatar_data = models.TextField(blank=True, default='')
+    avatar_content_type = models.CharField(max_length=100, blank=True, default='')
     bio = models.TextField(blank=True)
     subjects = models.ManyToManyField(
         Subject,
@@ -127,3 +129,38 @@ class Profile(models.Model):
 def create_user_profile(sender, instance, created, **kwargs):
     if created:
         Profile.objects.create(user=instance)
+
+
+class PasswordResetToken(models.Model):
+    """Stores a secure token for password reset requests."""
+
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='password_reset_tokens',
+    )
+    token = models.CharField(max_length=64, unique=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    expires_at = models.DateTimeField()
+    is_used = models.BooleanField(default=False)
+
+    class Meta:
+        db_table = 'password_reset_tokens'
+
+    def save(self, *args, **kwargs):
+        # Set expiry only on creation
+        if not self.pk:
+            self.expires_at = timezone.now() + timedelta(hours=1)
+        super().save(*args, **kwargs)
+
+    def is_valid(self) -> bool:
+        """Return True if the token has not been used and has not expired."""
+        return not self.is_used and timezone.now() < self.expires_at
+
+    @staticmethod
+    def generate_token() -> str:
+        """Generate a cryptographically secure URL-safe token."""
+        return secrets.token_urlsafe(48)  # 64 chars when base64-encoded
+
+    def __str__(self):
+        return f"PasswordResetToken for {self.user.email} (valid: {self.is_valid()})"

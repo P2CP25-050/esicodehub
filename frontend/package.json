@@ -10,21 +10,33 @@
     "test": "jest --watchAll=false"
   },
   "dependencies": {
+    "@monaco-editor/react": "^4.7.0",
     "axios": "^1.13.5",
+    "date-fns": "^4.1.0",
     "framer-motion": "^12.38.0",
+    "lucide-react": "^1.7.0",
+    "monaco-editor": "^0.55.1",
     "next": "16.1.6",
     "react": "19.2.3",
-    "react-dom": "19.2.3"
+    "react-dom": "19.2.3",
+    "swr": "^2.4.1"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.2",
+    "@types/jest": "^30.0.0",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "babel-plugin-react-compiler": "1.0.0",
     "eslint": "^9",
     "eslint-config-next": "16.1.6",
+    "jest": "^30.3.0",
+    "jest-environment-jsdom": "^30.3.0",
     "tailwindcss": "^4",
+    "ts-jest": "^29.4.6",
+    "ts-node": "^10.9.2",
     "typescript": "^5"
   }
 }

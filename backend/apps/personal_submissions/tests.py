@@ -1,0 +1,133 @@
+import json
+import os
+import tempfile
+from unittest.mock import patch
+
+from django.core.files.uploadedfile import SimpleUploadedFile
+from django.urls import reverse
+from rest_framework import status
+from rest_framework.test import APITestCase
+
+from apps.accounts.models import User
+from .models import PersonalSubmission
+from .gcs import validate_gcs_configuration
+from .validators import validate_code_file
+
+
+class FileUploadViewTests(APITestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(
+            email='student@test.local',
+            password='testpass123',
+            first_name='Test',
+            last_name='Student',
+            is_active=True,
+            is_verified=True,
+        )
+        self.client.force_authenticate(user=self.user)
+        self.submission = PersonalSubmission.objects.create(
+            owner=self.user,
+            title='Submission',
+            description='desc',
+            language='python',
+            course_tag='CS101',
+            submission_type=PersonalSubmission.SubmissionType.REVIEW,
+            visibility=PersonalSubmission.Visibility.PRIVATE,
+            gcs_prefix=PersonalSubmission.build_gcs_prefix(self.user.id, 1),
+        )
+        self.url = reverse('upload-files', kwargs={'pk': self.submission.id})
+
+    @patch('apps.personal_submissions.views.upload_file')
+    @patch('apps.personal_submissions.views.validate_code_file')
+    def test_upload_files_success(self, mock_validate, mock_upload):
+        mock_validate.side_effect = lambda file: file
+
+        payload = {
+            'files': [SimpleUploadedFile('main.py', b'print("ok")\n', content_type='text/plain')],
+            'file_paths': ['src/main.py'],
+        }
+        response = self.client.post(self.url, payload, format='multipart')
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(self.submission.files.count(), 1)
+        mock_upload.assert_called_once()
+
+    def test_upload_rejects_mismatched_file_paths(self):
+        payload = {
+            'files': [SimpleUploadedFile('main.py', b'print("ok")\n', content_type='text/plain')],
+            'file_paths': [],
+        }
+        response = self.client.post(self.url, payload, format='multipart')
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data['detail'], 'Number of files and file_paths must match')
+
+    def test_upload_rejects_path_traversal(self):
+        payload = {
+            'files': [SimpleUploadedFile('main.py', b'print("ok")\n', content_type='text/plain')],
+            'file_paths': ['../secret.py'],
+        }
+        response = self.client.post(self.url, payload, format='multipart')
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('Invalid file path', response.data['detail'])
+
+
+class FileValidatorTests(APITestCase):
+    @patch(
+            'apps.personal_submissions.validators.magic.from_buffer',
+            return_value='application/octet-stream'
+    )
+    def test_validator_allows_known_text_extension_with_utf8_content(self, _mock_magic):
+        file = SimpleUploadedFile('config.yaml', b'key: value\n')
+        validated = validate_code_file(file)
+        self.assertIs(validated, file)
+
+    @patch(
+            'apps.personal_submissions.validators.magic.from_buffer',
+            return_value='application/octet-stream'
+    )
+    def test_validator_rejects_binary_content(self, _mock_magic):
+        file = SimpleUploadedFile('config.yaml', b'\x00\x01\x02\x03')
+        with self.assertRaisesMessage(Exception, 'Security Error'):
+            validate_code_file(file)
+
+
+class GCSConfigurationValidationTests(APITestCase):
+    @patch.dict(os.environ, {}, clear=True)
+    @patch('apps.personal_submissions.gcs.settings', create=True)
+    def test_validation_reports_missing_bucket_and_credentials(self, settings_mock):
+        settings_mock.GS_BUCKET_NAME = ''
+        settings_mock.GCS_CREDENTIALS_PATH = None
+        settings_mock.GS_CREDENTIALS = None
+
+        issues = validate_gcs_configuration()
+
+        self.assertTrue(any('GCS_BUCKET_NAME is not set' in issue for issue in issues))
+        self.assertTrue(any('GCS credentials are not configured' in issue for issue in issues))
+
+    @patch('apps.personal_submissions.gcs.settings', create=True)
+    def test_validation_reports_windows_host_path_misconfiguration(self, settings_mock):
+        settings_mock.GS_BUCKET_NAME = 'bucket'
+        settings_mock.GCS_CREDENTIALS_PATH = r'C:\Users\student\gcs-credentials.json'
+        settings_mock.GS_CREDENTIALS = r'C:\Users\student\gcs-credentials.json'
+
+        issues = validate_gcs_configuration()
+
+        self.assertTrue(any('host path' in issue for issue in issues))
+
+    @patch('apps.personal_submissions.gcs.settings', create=True)
+    def test_validation_passes_for_existing_json_credentials_file(self, settings_mock):
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False) as handle:
+            json.dump({'type': 'service_account', 'client_email': 'a@b.c'}, handle)
+            credentials_path = handle.name
+
+        try:
+            settings_mock.GS_BUCKET_NAME = 'bucket'
+            settings_mock.GCS_CREDENTIALS_PATH = credentials_path
+            settings_mock.GS_CREDENTIALS = credentials_path
+
+            issues = validate_gcs_configuration()
+            self.assertEqual(issues, [])
+        finally:
+            os.unlink(credentials_path)

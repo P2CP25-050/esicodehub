@@ -26,7 +26,6 @@ export interface LoginRequest {
 
 export interface AuthTokens {
   access: string;
-  refresh: string;
 }
 
 export interface AuthUser {
@@ -38,7 +37,6 @@ export interface AuthUser {
 
 export interface LoginResponse {
   access: string;
-  refresh: string;
   user: AuthUser;
 }
 
@@ -59,12 +57,16 @@ export const resendVerification = (data: ResendVerificationRequest) =>
 //login and get tokens
 export const login = (data: LoginRequest) =>
   apiClient.post<LoginResponse>('/auth/login/', data);
-//refresh access token using refresh token
-export const refreshToken = (refresh: string) =>
+//refresh access token using HttpOnly refresh cookie
+export const refreshToken = () =>
   axios.post<AuthTokens>(
-	  `${process.env.NEXT_PUBLIC_API_URL}/auth/token/refresh/`,
-	  { refresh }
+    `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api'}/auth/token/refresh/`,
+    {},
+    { withCredentials: true }
   );
+
+export const logout = () =>
+  apiClient.post('/auth/logout/');
 //the response returned  by GET auth/me endpoint
 //returns the current user's profile based on the access token provided in the request headers
 //email ,   first_name, last_name, role (student or professor)

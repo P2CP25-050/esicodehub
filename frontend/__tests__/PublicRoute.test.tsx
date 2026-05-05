@@ -1,8 +1,8 @@
 import React from 'react';
 import { render, screen, waitFor } from '@testing-library/react';
 import { PublicRoute } from '@/components/PublicRoute';
-import * as useAuthHook from '@/hooks/useAuth';
-import type { AuthUser } from '@/hooks/useAuth';
+import * as useAuthHook from '@/context/AuthContext';
+import type { AuthUser } from '@/context/AuthContext';
 
 // ============================================================================
 // Mocks
@@ -37,6 +37,8 @@ const mockAuth = (overrides: Partial<ReturnType<typeof useAuthHook.useAuth>>) =>
     isLoading:       false,
     isAuthenticated: false,
     user:            null,
+    setUser:         jest.fn(),
+    logout:          jest.fn(),
     ...overrides,
   });
 };
@@ -107,7 +109,7 @@ describe('PublicRoute', () => {
 
   // ── Authenticated student ──────────────────────────────────────────────────
 
-  it('redirects student to /dashboard/student', async () => {
+  it('redirects student to /home', async () => {
     mockAuth({ isLoading: false, isAuthenticated: true, user: studentUser });
 
     render(
@@ -117,7 +119,7 @@ describe('PublicRoute', () => {
     );
 
     await waitFor(() =>
-      expect(mockReplace).toHaveBeenCalledWith('/dashboard/student')
+      expect(mockReplace).toHaveBeenCalledWith('/home')
     );
   });
 
@@ -136,7 +138,7 @@ describe('PublicRoute', () => {
 
   // ── Authenticated professor ────────────────────────────────────────────────
 
-  it('redirects professor to /dashboard/professor', async () => {
+  it('redirects professor to /home', async () => {
     mockAuth({ isLoading: false, isAuthenticated: true, user: professorUser });
 
     render(
@@ -145,9 +147,8 @@ describe('PublicRoute', () => {
       </PublicRoute>
     );
 
-    // ✅ fixed: /dashboard/professor not /dashboard/teacher
     await waitFor(() =>
-      expect(mockReplace).toHaveBeenCalledWith('/dashboard/professor')
+      expect(mockReplace).toHaveBeenCalledWith('/home')
     );
   });
 
