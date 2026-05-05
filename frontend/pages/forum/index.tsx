@@ -110,22 +110,23 @@ const FORUM_CSS = `
   /* Ask button */
   .fp-ask-btn {
     padding: 13px 28px;
-    background: var(--navy);
-    color: var(--paper);
-    border: 1.5px solid var(--navy);
+    background: var(--paper);
+    color: var(--ink);
+    border: 1.5px solid var(--ink);
     font-family: var(--font-mono);
     font-size: 12px;
     font-weight: 700;
     letter-spacing: 0.1em;
     text-transform: uppercase;
     cursor: pointer;
-    transition: background 0.15s, box-shadow 0.15s, transform 0.1s;
+    transition: background 0.15s, color 0.15s, box-shadow 0.15s, transform 0.1s;
     white-space: nowrap;
     text-decoration: none;
     display: inline-block;
   }
   .fp-ask-btn:hover {
     background: var(--ink);
+    color: var(--paper);
     border-color: var(--ink);
     box-shadow: 4px 4px 0 var(--navy);
     transform: translate(-2px, -2px);
