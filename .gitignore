@@ -10,3 +10,5 @@ data/
 gcs-credentials.json
 
 github-sa-key.json
+
+cloudbuild.yaml
