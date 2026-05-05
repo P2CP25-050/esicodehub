@@ -9,7 +9,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from .models import Answer, Question, Vote
+from .models import Answer, Question, QuestionView, Vote
 from .serializers import (
     AnswerCreateSerializer,
     AnswerSerializer,
@@ -222,10 +222,19 @@ class QuestionDetailView(APIView):
         )
 
     def get(self, request, pk):
-        Question.objects.filter(pk=pk).update(
-            view_count=F('view_count') + 1
-        )
         question = self.get_object(pk)
+
+        if request.user.is_authenticated and request.user != question.author:
+            with transaction.atomic():
+                _, created = QuestionView.objects.get_or_create(
+                    question=question,
+                    user=request.user,
+                )
+                if created:
+                    Question.objects.filter(pk=question.pk).update(
+                        view_count=F('view_count') + 1
+                    )
+                    question.refresh_from_db(fields=['view_count'])
 
         # Build the fully-annotated answer queryset once, no per answer
         # queries will be fired in AnswerSerializer for vote_score or
