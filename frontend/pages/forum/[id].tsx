@@ -1,10 +1,11 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/router";
 import {
   getQuestion,
   deleteQuestion,
   voteQuestion,
+  recordView,           // ← new service call: PATCH /questions/:id/view
 } from "@/services/forum";
 import type { QuestionDetail } from "@/services/forum";
 import Header from "@/components/submissions/Header";
@@ -21,11 +22,12 @@ function QuestionDetailContent() {
   const router = useRouter();
 
   const [question, setQuestion] = useState<QuestionDetail | null>(null);
-  // Starts as false because `isLoading` (derived below) is true while the
-  // router hasn't resolved, so the spinner shows on first render without
-  // needing loading=true here.
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+
+  // Tracks whether we already recorded a view in this browser session for
+  // this question, so a re-render or StrictMode double-effect doesn't double-count.
+  const viewRecorded = useRef(false);
 
   // Derive a validated numeric id only after the router is ready.
   // router.query.id can be undefined (first render) or string[] (catch-all
@@ -36,46 +38,49 @@ function QuestionDetailContent() {
       ? Number(rawId)
       : null;
 
-  // Derive the "invalid id" error directly from router state so we avoid
-  // calling setState synchronously inside a useEffect (react-hooks/set-state-in-effect).
-  const idError =
-    router.isReady && questionId === null ? "Invalid question ID." : "";
-
-  // Treat the page as loading while the router hasn't resolved yet, or while a
-  // fetch is in flight.
-  const isLoading = !router.isReady || loading;
-
-  const displayError = idError || error;
-
   useEffect(() => {
-    // Wait for the router. If the id is invalid we show the derived error instead.
-    if (!router.isReady || questionId === null) return;
+    // Wait for the router; show an error if the id is missing or invalid.
+    if (!router.isReady) return;
 
-    let cancelled = false;
+    if (questionId === null) {
+      setError("Invalid question ID.");
+      setLoading(false);
+      return;
+    }
 
-    const loadQuestion = async () => {
-      setLoading(true);
-      setError("");
-      try {
-        const q = await getQuestion(questionId);
-        if (!cancelled) {
-          setQuestion(q);
-        }
-      } catch {
-        if (!cancelled) {
-          setError("Failed to load question.");
-        }
-      } finally {
-        if (!cancelled) {
-          setLoading(false);
-        }
-      }
-    };
+    setLoading(true);
+    setError("");
+    viewRecorded.current = false; // reset on id change (navigating between questions)
 
-    void loadQuestion();
-
-    return () => { cancelled = true; };
+    getQuestion(questionId)
+      .then((q) => { setQuestion(q); setLoading(false); })
+      .catch(() => { setError("Failed to load question."); setLoading(false); });
   }, [router.isReady, questionId]);
+
+  // ── View tracking ──────────────────────────────────────────────────────────
+  // Fire once per session, only when:
+  //   1. The question has loaded successfully.
+  //   2. The current user is NOT the question author (self-views don't count).
+  //   3. We haven't already recorded a view in this session (ref guard).
+  useEffect(() => {
+    if (!question || loading) return;
+    if (viewRecorded.current) return;
+    if (question.author_email === currentUserEmail) return; // author's own view
+
+    viewRecorded.current = true;
+    recordView(question.id)
+      .then((updated) => {
+        // Merge the server-confirmed view_count back in without a full refetch.
+        if (updated && typeof updated.view_count === "number") {
+          setQuestion((prev) =>
+            prev ? { ...prev, view_count: updated.view_count } : prev
+          );
+        }
+      })
+      .catch(() => {
+        // Non-critical — a failed view ping shouldn't surface an error to the user.
+      });
+  }, [question, loading, currentUserEmail]);
 
   const hasAccepted = (question?.answers ?? []).some((a) => a.is_accepted);
 
@@ -127,7 +132,7 @@ function QuestionDetailContent() {
         <div className="max-w-screen-xl mx-auto px-4 sm:px-8 py-8">
 
           {/* Loading */}
-          {isLoading && !displayError && (
+          {loading && (
             <div className="flex items-center justify-center py-24">
               <div className="text-center space-y-3">
                 <svg
@@ -144,16 +149,16 @@ function QuestionDetailContent() {
           )}
 
           {/* Error */}
-          {displayError && !isLoading && (
+          {error && !loading && (
             <div className="bg-red-50 border border-red-200 rounded-xl p-6 text-center text-red-600">
-              <p className="font-bold">{displayError}</p>
+              <p className="font-bold">{error}</p>
               <Link href="/forum" className="text-sm text-red-400 hover:underline mt-2 block">
                 ← Back to Forum
               </Link>
             </div>
           )}
 
-          {question && !isLoading && questionId !== null && (
+          {question && !loading && questionId !== null && (
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
 
               {/* Main column */}

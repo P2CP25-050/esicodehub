@@ -16,15 +16,16 @@ import {
   register,
   verifyEmail,
   resendVerification,
+  getMe,
 } from "@/services/auth";
 
 // ─── Token storage utility ────────────────────────────────
 import { saveTokens } from "@/lib/tokens";
 import { PublicRoute } from "@/components/PublicRoute";
+import { useAuth } from "@/context/AuthContext";
 
 // ─── Types ────────────────────────────────────────────────
 type Page = "register" | "verify" | "success";
-type Role = "student" | "professor";
 
 // ─── Responsive width hook ────────────────────────────────
 function useWindowWidth(): number {
@@ -40,7 +41,6 @@ function useWindowWidth(): number {
 }
 
 // ─── Back Button ──────────────────────────────────────────
-// Kept local because it uses router directly
 function BackButton({ onClick }: { onClick: () => void }) {
   const [hovered, setHovered] = useState(false);
   return (
@@ -89,6 +89,7 @@ function BackButton({ onClick }: { onClick: () => void }) {
 function RegisterPageContent() {
   const router = useRouter();
   const width  = useWindowWidth();
+  const { setUser } = useAuth(); // FIX: get setUser to populate auth state before navigating
 
   // ── Page flow ──
   const [page, setPage] = useState<Page>("register");
@@ -219,21 +220,20 @@ function RegisterPageContent() {
     setLoadingRegister(true);
     try {
       await register({ email, password, password_confirm: confirmPassword });
-      // no need to use res, just navigate on success
       goTo("verify");
       startCooldown();
       setTimeout(() => codeRef.current?.focus(), 400);
     } catch (err: unknown) {
-	if (err instanceof AxiosError) {
-		const status = err.response?.status;
-		const data = err.response?.data;
-		if (status === 404) setEmailError("This email is not registered in the ESI system.");
-		else if (status === 400 && data?.error?.includes('already exists')) setEmailError("An account with this email already exists.");
-		else if (status === 400) setEmailError(data?.email?.[0] || data?.error || "Registration failed.");
-		else setEmailError("Something went wrong. Please try again.");
-	} else {
-		setEmailError("Registration failed. Try again.");
-	}
+      if (err instanceof AxiosError) {
+        const status = err.response?.status;
+        const data = err.response?.data;
+        if (status === 404) setEmailError("This email is not registered in the ESI system.");
+        else if (status === 400 && data?.error?.includes('already exists')) setEmailError("An account with this email already exists.");
+        else if (status === 400) setEmailError(data?.email?.[0] || data?.error || "Registration failed.");
+        else setEmailError("Something went wrong. Please try again.");
+      } else {
+        setEmailError("Registration failed. Try again.");
+      }
     } finally {
       setLoadingRegister(false);
     }
@@ -255,23 +255,29 @@ function RegisterPageContent() {
     try {
       const res = await verifyEmail({ email, code });
       saveTokens(res.data);
-      // redirect based on role from backend response
+
+      // FIX: Fetch the user profile and populate auth context immediately.
+      // This ensures isAuthenticated is true before /home mounts,
+      // so ProtectedRoute does not redirect away.
+      const profile = await getMe();
+      setUser(profile.data);
+
       goTo("success");
       setTimeout(() => redirectToDashboard(), 1800);
     } catch (err: unknown) {
-	if (err instanceof AxiosError) {
-		const status = err.response?.status;
-		if (status === 400) setCodeError("Invalid or expired code. Please try again.");
-		else setCodeError("Something went wrong. Please try again.");
-	} else {
-		setCodeError("Invalid code. Try again.");
-	}
-	setShakeCode(true);
-	setTimeout(() => setShakeCode(false), 600);
+      if (err instanceof AxiosError) {
+        const status = err.response?.status;
+        if (status === 400) setCodeError("Invalid or expired code. Please try again.");
+        else setCodeError("Something went wrong. Please try again.");
+      } else {
+        setCodeError("Invalid code. Try again.");
+      }
+      setShakeCode(true);
+      setTimeout(() => setShakeCode(false), 600);
     } finally {
       setLoadingVerify(false);
     }
-  }, [code, email, loadingVerify, goTo, redirectToDashboard]);
+  }, [code, email, loadingVerify, goTo, redirectToDashboard, setUser]);
 
   // ── RESEND — real API call ──
   const handleResend = useCallback(async () => {
@@ -358,7 +364,6 @@ function RegisterPageContent() {
           {/* ══════════════ REGISTER ══════════════ */}
           {page === "register" && (
             <div style={{ animation: "pageSlide 0.4s cubic-bezier(0.22,1,0.36,1) both" }}>
-              {/* Back → landing page */}
               <BackButton onClick={() => router.push("/")} />
 
               <Logo size={logoSize} />
@@ -367,7 +372,6 @@ function RegisterPageContent() {
                 Create your account
               </div>
 
-              {/* Email — @esi.dz only */}
               <InputRow
                 id="email"
                 placeholder="Email address (@esi.dz)"
@@ -385,7 +389,6 @@ function RegisterPageContent() {
                 }
               />
 
-              {/* Password + strength */}
               <InputRow
                 id="password"
                 placeholder="Password"
@@ -398,7 +401,6 @@ function RegisterPageContent() {
               />
               <PasswordStrength password={password} />
 
-              {/* Confirm password */}
               <InputRow
                 id="confirm"
                 placeholder="Confirm Password"

@@ -41,6 +41,8 @@ function getAuthInitPromise(): Promise<AuthUser | null> {
       .then((profile) => profile.data as AuthUser)
       .catch(() => {
         clearTokens();
+        // FIX: Reset so a subsequent login can re-trigger a fresh fetch
+        _authInitPromise = null;
         return null;
       });
   }
@@ -84,6 +86,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } catch {
       // ignore server errors — local cleanup must always proceed
     } finally {
+      // FIX: Reset singleton so the next login triggers a fresh auth check
+      _authInitPromise = null;
       clearTokens();
       setUser(null);
       router.push('/login');
