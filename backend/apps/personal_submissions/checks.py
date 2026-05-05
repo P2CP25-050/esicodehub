@@ -1,3 +1,6 @@
+import os
+import sys
+
 from django.conf import settings
 from django.core.checks import Error, Warning, register
 
@@ -7,6 +10,22 @@ from .gcs import validate_gcs_configuration
 @register()
 def gcs_configuration_check(app_configs=None, **kwargs):
     if getattr(settings, 'TESTING', False):
+        return []
+
+    if os.getenv('SKIP_GCS_CHECKS') == '1':
+        return []
+
+    if os.getenv('K_SERVICE'):
+        return []
+
+    skip_commands = {
+        'migrate',
+        'makemigrations',
+        'collectstatic',
+        'createsuperuser',
+        'loaddata',
+    }
+    if any(command in sys.argv for command in skip_commands):
         return []
 
     issues = validate_gcs_configuration()
