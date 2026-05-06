@@ -38,6 +38,8 @@ AUTH_COOKIE_SECURE = True
 AUTH_COOKIE_SAMESITE = 'None'
 SESSION_COOKIE_SECURE = True
 CSRF_COOKIE_SECURE = True
+SESSION_COOKIE_SAMESITE = 'None'
+CSRF_COOKIE_SAMESITE = 'None'
 
 
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
@@ -63,6 +65,8 @@ GOOGLE_CLOUD_PROJECT = os.getenv('GOOGLE_CLOUD_PROJECT')
 
 
 FRONTEND_URL = os.getenv('FRONTEND_URL', 'https://esicodehub.tech')
+BACKEND_URL = 'https://api.esicodehub.tech'
+ADMIN_EMAIL = os.getenv('ADMIN_EMAIL')
 
 
 LOGGING = {
