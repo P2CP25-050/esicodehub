@@ -158,6 +158,13 @@ export const getReviews = async (
 };
 
 export const listSubjects = async (): Promise<Subject[]> => {
-  const res = await apiClient.get<Subject[]>('/subjects/');
-  return res.data;
+  const res = await apiClient.get<Subject[] | { results?: Subject[] }>(
+    '/subjects/'
+  );
+  const data = res.data;
+  if (Array.isArray(data)) return data;
+  if (data && typeof data === 'object' && Array.isArray(data.results)) {
+    return data.results;
+  }
+  return [];
 };

@@ -43,23 +43,41 @@ MAX_FILE_SIZE = 10 * 1024 * 1024    # 10MB per file
 MAX_TOTAL_SIZE = 50 * 1024 * 1024   # 50MB per submission
 
 
+def _normalize_year(value):
+    if value is None:
+        return ''
+    return str(value).replace(' ', '').strip().upper()
+
+
+def _normalize_section(value):
+    if value is None:
+        return ''
+    return str(value).strip().upper()
+
+
+def _normalize_group(value):
+    if value is None:
+        return ''
+    return str(value).strip()
+
+
 def assignment_matches_student_targeting(assignment, esi_student):
     """Return True when assignment targeting matches one ESI student."""
-    if assignment.target_year != esi_student.study_year:
+    if _normalize_year(assignment.target_year) != _normalize_year(esi_student.study_year):
         return False
 
     if assignment.target_sections:
-        section = (esi_student.section or '').strip()
+        section = _normalize_section(esi_student.section)
         target_sections = {
-            str(value).strip() for value in assignment.target_sections
+            _normalize_section(value) for value in assignment.target_sections
         }
         if section not in target_sections:
             return False
 
     if assignment.target_groups:
-        student_group = str(esi_student.group)
+        student_group = _normalize_group(esi_student.group)
         target_groups = {
-            str(value).strip() for value in assignment.target_groups
+            _normalize_group(value) for value in assignment.target_groups
         }
         if student_group not in target_groups:
             return False
@@ -121,7 +139,11 @@ class AssignmentListCreateView(APIView):
                 if not esi_student:
                     queryset = Assignment.objects.none()
                 else:
-                    queryset = queryset.filter(target_year=esi_student.study_year)
+                    normalized_year = _normalize_year(esi_student.study_year)
+                    if not normalized_year:
+                        queryset = Assignment.objects.none()
+                    else:
+                        queryset = queryset.filter(target_year__iexact=normalized_year)
                     targeted_ids = [
                         assignment.id
                         for assignment in queryset

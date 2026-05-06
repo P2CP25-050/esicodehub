@@ -332,6 +332,7 @@ function NewAssignmentForm() {
   
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [loadingSubjects, setLoadingSubjects] = useState(true);
+  const [subjectError, setSubjectError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [errors, setErrors] = useState<FormErrors>({});
   const [submitError, setSubmitError] = useState<string | null>(null);
@@ -340,8 +341,14 @@ function NewAssignmentForm() {
   
   useEffect(() => {
     listSubjects()
-      .then(setSubjects)
-      .catch(() => setSubjects([]))
+      .then((data) => {
+        setSubjects(data);
+        setSubjectError(null);
+      })
+      .catch((err) => {
+        setSubjects([]);
+        setSubjectError(getErrorMessage(err, "Failed to load subjects."));
+      })
       .finally(() => setLoadingSubjects(false));
   }, []);
 
@@ -585,7 +592,11 @@ function NewAssignmentForm() {
                 disabled={loadingSubjects || submitting}
               >
                 <option value="">
-                  {loadingSubjects ? "Loading subjects…" : "Select a subject"}
+                  {loadingSubjects
+                    ? "Loading subjects..."
+                    : subjectError
+                      ? "Failed to load subjects"
+                      : "Select a subject"}
                 </option>
                 {subjects.map((s) => (
                   <option key={s.id} value={String(s.id)}>
@@ -593,6 +604,9 @@ function NewAssignmentForm() {
                   </option>
                 ))}
               </select>
+              {subjectError && !loadingSubjects && (
+                <div style={styles.fieldError}>{subjectError}</div>
+              )}
               {errors.subject && (
                 <div style={styles.fieldError}>{errors.subject}</div>
               )}
