@@ -281,6 +281,30 @@ export default function LandingPage() {
           border-color: rgba(148,163,184,.55);
           transform: translateY(-2px);
         }
+
+        /* Responsive adjustments */
+        .hero-inner { display: grid; grid-template-columns: 1fr 1fr; gap: 4rem; }
+        .stats-strip { display: grid; grid-template-columns: repeat(3, 1fr); }
+        .problem-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.5rem; }
+        .solution-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 3rem; }
+        .features-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 1.5rem; }
+
+        @media (max-width: 768px) {
+          nav { padding: 0 1rem; height: 56px; }
+          nav div[style] > a.btn-primary { padding: .4rem .9rem; font-size: .85rem; }
+
+          .hero-inner { grid-template-columns: 1fr; gap: 1.5rem; padding-top: 1.5rem !important; padding-bottom: 2rem !important; }
+          .code-window { width: 100%; max-width: none; transform: none !important; box-shadow: none !important; }
+          .code-window div[style] { padding: 1rem !important; }
+
+          .stats-strip { grid-template-columns: 1fr; padding: 1.5rem 1rem !important; }
+          .problem-grid { grid-template-columns: 1fr; }
+          .solution-grid { grid-template-columns: 1fr; }
+          .features-grid { grid-template-columns: 1fr; }
+
+          .feature-icon-wrap { margin-bottom: 8px; }
+          footer { padding: 1rem; }
+        }
       `}</style>
 
       <div style={{ minHeight: '100vh', background: '#0d1b2a' }}>
@@ -337,7 +361,7 @@ export default function LandingPage() {
           <div style={{ position: 'absolute', top: '15%', left: '5%', width: 500, height: 500, background: 'radial-gradient(circle, rgba(37,99,235,.12) 0%, transparent 65%)', pointerEvents: 'none' }} />
           <div style={{ position: 'absolute', bottom: '10%', right: '10%', width: 400, height: 400, background: 'radial-gradient(circle, rgba(79,70,229,.1) 0%, transparent 65%)', pointerEvents: 'none' }} />
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4rem', alignItems: 'center', width: '100%', paddingTop: '3rem', paddingBottom: '4rem' }}>
+          <div className="hero-inner" style={{ alignItems: 'center', width: '100%', paddingTop: '3rem', paddingBottom: '4rem' }}>
 
             {/* Left — copy */}
             <div>
@@ -479,12 +503,11 @@ export default function LandingPage() {
         </section>
 
         {/* ════════════════ STATS STRIP ════════════════ */}
-        <div ref={statsRef.ref} style={{
+        <div ref={statsRef.ref} className="stats-strip" style={{
           borderTop: '1px solid rgba(255,255,255,.06)',
           borderBottom: '1px solid rgba(255,255,255,.06)',
           background: 'rgba(255,255,255,.02)',
           padding: '2.5rem max(1.5rem, calc(50% - 680px))',
-          display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)',
           gap: '2rem',
         }}>
           {[
@@ -522,7 +545,7 @@ export default function LandingPage() {
             </h2>
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1.5rem' }}>
+          <div className="problem-grid">
             {[
               {
                 icon: (
@@ -584,14 +607,11 @@ export default function LandingPage() {
           </div>
 
           {/* Solution card */}
-          <div style={{
+          <div className="solution-grid" style={{
             background: 'linear-gradient(135deg, #0f172a, #1e293b)',
             border: '1px solid rgba(59,130,246,.2)',
             borderRadius: 20,
             padding: '2.5rem 3rem',
-            display: 'grid',
-            gridTemplateColumns: '1fr 1fr',
-            gap: '3rem',
             alignItems: 'center',
           }}>
             <div>
@@ -641,7 +661,7 @@ export default function LandingPage() {
             </h2>
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '1.5rem' }}>
+          <div className="features-grid">
             {[
               {
                 icon: (
