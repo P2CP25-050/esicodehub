@@ -1,14 +1,17 @@
-from django.core.mail import send_mail
+import os
+from rest_framework.views import APIView
+from rest_framework.permissions import AllowAny
 from django.contrib.auth import authenticate
 from django.conf import settings
+from django.db.models import Q
+from django.shortcuts import get_object_or_404
 from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.serializers import TokenRefreshSerializer
-
-from apps.accounts.models import User, EmailVerification, Profile
+from apps.accounts.models import User, EmailVerification, Profile, PasswordResetToken
 from apps.accounts.serializers import (
     RegisterSerializer,
     VerifyEmailSerializer,
@@ -16,8 +19,13 @@ from apps.accounts.serializers import (
     LoginSerializer,
     ProfileUpdateSerializer,
     UserProfileSerializer,
+    PublicProfileSerializer,
+    ProfileSearchResultSerializer,
 )
+from apps.accounts.tasks import send_verification_email, send_password_reset_email
+from apps.forum.models import Answer, Question
 from apps.esi_db.models import EsiStudent, EsiProfessor
+from apps.personal_submissions.models import PersonalSubmission
 
 
 def _set_refresh_cookie(response, refresh_token):
@@ -62,12 +70,7 @@ def _create_and_send_verification(user):
     """Generate a 6-digit code, save EmailVerification, and send email."""
     code = EmailVerification.generate_code()
     EmailVerification.objects.create(user=user, code=code)
-    send_mail(
-        subject='ESI Code Hub – Email Verification',
-        message=f'Your verification code is: {code}',
-        from_email=None,  # uses DEFAULT_FROM_EMAIL
-        recipient_list=[user.email],
-    )
+    send_verification_email.delay(user.email, code)
 
 
 @api_view(['POST'])
@@ -335,6 +338,94 @@ def profile(request):
     return Response(serializer.data)
 
 
+def _build_public_profile_stats(user):
+    return {
+        'submissions_count': PersonalSubmission.objects.filter(
+            owner=user,
+            visibility=PersonalSubmission.Visibility.PUBLIC,
+        ).count(),
+        'questions_count': Question.objects.filter(author=user).count(),
+        'answers_count': Answer.objects.filter(author=user).count(),
+        'accepted_answers_count': Answer.objects.filter(
+            author=user,
+            is_accepted=True,
+        ).count(),
+    }
+
+
+def _build_public_recent_activity(user):
+    if user.role != User.Role.STUDENT:
+        return {}
+
+    return {
+        'submissions': PersonalSubmission.objects.filter(
+            owner=user,
+            visibility=PersonalSubmission.Visibility.PUBLIC,
+        ).order_by('-created_at')[:5],
+        'questions': Question.objects.filter(author=user).order_by('-created_at')[:5],
+        'answers': Answer.objects.select_related('question').filter(
+            author=user,
+        ).order_by('-created_at')[:5],
+    }
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def profile_public(request, school_id):
+    """Return a user's public profile by school_id."""
+    user = get_object_or_404(User.objects.select_related('profile'), school_id=school_id)
+
+    student_map = {}
+    if user.role == User.Role.STUDENT and user.school_id:
+        student = EsiStudent.objects.filter(school_id=user.school_id).first()
+        if student is not None:
+            student_map[user.school_id] = student
+
+    serializer = PublicProfileSerializer(
+        user,
+        context={
+            'request': request,
+            'stats': _build_public_profile_stats(user),
+            'recent_activity': _build_public_recent_activity(user),
+            'student_map': student_map,
+        },
+    )
+    return Response(serializer.data)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def profile_search(request):
+    """Search verified users by name or school ID."""
+    query = (request.query_params.get('q') or '').strip()
+    if not query:
+        return Response([])
+
+    queryset = (
+        User.objects.filter(is_verified=True)
+        .select_related('profile')
+        .filter(
+            Q(first_name__icontains=query)
+            | Q(last_name__icontains=query)
+            | Q(school_id__icontains=query)
+        )
+        .order_by('last_name', 'first_name', 'school_id')[:20]
+    )
+
+    school_ids = [user.school_id for user in queryset if user.school_id]
+    student_map = {
+        student.school_id: student
+        for student in EsiStudent.objects.filter(school_id__in=school_ids)
+    }
+
+    serializer = ProfileSearchResultSerializer(
+        queryset,
+        many=True,
+        context={'request': request, 'student_map': student_map},
+    )
+    return Response(serializer.data)
+
+
 @api_view(['GET'])
 def subject_list(request):
     """Return a list of all subjects. No auth required."""
@@ -342,3 +433,106 @@ def subject_list(request):
     subjects = Subject.objects.all().order_by('code')
     data = [{'id': s.id, 'name': s.name, 'code': s.code} for s in subjects]
     return Response(data)
+
+
+class ForgotPasswordView(APIView):
+    """
+    Request a password reset link via email.
+    Always returns 200 to prevent user enumeration.
+    """
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        email = request.data.get('email', '').strip().lower()
+        if not email:
+            return Response(
+                {'error': 'Email is required.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        # Always return the same message whether email exists or not
+        # This prevents attackers from discovering which emails are registered
+        try:
+            user = User.objects.get(email=email, is_verified=True)
+        except User.DoesNotExist:
+            return Response(
+                {'message': 'If this email exists, a reset link has been sent.'}
+            )
+
+        # Invalidate all existing unused tokens for this user
+        PasswordResetToken.objects.filter(
+            user=user,
+            is_used=False,
+        ).update(is_used=True)
+
+        # Create a fresh token
+        token = PasswordResetToken.generate_token()
+        PasswordResetToken.objects.create(user=user, token=token)
+
+        # Build the reset URL
+        frontend_url = os.getenv('FRONTEND_URL', 'http://localhost:3000')
+        reset_url = f"{frontend_url}/reset-password?token={token}"
+
+        send_password_reset_email.delay(user.email, reset_url)
+        return Response(
+            {'message': 'If this email exists, a reset link has been sent.'}
+        )
+
+
+class ResetPasswordView(APIView):
+    """
+    Confirm a password reset using the token from the email link.
+    Validates the token, updates the password, and marks the token as used.
+    """
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        token_str = request.data.get('token', '')
+        password = request.data.get('password', '')
+        password2 = request.data.get('password_confirm', '')
+
+        if not all([token_str, password, password2]):
+            return Response(
+                {'error': 'All fields are required.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        if password != password2:
+            return Response(
+                {'error': 'Passwords do not match.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        if len(password) < 8:
+            return Response(
+                {'error': 'Password must be at least 8 characters.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        try:
+            token = PasswordResetToken.objects.select_related('user').get(
+                token=token_str,
+            )
+        except PasswordResetToken.DoesNotExist:
+            return Response(
+                {'error': 'Invalid or expired reset link.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        if not token.is_valid():
+            return Response(
+                {'error': 'This reset link has expired. Please request a new one.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        # Update the password and mark the token as used
+        user = token.user
+        user.set_password(password)
+        user.save(update_fields=['password'])
+
+        token.is_used = True
+        token.save(update_fields=['is_used'])
+
+        return Response(
+            {'message': 'Password reset successfully. You can now log in.'}
+        )

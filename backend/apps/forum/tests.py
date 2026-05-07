@@ -3,9 +3,9 @@ from django.test import TestCase
 from rest_framework.test import APIRequestFactory, force_authenticate
 
 from apps.accounts.models import User
-from apps.forum.models import Answer, Question, Vote
+from apps.forum.models import Answer, Question, QuestionView, Vote
 from apps.forum.serializers import AnswerCreateSerializer, QuestionCreateSerializer
-from apps.forum.views import AnswerCreateView, QuestionListCreateView
+from apps.forum.views import AnswerCreateView, QuestionDetailView, QuestionListCreateView
 
 
 class AnswerCreateSerializerTests(TestCase):
@@ -281,3 +281,71 @@ class AnswerCreateApiTests(TestCase):
 
         self.assertEqual(response.status_code, 400)
         self.assertIn('parent_id', response.data)
+
+
+class QuestionDetailViewCountTests(TestCase):
+    def setUp(self):
+        self.factory = APIRequestFactory()
+        self.author = User.objects.create_user(
+            email='author@example.com',
+            password='pass1234',
+            role='student',
+            first_name='Author',
+            last_name='User',
+            is_active=True,
+            is_verified=True,
+        )
+        self.viewer = User.objects.create_user(
+            email='viewer@example.com',
+            password='pass1234',
+            role='student',
+            first_name='Viewer',
+            last_name='User',
+            is_active=True,
+            is_verified=True,
+        )
+        self.question = Question.objects.create(
+            author=self.author,
+            title='View count test',
+            body='View count body',
+            tags=['python'],
+        )
+
+    def _get_question(self, user):
+        request = self.factory.get(
+            f'/api/forum/questions/{self.question.id}/'
+        )
+        force_authenticate(request, user=user)
+        return QuestionDetailView.as_view()(request, pk=self.question.id)
+
+    def test_author_view_does_not_increment(self):
+        response = self._get_question(self.author)
+
+        self.assertEqual(response.status_code, 200)
+        self.question.refresh_from_db(fields=['view_count'])
+        self.assertEqual(self.question.view_count, 0)
+        self.assertFalse(
+            QuestionView.objects.filter(
+                question=self.question,
+                user=self.author,
+            ).exists()
+        )
+
+    def test_viewer_increments_once(self):
+        response = self._get_question(self.viewer)
+
+        self.assertEqual(response.status_code, 200)
+        self.question.refresh_from_db(fields=['view_count'])
+        self.assertEqual(self.question.view_count, 1)
+        self.assertTrue(
+            QuestionView.objects.filter(
+                question=self.question,
+                user=self.viewer,
+            ).exists()
+        )
+
+        response = self._get_question(self.viewer)
+
+        self.assertEqual(response.status_code, 200)
+        self.question.refresh_from_db(fields=['view_count'])
+        self.assertEqual(self.question.view_count, 1)

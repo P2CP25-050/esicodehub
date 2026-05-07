@@ -1,6 +1,6 @@
 from django.contrib.contenttypes.models import ContentType
 from django.db import transaction
-from django.db.models import Count, F, IntegerField, OuterRef, Subquery, Sum, Value
+from django.db.models import Count, F, IntegerField, OuterRef, Prefetch, Subquery, Sum, Value
 from django.db.models.functions import Coalesce
 from django.shortcuts import get_object_or_404
 from rest_framework import status
@@ -9,7 +9,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from .models import Answer, Question, Vote
+from .models import Answer, Question, QuestionView, Vote
 from .serializers import (
     AnswerCreateSerializer,
     AnswerSerializer,
@@ -74,6 +74,74 @@ def _get_vote_score(obj, model):
         object_id=obj.id,
     ).aggregate(score=Coalesce(Sum('value'), 0))
     return result['score']
+
+
+def get_annotated_answers(question, user):
+    """
+    Return a queryset of top-level answers for the given question, annotated
+    with vote_score_db and user_vote_value, both resolved in the database so
+    no per answer queries are needed in the serializer.
+    Also prefetches replies and their authors to avoid queries in nested
+    """
+    answer_ct = ContentType.objects.get_for_model(Answer)
+
+    # Subquery: total vote score per answer
+    vote_score_subquery = (
+        Vote.objects.filter(
+            content_type=answer_ct,
+            object_id=OuterRef('pk'),
+        )
+        .values('object_id')
+        .annotate(total=Sum('value'))
+        .values('total')[:1]
+    )
+
+    replies_qs = (
+        Answer.objects.select_related('author')
+        .annotate(
+            vote_score_db=Coalesce(
+                Subquery(vote_score_subquery, output_field=IntegerField()),
+                Value(0),
+            ),
+            reply_count=Count('replies', distinct=True),
+        )
+        .order_by('created_at')
+    )
+
+    # Only annotate user_vote_value when there is an authenticated user —
+    # avoids a needless subquery for anonymous/unauthenticated contexts.
+    if user is not None and user.is_authenticated:
+        user_vote_subquery = (
+            Vote.objects.filter(
+                content_type=answer_ct,
+                object_id=OuterRef('pk'),
+                user=user,
+            )
+            .values('value')[:1]
+        )
+        replies_qs = replies_qs.annotate(
+            user_vote_value=Subquery(
+                user_vote_subquery, output_field=IntegerField()
+            )
+        )
+
+    qs = (
+        Answer.objects.filter(question=question, parent=None)
+        .select_related('author')
+        .prefetch_related(
+            Prefetch('replies', queryset=replies_qs, to_attr='prefetched_replies')
+        )
+        .annotate(
+            vote_score_db=Coalesce(
+                Subquery(vote_score_subquery, output_field=IntegerField()),
+                Value(0),
+            ),
+            reply_count=Count('replies', distinct=True),
+        )
+        .order_by('created_at')
+    )
+
+    return qs
 
 
 class QuestionListCreateView(APIView):
@@ -148,22 +216,37 @@ class QuestionDetailView(APIView):
     def get_object(self, pk):
         return get_object_or_404(
             _annotate_questions(
-                Question.objects.select_related('author').prefetch_related(
-                    'answers__author',
-                    'answers__replies__author',
-                )
+                Question.objects.select_related('author')
             ),
             pk=pk,
         )
 
     def get(self, request, pk):
-        Question.objects.filter(pk=pk).update(
-            view_count=F('view_count') + 1
-        )
         question = self.get_object(pk)
+
+        if request.user.is_authenticated and request.user != question.author:
+            with transaction.atomic():
+                _, created = QuestionView.objects.get_or_create(
+                    question=question,
+                    user=request.user,
+                )
+                if created:
+                    Question.objects.filter(pk=question.pk).update(
+                        view_count=F('view_count') + 1
+                    )
+                    question.refresh_from_db(fields=['view_count'])
+
+        # Build the fully-annotated answer queryset once, no per answer
+        # queries will be fired in AnswerSerializer for vote_score or
+        # user_vote when this queryset is passed via context.
+        annotated_answers = get_annotated_answers(question, request.user)
+
         serializer = QuestionDetailSerializer(
             question,
-            context={'request': request},
+            context={
+                'request': request,
+                'annotated_answers': annotated_answers,
+            },
         )
         return Response(serializer.data)
 

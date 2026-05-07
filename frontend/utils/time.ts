@@ -5,7 +5,7 @@
  * relativeTime("2024-01-15T10:30:00Z") // "2 hours ago"
  * relativeTime("2024-01-10T10:30:00Z") // "5 days ago"
  */
-export const relativeTime = (dateStr: string): string => {
+export const timeAgo = (dateStr: string): string => {
 
   const timestamp = new Date(dateStr).getTime();
 

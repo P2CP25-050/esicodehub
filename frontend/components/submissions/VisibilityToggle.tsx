@@ -8,29 +8,30 @@ interface VisibilityToggleProps {
 export default function VisibilityToggle({ value, onChange }: VisibilityToggleProps) {
   return (
     <div style={styles.container}>
-      <button
-        type="button"
-        onClick={() => onChange("public")}
-        style={{
-          ...styles.option,
-          ...(value === "public" ? styles.active : {})
-        }}
-      >
-        Public
-        <span style={styles.description}>Anyone can see it</span>
-      </button>
-
-      <button
-        type="button"
-        onClick={() => onChange("private")}
-        style={{
-          ...styles.option,
-          ...(value === "private" ? styles.active : {})
-        }}
-      >
-        Private
-        <span style={styles.description}>Only you can see it</span>
-      </button>
+      {(["public", "private"] as const).map((opt) => {
+        const isActive = value === opt;
+        return (
+          <button
+            key={opt}
+            type="button"
+            onClick={() => onChange(opt)}
+            style={{
+              ...styles.option,
+              ...(isActive ? styles.active : styles.inactive),
+            }}
+          >
+            <span style={{ ...styles.dot, background: isActive ? "#051650" : "#d1d5db" }} />
+            <span style={styles.content}>
+              <span style={{ ...styles.optLabel, color: isActive ? "#051650" : "#374151" }}>
+                {opt.charAt(0).toUpperCase() + opt.slice(1)}
+              </span>
+              <span style={styles.description}>
+                {opt === "public" ? "Anyone can see it" : "Only you can see it"}
+              </span>
+            </span>
+          </button>
+        );
+      })}
     </div>
   );
 }
@@ -38,29 +39,52 @@ export default function VisibilityToggle({ value, onChange }: VisibilityTogglePr
 const styles: Record<string, CSSProperties> = {
   container: {
     display: "flex",
-    gap: 12,
+    gap: 10,
   },
   option: {
     flex: 1,
-    padding: "14px 16px",
-    borderRadius: 10,
-    border: "2px solid #d1d9e6",
-    background: "#f8faff",
+    display: "flex",
+    alignItems: "center",
+    gap: 12,
+    padding: "13px 16px",
+    borderRadius: 0,
     cursor: "pointer",
     textAlign: "left",
-    fontWeight: 600,
-    fontSize: 14,
-    transition: "all .2s",
+    transition: "all .15s",
+    fontFamily: "'DM Sans', sans-serif",
   },
   active: {
-    borderColor: "#2563eb",
-    background: "#eff6ff",
+    border: "1.5px solid #051650",
+    background: "#f0f4ff",
+    boxShadow: "3px 3px 0 #051650",
+  },
+  inactive: {
+    border: "1.5px solid #d1d5db",
+    background: "#fafafa",
+    boxShadow: "none",
+  },
+  dot: {
+    width: 8,
+    height: 8,
+    borderRadius: "50%",
+    flexShrink: 0,
+    transition: "background .15s",
+  },
+  content: {
+    display: "flex",
+    flexDirection: "column" as const,
+    gap: 2,
+  },
+  optLabel: {
+    fontSize: 13,
+    fontWeight: 600,
+    lineHeight: 1,
+    transition: "color .15s",
   },
   description: {
-    display: "block",
+    fontSize: 11,
+    color: "#9ca3af",
     fontWeight: 400,
-    fontSize: 12,
-    color: "#64748b",
-    marginTop: 4,
+    lineHeight: 1,
   },
 };

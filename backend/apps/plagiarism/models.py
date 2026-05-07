@@ -48,17 +48,22 @@ class SimilarityMatch(models.Model):
         'assignment_submissions.AssignmentSubmission',
         on_delete=models.CASCADE,
         related_name='similarity_matches_as_a',
+        null=True,
+        blank=True,
     )
     submission_b = models.ForeignKey(
         'assignment_submissions.AssignmentSubmission',
         on_delete=models.CASCADE,
         related_name='similarity_matches_as_b',
+        null=True,
+        blank=True,
     )
     language = models.CharField(max_length=50)
     similarity_a = models.PositiveSmallIntegerField(validators=[MaxValueValidator(100)])
     similarity_b = models.PositiveSmallIntegerField(validators=[MaxValueValidator(100)])
     lines_matched = models.PositiveIntegerField()
     moss_link = models.URLField()
+    ai_moss_flag = models.BooleanField(default=False)
 
     class Meta:
         db_table = 'similarity_matches'
@@ -77,6 +82,7 @@ class SimilarityMatch(models.Model):
             ),
             models.UniqueConstraint(
                 fields=['report', 'submission_a', 'submission_b', 'language'],
+                condition=models.Q(ai_moss_flag=False),
                 name='unique_similarity_pair_per_language',
             ),
         ]
