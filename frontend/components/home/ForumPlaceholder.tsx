@@ -4,23 +4,65 @@ const PLACEHOLDER_QUESTIONS = [
   { title: "Best practices for SQL query optimization?", tag: "SQL", votes: 15, answers: 6 },
 ];
 
-function PlaceholderQuestionCard({ q }: { q: typeof PLACEHOLDER_QUESTIONS[0] }) {
-  return (
-    <div className="relative bg-[#f8faff] rounded-2xl border border-[#e2e8f6] p-5 select-none overflow-hidden">
-      {/* Blur overlay */}
-      <div className="absolute inset-0 backdrop-blur-[1.5px] bg-white/40 rounded-2xl z-10" />
+const TAG_COLORS: Record<string, string> = {
+  Python: "#3572A5",
+  JavaScript: "#c9a227",
+  SQL: "#e38c00",
+};
 
-      <div className="relative z-0">
-        <h3 className="text-[#0d1b2a] font-bold text-sm mb-2 line-clamp-2 opacity-50">
+function PlaceholderQuestionCard({ q }: { q: typeof PLACEHOLDER_QUESTIONS[0] }) {
+  const tagColor = TAG_COLORS[q.tag] ?? "#484f58";
+  return (
+    <div style={{
+      position: "relative",
+      background: "var(--surface-2)",
+      borderRadius: "var(--radius)",
+      border: "1px solid var(--border)",
+      padding: "14px 16px",
+      overflow: "hidden",
+      userSelect: "none",
+    }}>
+      {/* Blur overlay */}
+      <div style={{
+        position: "absolute",
+        inset: 0,
+        backdropFilter: "blur(2px)",
+        background: "rgba(13,17,23,0.55)",
+        borderRadius: "var(--radius)",
+        zIndex: 1,
+      }} />
+
+      <div style={{ position: "relative", zIndex: 0, opacity: 0.4 }}>
+        <h3 style={{
+          color: "var(--text-primary)",
+          fontWeight: 600,
+          fontSize: "13px",
+          margin: "0 0 8px",
+          lineHeight: 1.4,
+          display: "-webkit-box",
+          WebkitLineClamp: 2,
+          WebkitBoxOrient: "vertical",
+          overflow: "hidden",
+          fontFamily: "var(--font-body)",
+        }}>
           {q.title}
         </h3>
-        <div className="flex items-center justify-between">
-          <span className="inline-block px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-[#e2e8f6] text-[#64748b] opacity-50">
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          <span style={{
+            display: "inline-block",
+            padding: "2px 8px",
+            borderRadius: "4px",
+            fontSize: "10px",
+            fontWeight: 700,
+            fontFamily: "var(--font-mono)",
+            background: tagColor,
+            color: "#fff",
+          }}>
             {q.tag}
           </span>
-          <div className="flex items-center gap-3 opacity-50">
-            <span className="text-xs text-[#94a3b8]">▲ {q.votes}</span>
-            <span className="text-xs text-[#94a3b8]">💬 {q.answers}</span>
+          <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+            <span style={{ fontSize: "11px", color: "var(--text-muted)", fontFamily: "var(--font-mono)" }}>▲ {q.votes}</span>
+            <span style={{ fontSize: "11px", color: "var(--text-muted)", fontFamily: "var(--font-mono)" }}>💬 {q.answers}</span>
           </div>
         </div>
       </div>
@@ -30,34 +72,82 @@ function PlaceholderQuestionCard({ q }: { q: typeof PLACEHOLDER_QUESTIONS[0] }) 
 
 export default function ForumPlaceholder() {
   return (
-    <div className="flex flex-col h-full">
-      {/* Column header */}
-      <div className="flex items-center gap-2 mb-4">
-        <div className="w-1 h-5 rounded-full bg-gradient-to-b from-[#6c47ff] to-[#a29bfe]" />
-        <h2 className="text-base font-bold text-[#0d1b2a] tracking-tight">Trending Questions</h2>
-        <span className="ml-auto inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-[#6c47ff]/10 text-[#6c47ff] border border-[#6c47ff]/20 uppercase tracking-wide">
-          Coming Soon
+    <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
+      {/* Section header */}
+      <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "16px" }}>
+        <div style={{
+          width: "3px", height: "18px",
+          borderRadius: "2px",
+          background: "rgba(165,148,255,0.8)",
+          flexShrink: 0,
+        }} />
+        <span style={{
+          fontFamily: "var(--font-mono)",
+          fontSize: "11px",
+          fontWeight: 600,
+          letterSpacing: "0.16em",
+          textTransform: "uppercase",
+          color: "rgba(165,148,255,0.8)",
+          flex: 1,
+        }}>
+          Trending Questions
+        </span>
+        <span style={{
+          display: "inline-flex",
+          alignItems: "center",
+          padding: "2px 8px",
+          borderRadius: "4px",
+          fontSize: "9px",
+          fontFamily: "var(--font-mono)",
+          fontWeight: 600,
+          letterSpacing: "0.1em",
+          textTransform: "uppercase",
+          background: "rgba(165,148,255,0.1)",
+          color: "rgba(165,148,255,0.7)",
+          border: "1px solid rgba(165,148,255,0.2)",
+        }}>
+          Soon
         </span>
       </div>
 
-      <div className="flex flex-col gap-3 flex-1 relative">
+      <div style={{ position: "relative", display: "flex", flexDirection: "column", gap: "10px", flex: 1 }}>
         {PLACEHOLDER_QUESTIONS.map((q, i) => (
           <PlaceholderQuestionCard key={i} q={q} />
         ))}
 
-        {/* Center overlay badge */}
-        <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-20">
-          <div className="bg-white border border-[#6c47ff]/20 rounded-2xl shadow-[0_8px_32px_rgba(108,71,255,0.15)] px-6 py-4 text-center">
-            <div className="text-2xl mb-1"></div>
-            <p className="text-sm font-bold text-[#6c47ff]">Forum Coming Soon</p>
-            <p className="text-xs text-[#94a3b8] mt-0.5">Sprint 6</p>
+        {/* Center badge */}
+        <div style={{
+          position: "absolute",
+          inset: 0,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          pointerEvents: "none",
+          zIndex: 10,
+        }}>
+          <div style={{
+            background: "var(--surface)",
+            border: "1px solid rgba(165,148,255,0.25)",
+            borderRadius: "var(--radius)",
+            boxShadow: "0 8px 32px rgba(0,0,0,0.5)",
+            padding: "20px 28px",
+            textAlign: "center",
+          }}>
+            <div style={{ fontSize: "28px", marginBottom: "8px" }}>🧵</div>
+            <p style={{ fontSize: "13px", fontWeight: 700, color: "rgba(165,148,255,0.9)", margin: "0 0 4px", fontFamily: "var(--font-body)" }}>
+              Forum Coming Soon
+            </p>
+            <p style={{ fontSize: "11px", color: "var(--text-muted)", margin: 0, fontFamily: "var(--font-mono)" }}>
+              Sprint 6
+            </p>
           </div>
         </div>
       </div>
 
-      {/* Footer */}
-      <div className="mt-4 pt-3 border-t border-[#e2e8f6]">
-        <p className="text-xs text-[#94a3b8] font-medium">Forum launches in a future sprint</p>
+      <div style={{ marginTop: "16px", paddingTop: "12px", borderTop: "1px solid var(--border)" }}>
+        <p style={{ fontSize: "11px", color: "var(--text-muted)", fontFamily: "var(--font-mono)", margin: 0 }}>
+          Forum launches in a future sprint
+        </p>
       </div>
     </div>
   );

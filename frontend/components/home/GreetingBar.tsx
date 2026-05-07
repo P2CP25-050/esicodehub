@@ -17,42 +17,88 @@ export default function GreetingBar({ firstName, role }: GreetingBarProps) {
   const isProfessor = role === "professor";
 
   return (
-    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
-      {/* Left: greeting + badge */}
-      <div className="flex flex-wrap items-center gap-3">
-        <h1 className="text-2xl sm:text-3xl font-extrabold text-[#0d1b2a] tracking-tight">
-          {greeting},{" "}
-          <span className="bg-gradient-to-r from-[#1d6ef5] to-[#00c6ff] bg-clip-text text-transparent">
+    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "12px" }}>
+      {/* Left: greeting */}
+      <div style={{ display: "flex", alignItems: "center", gap: "12px", flexWrap: "wrap" }}>
+        <p style={{
+          fontFamily: "var(--font-body)",
+          fontSize: "15px",
+          color: "var(--text-secondary)",
+          margin: 0,
+          fontWeight: 400,
+        }}>
+          {greeting} —&nbsp;
+          <span style={{ color: "var(--text-primary)", fontWeight: 600 }}>
             {firstName}
           </span>
-          !
-        </h1>
-        {isProfessor ? (
-          <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-purple-100 text-purple-700 border border-purple-200 tracking-wide uppercase">
-            Professor
-          </span>
-        ) : (
-          <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-blue-100 text-blue-700 border border-blue-200 tracking-wide uppercase">
-            Student
-          </span>
-        )}
+        </p>
+
+        <span style={{
+          display: "inline-flex",
+          alignItems: "center",
+          padding: "3px 10px",
+          borderRadius: "20px",
+          fontSize: "10px",
+          fontFamily: "var(--font-mono)",
+          fontWeight: 600,
+          letterSpacing: "0.12em",
+          textTransform: "uppercase",
+          background: isProfessor ? "rgba(230,201,122,0.12)" : "rgba(88,166,255,0.12)",
+          color: isProfessor ? "var(--accent)" : "var(--blue)",
+          border: isProfessor ? "1px solid rgba(230,201,122,0.25)" : "1px solid rgba(88,166,255,0.25)",
+        }}>
+          {isProfessor ? "Professor" : "Student"}
+        </span>
       </div>
 
       {/* Right: action buttons */}
-      <div className="flex flex-wrap items-center gap-3">
+      <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
         <Link
           href="/submissions/new"
-          className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-[#1d6ef5] to-[#1558d4] text-white text-sm font-bold shadow-[0_4px_14px_rgba(29,110,245,0.35)] hover:opacity-90 transition-opacity whitespace-nowrap"
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            gap: "8px",
+            padding: "8px 16px",
+            borderRadius: "var(--radius)",
+            background: "var(--blue)",
+            color: "#0d1117",
+            fontSize: "13px",
+            fontWeight: 700,
+            fontFamily: "var(--font-body)",
+            textDecoration: "none",
+            transition: "opacity 0.15s, transform 0.15s",
+            whiteSpace: "nowrap",
+          }}
+          onMouseEnter={e => { (e.currentTarget as HTMLElement).style.opacity = "0.85"; (e.currentTarget as HTMLElement).style.transform = "translateY(-1px)"; }}
+          onMouseLeave={e => { (e.currentTarget as HTMLElement).style.opacity = "1"; (e.currentTarget as HTMLElement).style.transform = "translateY(0)"; }}
         >
-          <span className="text-base leading-none">+</span> New Submission
+          <span style={{ fontSize: "16px", lineHeight: 1 }}>+</span> New Submission
         </Link>
 
         {isProfessor && (
           <Link
             href="/assignments/new"
-            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white border border-[#d1d9e6] text-[#374151] text-sm font-bold hover:bg-[#f8faff] transition-colors whitespace-nowrap shadow-sm"
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: "8px",
+              padding: "8px 16px",
+              borderRadius: "var(--radius)",
+              background: "transparent",
+              color: "var(--text-primary)",
+              fontSize: "13px",
+              fontWeight: 600,
+              fontFamily: "var(--font-body)",
+              textDecoration: "none",
+              border: "1px solid var(--border)",
+              transition: "border-color 0.15s, background 0.15s",
+              whiteSpace: "nowrap",
+            }}
+            onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = "var(--accent)"; (e.currentTarget as HTMLElement).style.background = "var(--accent-dim)"; }}
+            onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = "var(--border)"; (e.currentTarget as HTMLElement).style.background = "transparent"; }}
           >
-            <span className="text-base leading-none">+</span> Create Assignment
+            <span style={{ fontSize: "16px", lineHeight: 1 }}>+</span> Create Assignment
           </Link>
         )}
       </div>
