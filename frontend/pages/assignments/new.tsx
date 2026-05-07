@@ -1,10 +1,11 @@
 "use client";
-import { useState, useEffect, ChangeEvent } from "react";
+import { useState, useEffect, useRef, ChangeEvent } from "react";
 import { useRouter } from "next/router";
+import axios from "axios";
 import Header from "@/components/submissions/Header";
 import Field from "@/components/submissions/Field";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
-import { listSubjects, createAssignment } from "@/services/assignments";
+import { listSubjects, createAssignment, uploadAssignmentDescriptionPdf } from "@/services/assignments";
 import type { Subject } from "@/services/assignments";
 
 // Types & constants 
@@ -67,6 +68,7 @@ interface FormErrors {
   year?: string;
   languages?: string;
   deadline?: string;
+  descriptionPdf?: string;
 }
 
 function validate(
@@ -88,6 +90,33 @@ function validate(
   return errors;
 }
 
+const getErrorMessage = (error: unknown, fallback: string): string => {
+  if (axios.isAxiosError(error)) {
+    const detail = error.response?.data?.detail;
+    if (typeof detail === "string" && detail.trim()) return detail;
+    if (typeof error.message === "string" && error.message.trim()) return error.message;
+  }
+
+  if (error instanceof Error && error.message.trim()) {
+    return error.message;
+  }
+
+  return fallback;
+};
+
+const formatFileSize = (value: number): string => {
+  if (!Number.isFinite(value) || value < 0) return "-";
+  if (value < 1024) return `${value} B`;
+  const kb = value / 1024;
+  if (kb < 1024) return `${kb.toFixed(1)} KB`;
+  return `${(kb / 1024).toFixed(1)} MB`;
+};
+
+const isPdfFile = (file: File): boolean => {
+  if (file.type === "application/pdf") return true;
+  return file.name.toLowerCase().endsWith(".pdf");
+};
+
 // Preview 
 
 interface AssignmentPreviewProps {
@@ -98,6 +127,7 @@ interface AssignmentPreviewProps {
   targetingSummary: string;
   deadline?: string;
   allowLate: boolean;
+  pdfName?: string;
 }
 
 function AssignmentPreview({
@@ -108,6 +138,7 @@ function AssignmentPreview({
   targetingSummary,
   deadline,
   allowLate,
+  pdfName,
 }: AssignmentPreviewProps) {
   const formatDeadline = (dateStr?: string) => {
     if (!dateStr) return "Not set";
@@ -145,6 +176,10 @@ function AssignmentPreview({
       <div style={styles.previewItem}>
         <span style={styles.previewLabel}>Late submissions:</span>
         <span>{allowLate ? "Allowed" : "Not allowed"}</span>
+      </div>
+      <div style={styles.previewItem}>
+        <span style={styles.previewLabel}>PDF:</span>
+        <span>{pdfName || "—"}</span>
       </div>
     </div>
   );
@@ -267,6 +302,7 @@ const RESPONSIVE_CSS = `
 
 function NewAssignmentForm() {
   const router = useRouter();
+  const pdfInputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
     if (typeof document !== "undefined") {
@@ -291,6 +327,7 @@ function NewAssignmentForm() {
   const [targetGroups, setTargetGroups] = useState<number[]>([]);
   const [deadline, setDeadline] = useState("");
   const [allowLate, setAllowLate] = useState(false);
+  const [selectedPdf, setSelectedPdf] = useState<File | null>(null);
 
   
   const [subjects, setSubjects] = useState<Subject[]>([]);
@@ -298,6 +335,7 @@ function NewAssignmentForm() {
   const [submitting, setSubmitting] = useState(false);
   const [errors, setErrors] = useState<FormErrors>({});
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const [createdAssignmentId, setCreatedAssignmentId] = useState<number | null>(null);
 
   
   useEffect(() => {
@@ -306,6 +344,37 @@ function NewAssignmentForm() {
       .catch(() => setSubjects([]))
       .finally(() => setLoadingSubjects(false));
   }, []);
+
+  const openPdfDialog = () => {
+    pdfInputRef.current?.click();
+  };
+
+  const setPdfFile = (file: File) => {
+    if (!isPdfFile(file)) {
+      setErrors((previous) => ({
+        ...previous,
+        descriptionPdf: "Please upload a PDF file.",
+      }));
+      return;
+    }
+
+    setErrors((previous) => ({ ...previous, descriptionPdf: undefined }));
+    setSelectedPdf(file);
+  };
+
+  const handlePdfInput = (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    setPdfFile(file);
+    event.target.value = "";
+  };
+
+  const clearSelectedPdf = () => {
+    setSelectedPdf(null);
+    if (pdfInputRef.current) {
+      pdfInputRef.current.value = "";
+    }
+  };
 
   
 
@@ -385,6 +454,7 @@ function NewAssignmentForm() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitError(null);
+    setCreatedAssignmentId(null);
 
     const validationErrors = validate({
       subject,
@@ -412,11 +482,25 @@ function NewAssignmentForm() {
         deadline: new Date(deadline).toISOString(),
         allow_late: allowLate,                                         
       });
+      if (selectedPdf) {
+        try {
+          await uploadAssignmentDescriptionPdf(assignment.id, selectedPdf);
+        } catch (error: unknown) {
+          setCreatedAssignmentId(assignment.id);
+          setSubmitError(
+            getErrorMessage(
+              error,
+              "Assignment created, but PDF upload failed. You can attach it from the edit page."
+            )
+          );
+          setSubmitting(false);
+          return;
+        }
+      }
+
       router.push(`/assignments/${assignment.id}`);
     } catch (err: unknown) {
-      const message =
-        err instanceof Error ? err.message : "Something went wrong. Please try again.";
-      setSubmitError(message);
+      setSubmitError(getErrorMessage(err, "Something went wrong. Please try again."));
       setSubmitting(false);
     }
   };
@@ -469,6 +553,24 @@ function NewAssignmentForm() {
                   <strong>Error</strong>
                 </div>
                 <p style={styles.errorMsg}>{submitError}</p>
+                {createdAssignmentId && (
+                  <div style={styles.errorBannerActions}>
+                    <button
+                      type="button"
+                      style={styles.errorActionPrimary}
+                      onClick={() => router.push(`/assignments/${createdAssignmentId}`)}
+                    >
+                      Go to assignment
+                    </button>
+                    <button
+                      type="button"
+                      style={styles.errorActionGhost}
+                      onClick={() => router.push(`/assignments/${createdAssignmentId}/edit`)}
+                    >
+                      Upload PDF later
+                    </button>
+                  </div>
+                )}
               </div>
             )}
 
@@ -521,6 +623,54 @@ function NewAssignmentForm() {
                 }
                 disabled={submitting}
               />
+            </Field>
+
+            <Field label="PDF instructions" hint="Optional — attach a PDF for students">
+              {selectedPdf ? (
+                <div style={styles.pdfCard}>
+                  <div>
+                    <p style={styles.pdfName}>{selectedPdf.name}</p>
+                    <p style={styles.pdfMeta}>{formatFileSize(selectedPdf.size)}</p>
+                  </div>
+                  <div style={styles.pdfActions}>
+                    <button
+                      type="button"
+                      style={styles.pdfButton}
+                      onClick={openPdfDialog}
+                      disabled={submitting}
+                    >
+                      Replace
+                    </button>
+                    <button
+                      type="button"
+                      style={{ ...styles.pdfButton, ...styles.pdfButtonGhost }}
+                      onClick={clearSelectedPdf}
+                      disabled={submitting}
+                    >
+                      Remove
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  style={styles.pdfButton}
+                  onClick={openPdfDialog}
+                  disabled={submitting}
+                >
+                  Attach PDF
+                </button>
+              )}
+              <input
+                ref={pdfInputRef}
+                type="file"
+                accept=".pdf,application/pdf"
+                onChange={handlePdfInput}
+                style={{ display: "none" }}
+              />
+              {errors.descriptionPdf && (
+                <div style={styles.fieldError}>{errors.descriptionPdf}</div>
+              )}
             </Field>
 
             <Field label="Languages" required>
@@ -708,6 +858,7 @@ function NewAssignmentForm() {
             targetingSummary={targetingSummary()}
             deadline={deadline}
             allowLate={allowLate}
+            pdfName={selectedPdf?.name}
           />
         </div>
       </div>
@@ -913,7 +1064,62 @@ const styles: Record<string, React.CSSProperties> = {
   },
   errorIcon: { fontSize: 16, color: "#b45309" },
   errorMsg: { fontSize: 13, color: "#92400e", margin: "0 0 6px" },
+  errorBannerActions: {
+    display: "flex",
+    gap: 10,
+    flexWrap: "wrap",
+    marginTop: 10,
+  },
+  errorActionPrimary: {
+    padding: "8px 14px",
+    background: "#1d6ef5",
+    color: "#fff",
+    border: "none",
+    borderRadius: 8,
+    fontSize: 12,
+    fontWeight: 700,
+    cursor: "pointer",
+  },
+  errorActionGhost: {
+    padding: "8px 14px",
+    background: "#fff",
+    color: "#374151",
+    border: "1px solid #d1d9e6",
+    borderRadius: 8,
+    fontSize: 12,
+    fontWeight: 600,
+    cursor: "pointer",
+  },
   fieldError: { fontSize: 12, color: "#ef4444", marginTop: 6 },
+  pdfCard: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 12,
+    padding: "12px 14px",
+    border: "1px solid #e2e8f6",
+    borderRadius: 10,
+    background: "#fff",
+  },
+  pdfName: { fontSize: 13, fontWeight: 600, color: "#1a2340", margin: 0 },
+  pdfMeta: { fontSize: 12, color: "#64748b", margin: 0 },
+  pdfActions: { display: "flex", gap: 8, flexWrap: "wrap" },
+  pdfButton: {
+    padding: "8px 14px",
+    background: "linear-gradient(135deg, #1d6ef5, #1558d4)",
+    color: "#fff",
+    border: "none",
+    borderRadius: 8,
+    fontSize: 12,
+    fontWeight: 700,
+    cursor: "pointer",
+  },
+  pdfButtonGhost: {
+    background: "#fff",
+    color: "#374151",
+    border: "1px solid #d1d9e6",
+    boxShadow: "none",
+  },
   previewCard: {
     background: "#fff",
     borderRadius: 16,

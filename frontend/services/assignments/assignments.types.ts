@@ -8,6 +8,7 @@ export interface Assignment {
   id: number;
   title: string;
   description: string;
+  description_pdf: string | null;
   subject: Subject;
   target_year: string;
   languages: string[];

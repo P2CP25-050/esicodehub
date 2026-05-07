@@ -28,14 +28,18 @@ describe('assignments.api', () => {
     expect(result.id).toBe(5);
   });
 
-  it('throws when files and filePaths lengths do not match', async () => {
+  it('falls back to file names when filePaths lengths do not match', async () => {
+    (apiClient.post as jest.Mock).mockResolvedValue({
+      data: { id: 1, file_count: 1 },
+    });
+
     const file = new File(['print("ok")'], 'main.py', { type: 'text/plain' });
+    await assignmentsApi.submitToAssignment(9, [file], []);
 
-    await expect(assignmentsApi.submitToAssignment(9, [file], [])).rejects.toThrow(
-      'files and filePaths length mismatch'
+    expect(apiClient.post).toHaveBeenCalledWith(
+      '/assignments/9/submit/',
+      expect.any(FormData)
     );
-
-    expect(apiClient.post).not.toHaveBeenCalled();
   });
 
   it('calls POST /assignments/:id/submit/ with FormData when lengths match', async () => {

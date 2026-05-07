@@ -10,5 +10,9 @@ data/
 gcs-credentials.json
 
 github-sa-key.json
+<<<<<<< HEAD
 
 cloudbuild.yaml
+=======
+backend/gunicorn.ctl
+>>>>>>> frontend/assignment-edit2
