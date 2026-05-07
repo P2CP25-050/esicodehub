@@ -10,4 +10,3 @@ data/
 gcs-credentials.json
 
 github-sa-key.json
-backend/gunicorn.ctl
