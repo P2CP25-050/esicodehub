@@ -11,11 +11,7 @@ export function useNotifications() {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const { isAuthenticated } = useAuth();
 
-  // Keep a stable ref so the effect never needs to redeclare itself when
-  // isAuthenticated changes, avoiding the set-state-in-effect lint rule.
-  const fetchRef = useRef<() => Promise<void>>(async () => {});
-
-  fetchRef.current = useCallback(async () => {
+  const fetchNotifications = useCallback(async () => {
     if (!isAuthenticated) return;
     try {
       const data = await getNotifications();
@@ -24,6 +20,14 @@ export function useNotifications() {
       // Non-fatal: keep stale notifications if the request fails.
     }
   }, [isAuthenticated]);
+
+  // Store the latest callback in a ref so the polling effect never
+  // needs to re-register itself when isAuthenticated changes.
+  // The assignment happens inside useEffect, not during render.
+  const fetchRef = useRef(fetchNotifications);
+  useEffect(() => {
+    fetchRef.current = fetchNotifications;
+  }, [fetchNotifications]);
 
   useEffect(() => {
     if (!isAuthenticated) return;
