@@ -126,7 +126,9 @@ export default function Header({ activePage = "" }: HeaderProps) {
   };
 
   const handleNotificationClick = async (n: Notification) => {
-    if (!n.is_read) await markOneRead(n.id);
+    if (!n.is_read) {
+      try { await markOneRead(n.id); } catch { /* non-fatal */ }
+    }
     setBellOpen(false);
     router.push(n.link);
   };
