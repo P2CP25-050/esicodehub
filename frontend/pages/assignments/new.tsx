@@ -561,18 +561,6 @@ function Chip({ label, selected, onClick, disabled }: ChipProps) {
 function NewAssignmentForm() {
   const router = useRouter();
 
-  useEffect(() => {
-    if (typeof document !== "undefined") {
-      const id = "na-ink-styles";
-      if (!document.getElementById(id)) {
-        const tag = document.createElement("style");
-        tag.id = id;
-        tag.textContent = PAGE_CSS;
-        document.head.appendChild(tag);
-      }
-    }
-  }, []);
-
   const [subject, setSubject] = useState("");
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -716,6 +704,7 @@ function NewAssignmentForm() {
     <div className="na-page">
       <Head>
         <title>Create Assignment — ESICodeHub</title>
+        <style id="na-ink-styles" dangerouslySetInnerHTML={{ __html: PAGE_CSS }} />
       </Head>
       <Header activePage="Assignments" />
 
