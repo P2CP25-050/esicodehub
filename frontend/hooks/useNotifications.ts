@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { useAuth } from '@/hooks/useAuth';
+import { useAuth } from '@/context/AuthContext';
 import {
   getNotifications,
   markAllNotificationsRead,
@@ -26,18 +26,22 @@ export function useNotifications() {
   }, [isAuthenticated]);
 
   useEffect(() => {
+    if (!isAuthenticated) return;
     const run = () => fetchRef.current();
     run();
     const interval = setInterval(run, 30_000);
     return () => clearInterval(interval);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [isAuthenticated]);
 
   const unreadCount = notifications.filter(n => !n.is_read).length;
 
   const markAllRead = async () => {
-    await markAllNotificationsRead();
-    setNotifications(prev => prev.map(n => ({ ...n, is_read: true })));
+    try {
+      await markAllNotificationsRead();
+      setNotifications(prev => prev.map(n => ({ ...n, is_read: true })));
+    } catch {
+      // Non-fatal: keep current state if the request fails.
+    }
   };
 
   const markOneRead = async (id: number) => {
