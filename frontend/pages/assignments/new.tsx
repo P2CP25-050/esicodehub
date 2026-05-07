@@ -1,13 +1,14 @@
 "use client";
 import { useState, useEffect, ChangeEvent } from "react";
 import { useRouter } from "next/router";
+import Link from "next/link";
 import Header from "@/components/submissions/Header";
 import Field from "@/components/submissions/Field";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { listSubjects, createAssignment } from "@/services/assignments";
 import type { Subject } from "@/services/assignments";
 
-// Types & constants 
+// ── Types & constants ─────────────────────────────────────────────────────────
 
 type AcademicYear = "1CP" | "2CP" | "1CS" | "2CS" | "3CS";
 const ACADEMIC_YEARS: AcademicYear[] = ["1CP", "2CP", "1CS", "2CS", "3CS"];
@@ -26,13 +27,7 @@ const SUBSECTION_GROUPS: Record<string, number[]> = {
   B: [3, 4],
 };
 
-const ASSIGNMENT_LANGUAGES = [
-  "python",
-  "c",
-  "c++",
-  "java",
-  "javascript",
-];
+const ASSIGNMENT_LANGUAGES = ["python", "c", "c++", "java", "javascript"];
 
 function getGroupsForSection(sectionIndex: number): number[] {
   const base = sectionIndex * 4 + 1;
@@ -60,7 +55,6 @@ function getAvailableGroups(
   return Array.from(seen).sort((a, b) => a - b);
 }
 
-// ------------------------------------------------------
 interface FormErrors {
   subject?: string;
   title?: string;
@@ -69,8 +63,7 @@ interface FormErrors {
   deadline?: string;
 }
 
-function validate(
-  fields: {
+function validate(fields: {
   subject: string;
   title: string;
   year: string;
@@ -88,7 +81,249 @@ function validate(
   return errors;
 }
 
-// Preview 
+// ── CSS ───────────────────────────────────────────────────────────────────────
+
+const PAGE_CSS = `
+  @import url('https://fonts.googleapis.com/css2?family=Lora:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;1,400&display=swap');
+
+  :root {
+    --bg:             #0d1117;
+    --surface:        #161b22;
+    --surface-2:      #21262d;
+    --border:         #30363d;
+    --accent:         #e6c97a;
+    --accent-dim:     rgba(230,201,122,0.12);
+    --blue:           #58a6ff;
+    --blue-dim:       rgba(88,166,255,0.12);
+    --orange:         #f0883e;
+    --green:          #3fb950;
+    --red:            #f85149;
+    --text-primary:   #e6edf3;
+    --text-secondary: #8b949e;
+    --text-muted:     #484f58;
+    --font-display:   'Lora', Georgia, serif;
+    --font-mono:      'IBM Plex Mono', monospace;
+    --font-body:      'DM Sans', sans-serif;
+    --radius:         10px;
+    --radius-lg:      16px;
+    --shadow:         0 1px 3px rgba(0,0,0,0.4), 0 4px 16px rgba(0,0,0,0.3);
+    --shadow-hover:   0 4px 8px rgba(0,0,0,0.5), 0 12px 32px rgba(0,0,0,0.4);
+  }
+
+  .na-page {
+    min-height: 100vh;
+    background: var(--bg);
+    font-family: var(--font-body);
+    color: var(--text-primary);
+    position: relative;
+  }
+  .na-page::before {
+    content: '';
+    position: fixed; inset: 0;
+    background-image:
+      linear-gradient(rgba(255,255,255,0.02) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,0.02) 1px, transparent 1px);
+    background-size: 48px 48px;
+    pointer-events: none; z-index: 0;
+  }
+
+  .na-container {
+    max-width: 1200px; margin: 0 auto;
+    padding: 32px 28px 80px;
+    position: relative; z-index: 1;
+  }
+
+  /* Breadcrumb */
+  .na-breadcrumb {
+    display: flex; align-items: center; gap: 8px;
+    margin-bottom: 32px;
+    font-family: var(--font-mono); font-size: 11px;
+    letter-spacing: 0.1em; color: var(--text-muted);
+  }
+  .na-breadcrumb-link { color: var(--accent); text-decoration: none; transition: opacity 0.15s; }
+  .na-breadcrumb-link:hover { opacity: 0.75; }
+
+  /* Page header */
+  .na-page-header {
+    display: flex; flex-wrap: wrap; align-items: flex-end;
+    justify-content: space-between; gap: 16px;
+    padding-bottom: 28px; border-bottom: 1px solid var(--border); margin-bottom: 32px;
+  }
+  .na-page-title {
+    font-family: var(--font-display); font-size: 36px; font-weight: 700;
+    color: var(--text-primary); margin: 0 0 6px; line-height: 1.1; letter-spacing: -0.01em;
+  }
+  .na-page-title span { color: var(--accent); }
+  .na-page-subtitle {
+    font-family: var(--font-mono); font-size: 11px;
+    letter-spacing: 0.14em; text-transform: uppercase;
+    color: var(--text-secondary); margin: 0;
+  }
+
+  /* Layout */
+  .na-layout { display: grid; grid-template-columns: 1fr 300px; gap: 24px; align-items: start; }
+
+  /* Form card */
+  .na-form-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 32px;
+    box-shadow: var(--shadow);
+  }
+
+  .na-form-section-title {
+    font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.18em;
+    text-transform: uppercase; color: var(--text-muted);
+    margin: 0 0 20px; padding-bottom: 10px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .na-divider { margin: 24px 0; border: none; border-top: 1px solid var(--border); }
+
+  /* Inputs */
+  .na-input, .na-select, .na-textarea {
+    width: 100%; padding: 10px 14px;
+    background: var(--surface-2); border: 1px solid var(--border);
+    border-radius: var(--radius); color: var(--text-primary);
+    font-family: var(--font-body); font-size: 13px;
+    outline: none; box-sizing: border-box;
+    transition: border-color 0.15s, box-shadow 0.15s;
+  }
+  .na-input::placeholder, .na-textarea::placeholder { color: var(--text-muted); }
+  .na-input:focus, .na-select:focus, .na-textarea:focus {
+    border-color: var(--blue);
+    box-shadow: 0 0 0 3px rgba(88,166,255,0.12);
+    background: var(--surface);
+  }
+  .na-select {
+    appearance: none; cursor: pointer;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%238b949e' stroke-width='1.5' fill='none'/%3E%3C/svg%3E");
+    background-repeat: no-repeat; background-position: right 14px center; padding-right: 36px;
+  }
+  .na-textarea { min-height: 100px; resize: vertical; }
+
+  /* Chips */
+  .na-chip-group { display: flex; flex-wrap: wrap; gap: 8px; }
+  .na-chip {
+    padding: 6px 16px;
+    background: var(--surface-2); border: 1px solid var(--border);
+    color: var(--text-secondary);
+    font-family: var(--font-mono); font-size: 11px; font-weight: 700;
+    letter-spacing: 0.08em; text-transform: uppercase;
+    cursor: pointer; border-radius: var(--radius);
+    transition: all 0.12s;
+  }
+  .na-chip:hover:not(:disabled) { border-color: var(--blue); color: var(--blue); background: var(--blue-dim); }
+  .na-chip.selected { background: var(--accent-dim); border-color: rgba(230,201,122,0.4); color: var(--accent); }
+  .na-chip:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  /* Subsection row */
+  .na-subsection-row { display: flex; align-items: center; gap: 16px; margin-bottom: 12px; flex-wrap: wrap; }
+  .na-subsection-label {
+    font-family: var(--font-mono); font-size: 11px; font-weight: 700;
+    color: var(--accent); letter-spacing: 0.1em; text-transform: uppercase; min-width: 50px;
+  }
+
+  /* Toggle */
+  .na-toggle-row { display: flex; align-items: center; gap: 10px; }
+  .na-checkbox { width: 16px; height: 16px; cursor: pointer; accent-color: var(--accent); }
+  .na-toggle-label { font-size: 13px; color: var(--text-secondary); cursor: pointer; }
+
+  /* Actions */
+  .na-actions {
+    display: flex; gap: 12px; justify-content: flex-end;
+    margin-top: 28px; padding-top: 24px; border-top: 1px solid var(--border);
+  }
+  .na-btn-primary {
+    padding: 11px 28px; background: var(--accent); color: #0d1117;
+    border: none; border-radius: var(--radius);
+    font-family: var(--font-mono); font-size: 12px; font-weight: 700;
+    letter-spacing: 0.08em; text-transform: uppercase; cursor: pointer;
+    transition: opacity 0.15s, transform 0.1s, box-shadow 0.15s;
+    box-shadow: 0 4px 14px rgba(230,201,122,0.3);
+  }
+  .na-btn-primary:hover:not(:disabled) { opacity: 0.88; transform: translateY(-1px); box-shadow: 0 6px 20px rgba(230,201,122,0.4); }
+  .na-btn-primary:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  .na-btn-outline {
+    padding: 11px 20px; background: transparent; color: var(--text-secondary);
+    border: 1px solid var(--border); border-radius: var(--radius);
+    font-family: var(--font-mono); font-size: 12px; font-weight: 700;
+    letter-spacing: 0.08em; text-transform: uppercase; cursor: pointer;
+    transition: border-color 0.15s, color 0.15s;
+  }
+  .na-btn-outline:hover:not(:disabled) { border-color: var(--text-secondary); color: var(--text-primary); }
+  .na-btn-outline:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  /* Field error */
+  .na-field-error {
+    font-family: var(--font-mono); font-size: 11px; color: var(--red);
+    margin-top: 6px; letter-spacing: 0.04em;
+  }
+
+  /* Error banner */
+  .na-error-banner {
+    margin-bottom: 24px; padding: 14px 16px;
+    background: rgba(248,81,73,0.1); border: 1px solid rgba(248,81,73,0.3);
+    border-radius: var(--radius);
+  }
+  .na-error-banner-top {
+    display: flex; align-items: center; gap: 8px; margin-bottom: 4px;
+    font-family: var(--font-mono); font-size: 11px; font-weight: 700;
+    letter-spacing: 0.1em; text-transform: uppercase; color: var(--red);
+  }
+  .na-error-msg { font-size: 13px; color: var(--red); margin: 0; opacity: 0.85; }
+
+  /* Progress */
+  .na-progress-wrap {
+    margin: 16px 0 4px; padding: 12px 14px;
+    background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--radius);
+  }
+  .na-progress-label {
+    font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.08em;
+    text-transform: uppercase; color: var(--accent); margin-bottom: 8px; display: block;
+  }
+  .na-progress-track { height: 3px; background: var(--border); border-radius: 2px; overflow: hidden; }
+  .na-progress-fill { height: 100%; background: var(--accent); width: 30%; transition: width 0.3s; animation: na-progress-anim 1.4s ease-in-out infinite; }
+  @keyframes na-progress-anim { 0% { width: 20%; } 50% { width: 70%; } 100% { width: 20%; } }
+
+  /* Preview card */
+  .na-preview-card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius-lg); padding: 24px;
+    position: sticky; top: 24px; box-shadow: var(--shadow);
+    border-top: 2px solid var(--accent);
+  }
+  .na-preview-title {
+    font-family: var(--font-display); font-size: 18px; font-weight: 600;
+    color: var(--text-primary); margin: 0 0 20px;
+    padding-bottom: 14px; border-bottom: 1px solid var(--border);
+  }
+  .na-preview-item { display: flex; gap: 12px; margin-bottom: 14px; font-size: 13px; line-height: 1.5; }
+  .na-preview-label {
+    font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.1em;
+    text-transform: uppercase; color: var(--text-muted); font-weight: 700;
+    width: 80px; flex-shrink: 0; padding-top: 2px;
+  }
+  .na-preview-value { color: var(--text-secondary); word-break: break-word; }
+  .na-no-groups { font-family: var(--font-mono); font-size: 11px; color: var(--text-muted); }
+
+  @media (max-width: 900px) {
+    .na-page-title { font-size: 28px; }
+    .na-layout { grid-template-columns: 1fr; }
+    .na-form-card { padding: 24px 20px; }
+    .na-preview-card { position: static; }
+  }
+  @media (max-width: 600px) {
+    .na-container { padding: 20px 14px 60px; }
+    .na-page-title { font-size: 24px; }
+    .na-actions { flex-direction: column-reverse; }
+    .na-btn-primary, .na-btn-outline { width: 100%; text-align: center; }
+  }
+`;
+
+// ── Preview component ─────────────────────────────────────────────────────────
 
 interface AssignmentPreviewProps {
   subjectName?: string;
@@ -100,206 +335,80 @@ interface AssignmentPreviewProps {
   allowLate: boolean;
 }
 
-function AssignmentPreview({
-  subjectName,
-  title,
-  year,
-  languages,
-  targetingSummary,
-  deadline,
-  allowLate,
-}: AssignmentPreviewProps) {
+function AssignmentPreview({ subjectName, title, year, languages, targetingSummary, deadline, allowLate }: AssignmentPreviewProps) {
   const formatDeadline = (dateStr?: string) => {
-    if (!dateStr) return "Not set";
-    const d = new Date(dateStr);
-    return d.toLocaleString();
+    if (!dateStr) return "—";
+    return new Date(dateStr).toLocaleString();
   };
-
   return (
-    <div style={styles.previewCard}>
-      <h3 style={styles.previewTitle}>Assignment Preview</h3>
-      <div style={styles.previewItem}>
-        <span style={styles.previewLabel}>Subject:</span>
-        <span>{subjectName || "—"}</span>
-      </div>
-      <div style={styles.previewItem}>
-        <span style={styles.previewLabel}>Title:</span>
-        <span>{title || "—"}</span>
-      </div>
-      <div style={styles.previewItem}>
-        <span style={styles.previewLabel}>Year:</span>
-        <span>{year || "—"}</span>
-      </div>
-      <div style={styles.previewItem}>
-        <span style={styles.previewLabel}>Languages:</span>
-        <span>{languages.length ? languages.join(", ") : "—"}</span>
-      </div>
-      <div style={styles.previewItem}>
-        <span style={styles.previewLabel}>Targeting:</span>
-        <span style={styles.previewMultiline}>{targetingSummary || "—"}</span>
-      </div>
-      <div style={styles.previewItem}>
-        <span style={styles.previewLabel}>Deadline:</span>
-        <span>{formatDeadline(deadline)}</span>
-      </div>
-      <div style={styles.previewItem}>
-        <span style={styles.previewLabel}>Late submissions:</span>
-        <span>{allowLate ? "Allowed" : "Not allowed"}</span>
-      </div>
+    <div className="na-preview-card">
+      <h3 className="na-preview-title">Preview</h3>
+      {[
+        { label: "Subject",  value: subjectName || "—" },
+        { label: "Title",    value: title || "—" },
+        { label: "Year",     value: year || "—" },
+        { label: "Langs",    value: languages.length ? languages.join(", ") : "—" },
+        { label: "Target",   value: targetingSummary || "—" },
+        { label: "Deadline", value: formatDeadline(deadline) },
+        { label: "Late",     value: allowLate ? "Allowed" : "Not allowed" },
+      ].map(({ label, value }) => (
+        <div className="na-preview-item" key={label}>
+          <span className="na-preview-label">{label}</span>
+          <span className="na-preview-value">{value}</span>
+        </div>
+      ))}
     </div>
   );
 }
 
-// Chip 
+// ── Chip component ────────────────────────────────────────────────────────────
 
-interface ChipProps {
-  label: string;
-  selected: boolean;
-  onClick: () => void;
-  disabled?: boolean;
-}
-
-function Chip({ label, selected, onClick, disabled }: ChipProps) {
+function Chip({ label, selected, onClick, disabled }: { label: string; selected: boolean; onClick: () => void; disabled?: boolean }) {
   return (
     <button
       type="button"
       onClick={onClick}
       disabled={disabled}
-      style={{
-        ...styles.chip,
-        ...(selected ? styles.chipSelected : {}),
-        ...(disabled ? styles.chipDisabled : {}),
-      }}
+      className={`na-chip${selected ? " selected" : ""}`}
     >
       {label}
     </button>
   );
 }
 
-// Main form 
-
-const RESPONSIVE_CSS = `
-  .assignment-container {
-    max-width: 1200px;
-    margin: 0 auto;
-    padding: 32px 24px 64px;
-  }
-  .assignment-layout {
-    display: grid;
-    grid-template-columns: 1fr 320px;
-    gap: 28px;
-    align-items: start;
-  }
-  .assignment-form-card {
-    background: #fff;
-    border-radius: 16px;
-    padding: 36px 40px;
-    box-shadow: 0 4px 24px rgba(30,60,120,0.08);
-    border: 1px solid #e2e8f6;
-  }
-  .assignment-actions {
-    display: flex;
-    gap: 12px;
-    justify-content: flex-end;
-    margin-top: 10px;
-  }
-  .assignment-btn-primary {
-    padding: 12px 28px;
-    background: linear-gradient(135deg, #1d6ef5, #1558d4);
-    color: #fff;
-    border: none;
-    border-radius: 10px;
-    font-size: 14px;
-    font-weight: 700;
-    cursor: pointer;
-    box-shadow: 0 4px 14px rgba(29,110,245,0.35);
-  }
-  .assignment-btn-outline {
-    padding: 12px 24px;
-    background: #fff;
-    color: #374151;
-    border: 1.5px solid #d1d9e6;
-    border-radius: 10px;
-    font-size: 14px;
-    font-weight: 600;
-    cursor: pointer;
-  }
-  .assignment-subsection-row {
-    display: flex;
-    align-items: center;
-    gap: 16px;
-    margin-bottom: 12px;
-    flex-wrap: wrap;
-  }
-
-  @media (max-width: 900px) {
-    .assignment-layout {
-      grid-template-columns: 1fr;
-    }
-    .assignment-form-card {
-      padding: 28px 24px;
-    }
-  }
-
-  @media (max-width: 600px) {
-    .assignment-container {
-      padding: 16px 12px 48px;
-    }
-    .assignment-form-card {
-      padding: 20px 16px;
-      border-radius: 12px;
-    }
-    .assignment-actions {
-      flex-direction: column-reverse;
-      gap: 10px;
-    }
-    .assignment-btn-primary,
-    .assignment-btn-outline {
-      width: 100%;
-      text-align: center;
-      padding: 14px;
-    }
-    .assignment-subsection-row {
-      gap: 8px;
-    }
-  }
-`;
+// ── Main form ─────────────────────────────────────────────────────────────────
 
 function NewAssignmentForm() {
   const router = useRouter();
 
   useEffect(() => {
-    if (typeof document !== "undefined") {
-      const id = "assignment-responsive-styles";
-      if (!document.getElementById(id)) {
-        const tag = document.createElement("style");
-        tag.id = id;
-        tag.textContent = RESPONSIVE_CSS;
-        document.head.appendChild(tag);
-      }
+    if (typeof document === "undefined") return;
+    const id = "na-dark-styles";
+    if (!document.getElementById(id)) {
+      const tag = document.createElement("style");
+      tag.id = id;
+      tag.textContent = PAGE_CSS;
+      document.head.appendChild(tag);
     }
   }, []);
 
-  // Subject is stored as a string from  <select> ; 
-  const [subject, setSubject] = useState("");
-  const [title, setTitle] = useState("");
-  const [description, setDescription] = useState("");
-  const [year, setYear] = useState<AcademicYear | "">("");
-  const [languages, setLanguages] = useState<string[]>([]);
-  const [targetSections, setTargetSections] = useState<string[]>([]);
+  const [subject,           setSubject]           = useState("");
+  const [title,             setTitle]             = useState("");
+  const [description,       setDescription]       = useState("");
+  const [year,              setYear]              = useState<AcademicYear | "">("");
+  const [languages,         setLanguages]         = useState<string[]>([]);
+  const [targetSections,    setTargetSections]    = useState<string[]>([]);
   const [targetSubSections, setTargetSubSections] = useState<string[]>([]);
-  const [targetGroups, setTargetGroups] = useState<number[]>([]);
-  const [deadline, setDeadline] = useState("");
-  const [allowLate, setAllowLate] = useState(false);
+  const [targetGroups,      setTargetGroups]      = useState<number[]>([]);
+  const [deadline,          setDeadline]          = useState("");
+  const [allowLate,         setAllowLate]         = useState(false);
 
-  
-  const [subjects, setSubjects] = useState<Subject[]>([]);
+  const [subjects,        setSubjects]        = useState<Subject[]>([]);
   const [loadingSubjects, setLoadingSubjects] = useState(true);
-  const [submitting, setSubmitting] = useState(false);
-  const [errors, setErrors] = useState<FormErrors>({});
-  const [submitError, setSubmitError] = useState<string | null>(null);
+  const [submitting,      setSubmitting]      = useState(false);
+  const [errors,          setErrors]          = useState<FormErrors>({});
+  const [submitError,     setSubmitError]     = useState<string | null>(null);
 
-  
   useEffect(() => {
     listSubjects()
       .then(setSubjects)
@@ -307,121 +416,72 @@ function NewAssignmentForm() {
       .finally(() => setLoadingSubjects(false));
   }, []);
 
-  
+  const isSpecialityYear   = year === "2CS" || year === "3CS";
+  const availableSections  = year ? SECTIONS_BY_YEAR[year as AcademicYear] : [];
+  const availableGroups    = getAvailableGroups(year, targetSections, targetSubSections);
+  const showGroups         = (!isSpecialityYear && targetSections.length > 0) || (isSpecialityYear && targetSubSections.length > 0);
 
-  const isSpecialityYear = year === "2CS" || year === "3CS";
-  const availableSections = year ? SECTIONS_BY_YEAR[year as AcademicYear] : [];
-  const availableGroups = getAvailableGroups(year, targetSections, targetSubSections);
-  const showGroups =
-    (!isSpecialityYear && targetSections.length > 0) ||
-    (isSpecialityYear && targetSubSections.length > 0);
-
-  
   const handleSectionChange = (section: string) => {
     const removing = targetSections.includes(section);
-    const next = removing
-      ? targetSections.filter((s) => s !== section)
-      : [...targetSections, section];
+    const next = removing ? targetSections.filter((s) => s !== section) : [...targetSections, section];
     setTargetSections(next);
-
     if (removing && isSpecialityYear) {
-      setTargetSubSections((prev) =>
-        prev.filter((k) => !k.startsWith(section + "-"))
-      );
+      setTargetSubSections((prev) => prev.filter((k) => !k.startsWith(section + "-")));
       setTargetGroups((prev) => {
-        const remainingSubs = targetSubSections.filter(
-          (k) => !k.startsWith(section + "-")
-        );
-        const reachable = new Set(
-          remainingSubs.flatMap((k) => SUBSECTION_GROUPS[k.split("-")[1]] ?? [])
-        );
+        const remainingSubs = targetSubSections.filter((k) => !k.startsWith(section + "-"));
+        const reachable = new Set(remainingSubs.flatMap((k) => SUBSECTION_GROUPS[k.split("-")[1]] ?? []));
         return prev.filter((g) => reachable.has(g));
       });
     } else if (removing && year) {
       const idx = SECTIONS_BY_YEAR[year as AcademicYear].indexOf(section);
-      setTargetGroups((prev) =>
-        prev.filter((g) => !getGroupsForSection(idx).includes(g))
-      );
+      setTargetGroups((prev) => prev.filter((g) => !getGroupsForSection(idx).includes(g)));
     }
   };
 
   const handleSubSectionChange = (key: string) => {
     const removing = targetSubSections.includes(key);
-    const next = removing
-      ? targetSubSections.filter((k) => k !== key)
-      : [...targetSubSections, key];
+    const next = removing ? targetSubSections.filter((k) => k !== key) : [...targetSubSections, key];
     setTargetSubSections(next);
-
     if (removing) {
       const sub = key.split("-")[1];
       const candidates = new Set(SUBSECTION_GROUPS[sub] ?? []);
-      const stillReachable = new Set(
-        next.flatMap((k) => SUBSECTION_GROUPS[k.split("-")[1]] ?? [])
-      );
-      setTargetGroups((prev) =>
-        prev.filter((g) => !candidates.has(g) || stillReachable.has(g))
-      );
+      const stillReachable = new Set(next.flatMap((k) => SUBSECTION_GROUPS[k.split("-")[1]] ?? []));
+      setTargetGroups((prev) => prev.filter((g) => !candidates.has(g) || stillReachable.has(g)));
     }
   };
 
-  const handleGroupChange = (group: number) => {
-    setTargetGroups((prev) =>
-      prev.includes(group)
-        ? prev.filter((g) => g !== group)
-        : [...prev, group]
-    );
-  };
-
-  const handleLanguageToggle = (language: string) => {
-    setLanguages((prev) =>
-      prev.includes(language)
-        ? prev.filter((item) => item !== language)
-        : [...prev, language]
-    );
+  const handleGroupChange  = (group: number) => setTargetGroups((prev) => prev.includes(group) ? prev.filter((g) => g !== group) : [...prev, group]);
+  const handleLanguageToggle = (lang: string) => {
+    setLanguages((prev) => prev.includes(lang) ? prev.filter((l) => l !== lang) : [...prev, lang]);
     setErrors((prev) => ({ ...prev, languages: undefined }));
   };
 
-  // Submission
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitError(null);
-
-    const validationErrors = validate({
-      subject,
-      title,
-      year,
-      languages,
-      deadline,
-    });
-    if (Object.keys(validationErrors).length > 0) {
-      setErrors(validationErrors);
-      return;
-    }
+    const validationErrors = validate({ subject, title, year, languages, deadline });
+    if (Object.keys(validationErrors).length > 0) { setErrors(validationErrors); return; }
     setErrors({});
     setSubmitting(true);
-
     try {
       const assignment = await createAssignment({
-        subject: Number(subject),                                      
+        subject: Number(subject),
         title: title.trim(),
         description: description.trim() || undefined,
-        target_year: year as AcademicYear,                            
+        target_year: year as AcademicYear,
         languages,
-        target_sections: targetSections.length > 0 ? targetSections : undefined, 
-        target_groups: targetGroups.length > 0 ? targetGroups : undefined,       
+        target_sections: targetSections.length > 0 ? targetSections : undefined,
+        target_groups:   targetGroups.length > 0 ? targetGroups : undefined,
         deadline: new Date(deadline).toISOString(),
-        allow_late: allowLate,                                         
+        allow_late: allowLate,
       });
       router.push(`/assignments/${assignment.id}`);
     } catch (err: unknown) {
-      const message =
-        err instanceof Error ? err.message : "Something went wrong. Please try again.";
-      setSubmitError(message);
+      setSubmitError(err instanceof Error ? err.message : "Something went wrong. Please try again.");
       setSubmitting(false);
     }
   };
 
-  // Targeting summary for preview
   const targetingSummary = () => {
     if (!year) return "No year selected";
     if (isSpecialityYear) {
@@ -433,48 +493,45 @@ function NewAssignmentForm() {
     return `Sections: ${targetSections.join(", ")} (Groups: ${targetGroups.join(", ")})`;
   };
 
-  
   const selectedSubjectName = subjects.find((s) => String(s.id) === subject)?.name;
 
   return (
-    <div style={styles.page}>
+    <div className="na-page">
       <Header activePage="Assignments" />
-
-      <div className="assignment-container">
+      <div className="na-container">
         {/* Breadcrumb */}
-        <div style={styles.breadcrumb}>
-          <span
-            style={styles.breadcrumbLink}
-            onClick={() => router.push("/assignments")}
-          >
-            Assignments
-          </span>
-          <span style={styles.breadcrumbSep}>/</span>
-          <span style={styles.breadcrumbCurrent}>New Assignment</span>
+        <nav className="na-breadcrumb">
+          <Link href="/" className="na-breadcrumb-link">~/home</Link>
+          <span>/</span>
+          <Link href="/assignments" className="na-breadcrumb-link">assignments</Link>
+          <span>/</span>
+          <span>new</span>
+        </nav>
+
+        {/* Page header */}
+        <div className="na-page-header">
+          <div>
+            <h1 className="na-page-title">New <span>Assignment</span></h1>
+            <p className="na-page-subtitle">Define targeting, languages, and deadlines</p>
+          </div>
         </div>
 
-        <div className="assignment-layout">
-          {/* Form Card */}
-          <form className="assignment-form-card" onSubmit={handleSubmit}>
-            <h2 style={styles.formTitle}>New Assignment</h2>
-            <p style={styles.formSubtitle}>
-              Create an assignment for your students. Define targeting and deadlines.
-            </p>
+        {/* Layout */}
+        <div className="na-layout">
+          {/* Form */}
+          <form className="na-form-card" onSubmit={handleSubmit}>
+            <p className="na-form-section-title">Assignment Details</p>
 
-            {/* Global error */}
             {submitError && (
-              <div style={styles.errorBanner}>
-                <div style={styles.errorBannerTop}>
-                  <span style={styles.errorIcon}>⚠</span>
-                  <strong>Error</strong>
-                </div>
-                <p style={styles.errorMsg}>{submitError}</p>
+              <div className="na-error-banner">
+                <div className="na-error-banner-top"><span>⚠</span><span>Error</span></div>
+                <p className="na-error-msg">{submitError}</p>
               </div>
             )}
 
             <Field label="Subject" required>
               <select
-                style={styles.select}
+                className="na-select"
                 value={subject}
                 onChange={(e: ChangeEvent<HTMLSelectElement>) => {
                   setSubject(e.target.value);
@@ -482,23 +539,17 @@ function NewAssignmentForm() {
                 }}
                 disabled={loadingSubjects || submitting}
               >
-                <option value="">
-                  {loadingSubjects ? "Loading subjects…" : "Select a subject"}
-                </option>
+                <option value="">{loadingSubjects ? "Loading subjects…" : "Select a subject"}</option>
                 {subjects.map((s) => (
-                  <option key={s.id} value={String(s.id)}>
-                    {s.code} — {s.name}
-                  </option>
+                  <option key={s.id} value={String(s.id)}>{s.code} — {s.name}</option>
                 ))}
               </select>
-              {errors.subject && (
-                <div style={styles.fieldError}>{errors.subject}</div>
-              )}
+              {errors.subject && <div className="na-field-error">{errors.subject}</div>}
             </Field>
 
             <Field label="Title" required>
               <input
-                style={styles.input}
+                className="na-input"
                 placeholder="e.g. Lab Report 3 — Binary Trees"
                 value={title}
                 onChange={(e: ChangeEvent<HTMLInputElement>) => {
@@ -508,75 +559,54 @@ function NewAssignmentForm() {
                 disabled={submitting}
                 required
               />
-              {errors.title && <div style={styles.fieldError}>{errors.title}</div>}
+              {errors.title && <div className="na-field-error">{errors.title}</div>}
             </Field>
 
             <Field label="Description" hint="Optional — instructions or context">
               <textarea
-                style={{ ...styles.input, minHeight: 100, resize: "vertical" }}
+                className="na-textarea"
                 placeholder="Describe the assignment, expectations, or additional notes..."
                 value={description}
-                onChange={(e: ChangeEvent<HTMLTextAreaElement>) =>
-                  setDescription(e.target.value)
-                }
+                onChange={(e: ChangeEvent<HTMLTextAreaElement>) => setDescription(e.target.value)}
                 disabled={submitting}
               />
             </Field>
 
             <Field label="Languages" required>
-              <div style={styles.chipGroup}>
-                {ASSIGNMENT_LANGUAGES.map((language) => (
-                  <Chip
-                    key={language}
-                    label={language}
-                    selected={languages.includes(language)}
-                    onClick={() => handleLanguageToggle(language)}
-                    disabled={submitting}
-                  />
+              <div className="na-chip-group">
+                {ASSIGNMENT_LANGUAGES.map((lang) => (
+                  <Chip key={lang} label={lang} selected={languages.includes(lang)} onClick={() => handleLanguageToggle(lang)} disabled={submitting} />
                 ))}
               </div>
-              {errors.languages && (
-                <div style={styles.fieldError}>{errors.languages}</div>
-              )}
+              {errors.languages && <div className="na-field-error">{errors.languages}</div>}
             </Field>
 
+            <hr className="na-divider" />
+            <p className="na-form-section-title">Targeting</p>
+
             <Field label="Year" required>
-              <div style={styles.chipGroup}>
+              <div className="na-chip-group">
                 {ACADEMIC_YEARS.map((y) => (
                   <Chip
-                    key={y}
-                    label={y}
-                    selected={year === y}
+                    key={y} label={y} selected={year === y}
                     onClick={() => {
                       setYear(year === y ? "" : y);
-                      setTargetSections([]);
-                      setTargetSubSections([]);
-                      setTargetGroups([]);
+                      setTargetSections([]); setTargetSubSections([]); setTargetGroups([]);
                       setErrors((prev) => ({ ...prev, year: undefined }));
                     }}
                     disabled={submitting}
                   />
                 ))}
               </div>
-              {errors.year && <div style={styles.fieldError}>{errors.year}</div>}
+              {errors.year && <div className="na-field-error">{errors.year}</div>}
             </Field>
 
             {year && (
               <>
-                <div style={styles.divider} />
-                <Field
-                  label={isSpecialityYear ? "Speciality" : "Section"}
-                  hint="Optional — leave empty for all"
-                >
-                  <div style={styles.chipGroup}>
+                <Field label={isSpecialityYear ? "Speciality" : "Section"} hint="Optional — leave empty for all">
+                  <div className="na-chip-group">
                     {availableSections.map((s) => (
-                      <Chip
-                        key={s}
-                        label={s}
-                        selected={targetSections.includes(s)}
-                        onClick={() => handleSectionChange(s)}
-                        disabled={submitting}
-                      />
+                      <Chip key={s} label={s} selected={targetSections.includes(s)} onClick={() => handleSectionChange(s)} disabled={submitting} />
                     ))}
                   </div>
                 </Field>
@@ -584,20 +614,12 @@ function NewAssignmentForm() {
                 {isSpecialityYear && targetSections.length > 0 && (
                   <Field label="Section" hint="Optional — 2 per speciality">
                     {targetSections.map((spec) => (
-                      <div key={spec} className="assignment-subsection-row">
-                        <span style={styles.subsectionLabel}>{spec}</span>
-                        <div style={styles.chipGroup}>
+                      <div key={spec} className="na-subsection-row">
+                        <span className="na-subsection-label">{spec}</span>
+                        <div className="na-chip-group">
                           {SPECIALITY_SUBSECTIONS.map((sub) => {
                             const key = `${spec}-${sub}`;
-                            return (
-                              <Chip
-                                key={key}
-                                label={sub}
-                                selected={targetSubSections.includes(key)}
-                                onClick={() => handleSubSectionChange(key)}
-                                disabled={submitting}
-                              />
-                            );
+                            return <Chip key={key} label={sub} selected={targetSubSections.includes(key)} onClick={() => handleSubSectionChange(key)} disabled={submitting} />;
                           })}
                         </div>
                       </div>
@@ -606,26 +628,13 @@ function NewAssignmentForm() {
                 )}
 
                 {showGroups && (
-                  <Field
-                    label="Groups"
-                    hint={`Optional — ${
-                      isSpecialityYear ? "2 per section" : "4 per section"
-                    }`}
-                  >
+                  <Field label="Groups" hint={`Optional — ${isSpecialityYear ? "2 per section" : "4 per section"}`}>
                     {availableGroups.length === 0 ? (
-                      <p style={styles.noGroupsMsg}>
-                        Select a section to reveal groups.
-                      </p>
+                      <p className="na-no-groups">Select a section to reveal groups.</p>
                     ) : (
-                      <div style={styles.chipGroup}>
+                      <div className="na-chip-group">
                         {availableGroups.map((g) => (
-                          <Chip
-                            key={g}
-                            label={String(g)}
-                            selected={targetGroups.includes(g)}
-                            onClick={() => handleGroupChange(g)}
-                            disabled={submitting}
-                          />
+                          <Chip key={g} label={String(g)} selected={targetGroups.includes(g)} onClick={() => handleGroupChange(g)} disabled={submitting} />
                         ))}
                       </div>
                     )}
@@ -634,10 +643,13 @@ function NewAssignmentForm() {
               </>
             )}
 
+            <hr className="na-divider" />
+            <p className="na-form-section-title">Submission Settings</p>
+
             <Field label="Deadline" required>
               <input
                 type="datetime-local"
-                style={styles.input}
+                className="na-input"
                 value={deadline}
                 onChange={(e: ChangeEvent<HTMLInputElement>) => {
                   setDeadline(e.target.value);
@@ -646,55 +658,38 @@ function NewAssignmentForm() {
                 disabled={submitting}
                 required
               />
-              {errors.deadline && (
-                <div style={styles.fieldError}>{errors.deadline}</div>
-              )}
+              {errors.deadline && <div className="na-field-error">{errors.deadline}</div>}
             </Field>
 
             <Field label="Late submissions">
-              <div style={styles.toggleRow}>
+              <div className="na-toggle-row">
                 <input
                   type="checkbox"
                   id="allowLate"
                   checked={allowLate}
                   onChange={(e) => setAllowLate(e.target.checked)}
                   disabled={submitting}
-                  style={styles.checkbox}
+                  className="na-checkbox"
                 />
-                <label htmlFor="allowLate" style={styles.toggleLabel}>
+                <label htmlFor="allowLate" className="na-toggle-label">
                   Allow students to submit after the deadline
                 </label>
               </div>
             </Field>
 
-            {/* Progress */}
             {submitting && (
-              <div style={styles.progressWrap}>
-                <div style={styles.progressHeader}>
-                  <span style={styles.progressLabel}>Creating assignment…</span>
-                </div>
-                <div style={styles.progressTrack}>
-                  <div style={{ ...styles.progressFill, width: "30%" }} />
-                </div>
+              <div className="na-progress-wrap">
+                <span className="na-progress-label">Creating assignment…</span>
+                <div className="na-progress-track"><div className="na-progress-fill" /></div>
               </div>
             )}
 
-            <div className="assignment-actions">
-              <button
-                type="button"
-                className="assignment-btn-outline"
-                disabled={submitting}
-                onClick={() => router.back()}
-              >
+            <div className="na-actions">
+              <button type="button" className="na-btn-outline" disabled={submitting} onClick={() => router.back()}>
                 Cancel
               </button>
-              <button
-                type="submit"
-                className={`assignment-btn-primary${submitting ? " assignment-btn-disabled" : ""}`}
-                style={submitting ? styles.btnDisabled : undefined}
-                disabled={submitting}
-              >
-                {submitting ? "Creating…" : "Create Assignment"}
+              <button type="submit" className="na-btn-primary" disabled={submitting}>
+                {submitting ? "Creating…" : "+ Create Assignment"}
               </button>
             </div>
           </form>
@@ -715,226 +710,10 @@ function NewAssignmentForm() {
   );
 }
 
-// Main Page 
-
 export default function NewAssignmentPage() {
   return (
-  
     <ProtectedRoute>
-
-    <NewAssignmentForm /> ;
-
+      <NewAssignmentForm />
     </ProtectedRoute>
-
-  
-
-  
   );
 }
-
-// Styles 
-
-const styles: Record<string, React.CSSProperties> = {
-  page: {
-    minHeight: "100vh",
-    background: "#f0f4ff",
-    fontFamily: "'Segoe UI', system-ui, sans-serif",
-    color: "#1a2340",
-  },
-  container: {
-    maxWidth: 1200,
-    margin: "0 auto",
-    padding: "32px 24px 64px",
-  },
-  breadcrumb: {
-    display: "flex",
-    alignItems: "center",
-    gap: 8,
-    marginBottom: 28,
-    fontSize: 14,
-  },
-  breadcrumbLink: {
-    color: "#2563eb",
-    cursor: "pointer",
-    fontWeight: 500,
-  },
-  breadcrumbSep: { color: "#94a3b8" },
-  breadcrumbCurrent: { color: "#64748b" },
-  layout: {
-    display: "grid",
-    gridTemplateColumns: "1fr 320px",
-    gap: 28,
-    alignItems: "start",
-  },
-  formCard: {
-    background: "#fff",
-    borderRadius: 16,
-    padding: "36px 40px",
-    boxShadow: "0 4px 24px rgba(30,60,120,0.08)",
-    border: "1px solid #e2e8f6",
-  },
-  formTitle: {
-    fontSize: 26,
-    fontWeight: 800,
-    margin: "0 0 6px",
-    color: "#0d1b2a",
-  },
-  formSubtitle: {
-    fontSize: 14,
-    color: "#64748b",
-    margin: "0 0 32px",
-  },
-  input: {
-    width: "100%",
-    padding: "11px 14px",
-    border: "1.5px solid #d1d9e6",
-    borderRadius: 10,
-    fontSize: 14,
-    color: "#1a2340",
-    background: "#f8faff",
-    outline: "none",
-    boxSizing: "border-box",
-    transition: "border-color .2s",
-  },
-  select: {
-    width: "100%",
-    padding: "11px 14px",
-    border: "1.5px solid #d1d9e6",
-    borderRadius: 10,
-    fontSize: 14,
-    color: "#1a2340",
-    background: "#f8faff",
-    outline: "none",
-    boxSizing: "border-box",
-    appearance: "none",
-    cursor: "pointer",
-  },
-  chipGroup: { display: "flex", flexWrap: "wrap", gap: 10 },
-  chip: {
-    padding: "7px 16px",
-    borderRadius: 30,
-    border: "1.5px solid #d1d9e6",
-    background: "#fff",
-    color: "#374151",
-    fontSize: 13,
-    fontWeight: 600,
-    cursor: "pointer",
-    transition: "all 0.15s",
-  },
-  chipSelected: {
-    background: "linear-gradient(135deg, #1d6ef5, #1558d4)",
-    borderColor: "#1d6ef5",
-    color: "#fff",
-    boxShadow: "0 2px 8px rgba(29,110,245,0.25)",
-  },
-  chipDisabled: { opacity: 0.6, cursor: "not-allowed" },
-  subsectionRow: {
-    display: "flex",
-    alignItems: "center",
-    gap: 16,
-    marginBottom: 12,
-  },
-  subsectionLabel: {
-    fontSize: 14,
-    fontWeight: 700,
-    color: "#2563eb",
-    minWidth: 60,
-  },
-  noGroupsMsg: { fontSize: 13, color: "#64748b", margin: 0 },
-  divider: { margin: "12px 0 20px", borderTop: "1px solid #e2e8f0" },
-  toggleRow: { display: "flex", alignItems: "center", gap: 10 },
-  checkbox: { width: 18, height: 18, cursor: "pointer" },
-  toggleLabel: { fontSize: 14, color: "#1a2340", cursor: "pointer" },
-  actions: {
-    display: "flex",
-    gap: 12,
-    justifyContent: "flex-end",
-    marginTop: 10,
-  },
-  btnPrimary: {
-    padding: "12px 28px",
-    background: "linear-gradient(135deg, #1d6ef5, #1558d4)",
-    color: "#fff",
-    border: "none",
-    borderRadius: 10,
-    fontSize: 14,
-    fontWeight: 700,
-    cursor: "pointer",
-    boxShadow: "0 4px 14px rgba(29,110,245,0.35)",
-  },
-  btnDisabled: { opacity: 0.6, cursor: "not-allowed", boxShadow: "none" },
-  btnOutline: {
-    padding: "12px 24px",
-    background: "#fff",
-    color: "#374151",
-    border: "1.5px solid #d1d9e6",
-    borderRadius: 10,
-    fontSize: 14,
-    fontWeight: 600,
-    cursor: "pointer",
-  },
-  progressWrap: {
-    marginTop: 20,
-    marginBottom: 4,
-    background: "#f0f6ff",
-    border: "1px solid #dbeafe",
-    borderRadius: 10,
-    padding: "14px 16px",
-  },
-  progressHeader: {
-    display: "flex",
-    justifyContent: "space-between",
-    marginBottom: 8,
-  },
-  progressLabel: { fontSize: 13, color: "#1e3a5f", fontWeight: 500 },
-  progressTrack: {
-    height: 6,
-    background: "#dbeafe",
-    borderRadius: 99,
-    overflow: "hidden",
-  },
-  progressFill: {
-    height: "100%",
-    background: "linear-gradient(90deg, #2563eb, #60a5fa)",
-    borderRadius: 99,
-  },
-  errorBanner: {
-    marginBottom: 24,
-    background: "#fff7ed",
-    border: "1px solid #fed7aa",
-    borderRadius: 10,
-    padding: "16px 18px",
-  },
-  errorBannerTop: {
-    display: "flex",
-    alignItems: "center",
-    gap: 8,
-    marginBottom: 6,
-  },
-  errorIcon: { fontSize: 16, color: "#b45309" },
-  errorMsg: { fontSize: 13, color: "#92400e", margin: "0 0 6px" },
-  fieldError: { fontSize: 12, color: "#ef4444", marginTop: 6 },
-  previewCard: {
-    background: "#fff",
-    borderRadius: 16,
-    padding: "24px 20px",
-    boxShadow: "0 4px 24px rgba(30,60,120,0.08)",
-    border: "1px solid #e2e8f6",
-  },
-  previewTitle: {
-    fontSize: 18,
-    fontWeight: 700,
-    margin: "0 0 20px",
-    color: "#0d1b2a",
-    borderBottom: "2px solid #eef2ff",
-    paddingBottom: 10,
-  },
-  previewItem: { display: "flex", gap: 12, marginBottom: 14, fontSize: 13 },
-  previewLabel: {
-    width: 100,
-    fontWeight: 600,
-    color: "#64748b",
-    flexShrink: 0,
-  },
-  previewMultiline: { wordBreak: "break-word", lineHeight: 1.4 },
-};
