@@ -704,7 +704,7 @@ function NewAssignmentForm() {
     <div className="na-page">
       <Head>
         <title>Create Assignment — ESICodeHub</title>
-        <style id="na-ink-styles" dangerouslySetInnerHTML={{ __html: PAGE_CSS }} />
+        <style id="na-ink-styles">{PAGE_CSS}</style>
       </Head>
       <Header activePage="Assignments" />
 
