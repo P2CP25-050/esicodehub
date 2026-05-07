@@ -75,7 +75,7 @@ export default function ForgotPasswordPage() {
       // FIX 2: Corrected endpoint — frontend was calling "/auth/forgot-password/"
       // but the backend route is "/auth/password-reset/". Update this string to
       // match whatever your Django/DRF urlconf actually exposes.
-      await apiClient.post("/auth/password-reset/", { email });
+      await apiClient.post("/auth/forgot-password/", { email });
       // Always show the same message regardless of whether email exists
       // — prevents user enumeration attacks.
       setMessage({
