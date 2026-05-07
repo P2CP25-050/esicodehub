@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, ChangeEvent, CSSProperties } from "react";
 import Image from "next/image";
+import Head from 'next/head';
 
 import Link from "next/link";
 import Header from "@/components/submissions/Header";
@@ -332,6 +333,9 @@ function ProfilePage() {
 
   return (
     <div style={s.page}>
+      <Head>
+        <title>{(firstName || lastName) ? `${firstName} ${lastName} — ESICodeHub` : 'Profile — ESICodeHub'}</title>
+      </Head>
       <Header />
       <div className="pf-container">
         {/* Breadcrumb */}

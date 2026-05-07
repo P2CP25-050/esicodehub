@@ -11,6 +11,7 @@ import { useRouter } from 'next/router';
 import axios from 'axios';
 
 import Header from '@/components/submissions/Header';
+import Head from 'next/head';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
 import { useAuth } from '@/context/AuthContext';
 import {
@@ -138,6 +139,9 @@ const buildReviewSignature = (submission?: AssignmentSubmission | null): string 
 function LoadingSkeleton() {
   return (
     <div className="min-h-screen bg-[#f0f4ff] text-[#1a2340]">
+      <Head>
+        <title>Loading Assignment... — ESICodeHub</title>
+      </Head>
       <Header activePage="Assignments" />
       <main className="mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:px-8">
         <div className="h-7 w-28 animate-pulse rounded-full bg-white/90" />
@@ -608,6 +612,9 @@ function AssignmentDetailPageContent() {
 
   return (
     <div className="min-h-screen bg-[#f0f4ff] text-[#1a2340]">
+      <Head>
+        <title>{assignment?.title} — ESICodeHub</title>
+      </Head>
       <Header activePage="Assignments" />
 
       {toast && (

@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect, useRef, useCallback } from "react";
+import Head from "next/head";
 import { useRouter } from "next/router";
 import Link from "next/link";
 
@@ -296,6 +297,10 @@ function ForumContent() {
   const count = questions.length;
 
   return (
+    <>
+      <Head>
+        <title>Q&A Forum — ESICodeHub</title>
+      </Head>
     <div className="fp-page">
       <Header activePage="Q&A Forums" />
 
@@ -372,6 +377,7 @@ function ForumContent() {
           </div>
         </div>
       </div>
-    </div>
-  );
+   </div>
+    </>
+  )
 }

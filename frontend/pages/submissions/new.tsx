@@ -2,6 +2,7 @@ import { useState, CSSProperties, ChangeEvent, useEffect } from "react";
 import { useRouter } from "next/router";
 import axios from "axios";
 import Header from "@/components/submissions/Header";
+import Head from 'next/head';
 import Field from "@/components/submissions/Field";
 import FileUpload from "@/components/submissions/FileUpload";
 import SubmissionPreview from "@/components/submissions/SubmissionPreview";
@@ -479,6 +480,9 @@ function NewSubmissionForm() {
 
   return (
     <div className="ns-page">
+      <Head>
+        <title>New Submission — ESICodeHub</title>
+      </Head>
       <Header activePage="Submissions" />
 
       <div className="ns-container">

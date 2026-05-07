@@ -122,7 +122,7 @@ export default function LandingPage() {
   return (
     <>
       <Head>
-        <title>ESICodeHub — The code platform built for ESI</title>
+        <title>Home — ESICodeHub</title>
         <meta name="description" content="Share code, submit assignments, and collaborate transparently under academic supervision at École Supérieure d'Informatique." />
       </Head>
 

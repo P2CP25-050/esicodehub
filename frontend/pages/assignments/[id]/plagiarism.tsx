@@ -4,6 +4,7 @@ import { useRouter } from "next/router";
 import axios from "axios";
 
 import Header from "@/components/submissions/Header";
+import Head from 'next/head';
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { getAssignment } from "@/services/assignments";
 import type { Assignment } from "@/services/assignments";
@@ -48,6 +49,9 @@ const getSimilarityTone = (value: number) => {
   if (value >= 70) {
     return {
       row: "bg-rose-50/80",
+        <Head>
+          <title>{assignment ? `${assignment.title} — Plagiarism Report — ESICodeHub` : 'Plagiarism Report — ESICodeHub'}</title>
+        </Head>
       border: "border-rose-400",
       badge: "bg-rose-100 text-rose-700 border-rose-200",
     };
