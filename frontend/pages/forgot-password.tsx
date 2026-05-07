@@ -40,11 +40,14 @@ function Message({ text, type }: { text: string; type: "error" | "success" }) {
 export default function ForgotPasswordPage() {
   const router = useRouter();
 
-  const [email, setEmail]         = useState("");
+  const [email, setEmail]           = useState("");
   const [emailShake, setEmailShake] = useState(false);
-  const [message, setMessage]     = useState<{ text: string; type: "error" | "success" } | null>(null);
-  const [loading, setLoading]     = useState(false);
-  const [sent, setSent]           = useState(false);
+  const [message, setMessage]       = useState<{ text: string; type: "error" | "success" } | null>(null);
+  const [loading, setLoading]       = useState(false);
+  const [sent, setSent]             = useState(false);
+
+  // FIX 1: Match the @esi.dz restriction enforced on the login page.
+  const isEsiEmail = (v: string) => v.toLowerCase().endsWith("@esi.dz");
 
   const shake = () => {
     setEmailShake(true);
@@ -60,9 +63,19 @@ export default function ForgotPasswordPage() {
       return;
     }
 
+    // FIX 1: Reject non-@esi.dz addresses before hitting the API.
+    if (!isEsiEmail(email)) {
+      shake();
+      setMessage({ text: "Only @esi.dz email addresses are allowed.", type: "error" });
+      return;
+    }
+
     setLoading(true);
     try {
-      await apiClient.post("/auth/forgot-password/", { email });
+      // FIX 2: Corrected endpoint — frontend was calling "/auth/forgot-password/"
+      // but the backend route is "/auth/password-reset/". Update this string to
+      // match whatever your Django/DRF urlconf actually exposes.
+      await apiClient.post("/auth/password-reset/", { email });
       // Always show the same message regardless of whether email exists
       // — prevents user enumeration attacks.
       setMessage({

@@ -64,25 +64,29 @@ export default function ResetPasswordPage() {
   const router = useRouter();
   const { token } = router.query;
 
-  const [password, setPassword]         = useState("");
-  const [confirm, setConfirm]           = useState("");
+  const [password, setPassword]           = useState("");
+  const [confirm, setConfirm]             = useState("");
   const [passwordShake, setPasswordShake] = useState(false);
-  const [confirmShake, setConfirmShake] = useState(false);
-  const [message, setMessage]           = useState<{ text: string; type: "error" | "success" } | null>(null);
-  const [loading, setLoading]           = useState(false);
-  const [done, setDone]                 = useState(false);
-  const [expired, setExpired]           = useState(false);
-  const [tokenReady, setTokenReady]     = useState(false);
+  const [confirmShake, setConfirmShake]   = useState(false);
+  const [message, setMessage]             = useState<{ text: string; type: "error" | "success" } | null>(null);
+  const [loading, setLoading]             = useState(false);
+  const [done, setDone]                   = useState(false);
+  const [expired, setExpired]             = useState(false);
 
-  
+  // FIX: Do NOT gate the entire page render on router.isReady.
+  // Previously `return null` caused a blank screen for the full hydration
+  // window (appeared as a very long delay). Instead, redirect only once
+  // isReady confirms there is no token — the card renders immediately and
+  // the form submit button is disabled while the token is still unknown.
   useEffect(() => {
     if (!router.isReady) return;
     if (!token) {
       router.replace("/forgot-password");
-    } else {
-      setTokenReady(true);
     }
   }, [router.isReady, token]);
+
+  // True once Next.js has parsed the query string and a token is present.
+  const tokenReady = router.isReady && !!token;
 
   const shake = (setter: (v: boolean) => void) => {
     setter(true);
@@ -134,8 +138,6 @@ export default function ResetPasswordPage() {
       setLoading(false);
     }
   };
-
-  if (!tokenReady) return null; // avoid flash before redirect
 
   return (
     <>
@@ -332,7 +334,9 @@ export default function ResetPasswordPage() {
               />
 
               <div style={{ marginTop: 8, animation: "fadeUp 0.5s 0.38s both" }}>
-                <PillButton onClick={handleReset} delay={0} loading={loading}>
+                {/* FIX: Button is disabled until the token is confirmed present,
+                    instead of hiding the whole page with `return null`. */}
+                <PillButton onClick={handleReset} delay={0} loading={loading || !tokenReady}>
                   Reset Password
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" width={17} height={17}>
                     <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
