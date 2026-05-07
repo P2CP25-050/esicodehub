@@ -236,16 +236,6 @@ function ForumContent() {
   }, [ordering, dSearch, dAuthor, activeTag]);
 
   useEffect(() => {
-    const id = "forum-ink-styles";
-    if (typeof document !== "undefined" && !document.getElementById(id)) {
-      const tag = document.createElement("style");
-      tag.id = id;
-      tag.textContent = FORUM_CSS;
-      document.head.appendChild(tag);
-    }
-  }, []);
-
-  useEffect(() => {
     fetchPage1();
   }, [fetchPage1]);
 
@@ -300,6 +290,7 @@ function ForumContent() {
     <>
       <Head>
         <title>Q&A Forum — ESICodeHub</title>
+        <style id="forum-ink-styles">{FORUM_CSS}</style>
       </Head>
     <div className="fp-page">
       <Header activePage="Q&A Forums" />
