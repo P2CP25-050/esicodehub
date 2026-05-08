@@ -210,3 +210,5 @@ __marimo__/
 staticfiles/
 
 apps/esi_db/fixtures/esi_mock_data.json
+
+gunicorn.ctl
