@@ -23,6 +23,11 @@ export interface QuestionListItem {
   title: string;
   tags: string[];
   author_name: string;
+  author_avatar?: string | null;
+  author_username?: string;
+  author_id?: number;
+  body?: string;
+  description?: string;
   answer_count: number;
   vote_score: number;
   has_accepted_answer: boolean;

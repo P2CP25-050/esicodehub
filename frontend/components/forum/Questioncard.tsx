@@ -1,4 +1,5 @@
 import { useRouter } from "next/router";
+import Image from "next/image";
 import type { QuestionListItem } from "@/services/forum";
 import { timeAgo } from "@/utils/forum";
 
@@ -47,9 +48,9 @@ export function QuestionCard({
 
   const authorName = question.author_name ?? "Anonymous";
   const avatarBg   = avatarColor(authorName);
-  const avatarSrc  = (question as any).author_avatar ?? null;
-  const authorSlug = (question as any).author_username ?? (question as any).author_id ?? question.author_name;
-  const bodyText   = (question as any).body ?? (question as any).description ?? null;
+  const avatarSrc  = question.author_avatar ?? null;
+  const authorSlug = question.author_username ?? String(question.author_id ?? "") || question.author_name;
+  const bodyText   = question.body ?? question.description ?? null;
 
   return (
     <>
@@ -385,7 +386,16 @@ export function QuestionCard({
             >
               <div className="qc-avatar" style={{ background: avatarBg }}>
                 {avatarSrc
-                  ? <img src={avatarSrc} alt={authorName} />
+                  ? (
+                      <Image
+                        src={avatarSrc}
+                        alt={authorName}
+                        fill
+                        sizes="48px"
+                        className="object-cover"
+                        unoptimized
+                      />
+                    )
                   : initials(authorName)}
               </div>
               <div className="qc-author-info">
