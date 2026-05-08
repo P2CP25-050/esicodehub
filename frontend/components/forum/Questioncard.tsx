@@ -49,7 +49,7 @@ export function QuestionCard({
   const authorName = question.author_name ?? "Anonymous";
   const avatarBg   = avatarColor(authorName);
   const avatarSrc  = question.author_avatar ?? null;
-  const authorSlug = question.author_username ?? String(question.author_id ?? "") || question.author_name;
+  const authorSlug = (question.author_username ?? String(question.author_id ?? "")) || question.author_name;
   const bodyText   = question.body ?? question.description ?? null;
 
   return (
