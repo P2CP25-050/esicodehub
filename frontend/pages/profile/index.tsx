@@ -12,6 +12,7 @@ import {
   getStudentStats,
   getProfessorStats,
   getRecentActivity,
+  triggerPasswordReset,
 } from "@/services/profile/api";
 import type {
   ProfileStats,
@@ -226,6 +227,10 @@ function ProfilePage() {
   const [profileData, setProfileData] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
 
+  const [resetLoading, setResetLoading] = useState(false);
+  const [resetSent, setResetSent] = useState(false);
+  const [resetError, setResetError] = useState<string | null>(null);
+
   // Inject styles
   useEffect(() => {
     if (typeof document === "undefined") return;
@@ -286,6 +291,26 @@ function ProfilePage() {
     } finally {
       setBioSaving(false);
     }
+  };
+
+  // Trigger password reset email in the profile page
+  const handleTriggerReset = async () => {
+  setResetLoading(true);
+  setResetError(null);
+  try {
+    await triggerPasswordReset(email);
+    setResetSent(true);
+    // Reset the "Sent" status after 5 seconds so they can try again if needed
+    setTimeout(() => setResetSent(false), 5000);
+  } catch (err: unknown) {
+    if (err instanceof Error) {
+    setResetError(err.message);
+    } else {
+    setResetError("Failed to send reset link. Please try again.");
+    }
+  } finally {
+    setResetLoading(false);
+  }
   };
 
   const handleAvatarChange = async (e: ChangeEvent<HTMLInputElement>) => {
@@ -429,8 +454,45 @@ function ProfilePage() {
                     🗓 {memberSince(createdAt)}
                   </p>
                 )}
+                {/* MODIFICATION START: Password Reset Section */}
+                <div style={{ marginTop: 24, paddingTop: 20, borderTop: '1px solid #f1f5f9' }}>
+                  <label style={s.fieldLabel}>Security</label>
+                  <p style={{ fontSize: 12, color: "#64748b", margin: "6px 0 12px", lineHeight: 1.4 }}>
+                     Need to change your password? Click below to receive a secure link.
+                  </p>
+                  {resetSent ? (
+                  <div style={{ 
+                     background: '#f0fdf4', 
+                     color: '#16a34a', 
+                     padding: '10px', 
+                     borderRadius: '8px', 
+                     fontSize: 13, 
+                     fontWeight: 600,
+                     textAlign: 'center',
+                     border: '1px solid #bbf7d0'
+                    }}>
+                      ✓ Check your email!
+                  </div>
+                ) : (
+                  <button
+                    onClick={handleTriggerReset}
+                    disabled={resetLoading}
+                    style={{
+                      ...s.btnUploadPhoto, 
+                      width: '100%', 
+                      background: '#fff',
+                      transition: 'all 0.2s ease',
+                      borderColor: resetError ? '#fecaca' : '#d1d9e6',
+                      color: resetError ? '#dc2626' : '#374151'
+                    }}
+                  >
+                    {resetLoading ? "Sending Link..." : "Reset Password"}
+                  </button>
+                )}
+                {resetError && <p style={{ ...s.inlineError, marginTop: 8, textAlign: 'center' }}>{resetError}</p>}
               </div>
             </div>
+          </div>
 
             {/* Bio card */}
             <div className="pf-card">
