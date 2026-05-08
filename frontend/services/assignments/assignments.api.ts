@@ -143,3 +143,17 @@ export const listSubjects = async (): Promise<Subject[]> => {
   const res = await apiClient.get<Subject[]>('/subjects/');
   return res.data;
 };
+
+export const uploadAssignmentDescriptionPdf = async (
+  id: number,
+  file: File
+): Promise<Assignment> => {
+  const formData = new FormData();
+  formData.append('description_pdf', file);
+
+  const res = await apiClient.post<Assignment>(
+    `/assignments/${id}/upload-description-pdf/`,
+    formData
+  );
+  return res.data;
+};

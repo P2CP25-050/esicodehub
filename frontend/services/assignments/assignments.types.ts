@@ -18,7 +18,10 @@ export interface Assignment {
   is_open: boolean;
   has_submitted?: boolean;
   professor_name: string;
+  professor_school_id: number;
   submission_count: number;
+  max_score?: number;
+  description_pdf?: string;
   created_at: string;
   updated_at: string;
 }
@@ -40,6 +43,7 @@ export interface AssignmentUpdatePayload {
   description?: string;
   deadline?: string;
   allow_late?: boolean;
+  max_score?: number;
 }
 
 export interface AssignmentListParams {

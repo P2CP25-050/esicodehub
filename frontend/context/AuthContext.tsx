@@ -15,6 +15,7 @@ export interface AuthUser {
   first_name: string;
   last_name: string;
   role: 'student' | 'professor';
+  school_id?: number;
 }
 
 interface AuthContextValue {

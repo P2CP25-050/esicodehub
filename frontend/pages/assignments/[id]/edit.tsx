@@ -25,6 +25,7 @@ type FieldErrors = {
   title?: string;
   deadline?: string;
   descriptionPdf?: string;
+  maxScore?: string;
 };
 
 const fetchAssignment = async (url: string): Promise<Assignment> => {
@@ -133,6 +134,7 @@ function AssignmentEditPageContent() {
   const [titleOverride, setTitleOverride] = useState<string | null>(null);
   const [descriptionOverride, setDescriptionOverride] = useState<string | null>(null);
   const [deadlineOverride, setDeadlineOverride] = useState<string | null>(null);
+  const [maxScoreOverride, setMaxScoreOverride] = useState<string | null>(null);
   const [selectedPdf, setSelectedPdf] = useState<File | null>(null);
   const [dragOver, setDragOver] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
@@ -144,6 +146,7 @@ function AssignmentEditPageContent() {
   const deadline =
     deadlineOverride ??
     (assignment?.deadline ? toLocalDateTimeValue(assignment.deadline) : '');
+  const maxScore = maxScoreOverride ?? (assignment?.max_score?.toString() ?? '');
 
   const canEditAssignment = user?.role === 'professor';
   const hasExistingPdf = Boolean(assignment?.description_pdf);
@@ -200,6 +203,9 @@ function AssignmentEditPageContent() {
     } else if (Number.isNaN(new Date(deadline).getTime())) {
       nextErrors.deadline = 'Enter a valid due date.';
     }
+    if (maxScore.trim() && (Number.isNaN(Number(maxScore)) || Number(maxScore) < 0)) {
+      nextErrors.maxScore = 'Enter a valid positive number.';
+    }
 
     setFieldErrors(nextErrors);
     if (Object.keys(nextErrors).length > 0) return;
@@ -208,11 +214,16 @@ function AssignmentEditPageContent() {
     setSubmitError(null);
 
     try {
-      await updateAssignment(assignmentId, {
+      const updateData: Parameters<typeof updateAssignment>[1] = {
         title: title.trim(),
         description: description.trim(),
         deadline: new Date(deadline).toISOString(),
-      });
+      };
+      if (maxScore.trim()) {
+        updateData.max_score = Number(maxScore);
+      }
+
+      await updateAssignment(assignmentId, updateData);
 
       if (selectedPdf) {
         await uploadAssignmentDescriptionPdf(assignmentId, selectedPdf);
@@ -405,6 +416,29 @@ function AssignmentEditPageContent() {
               )}
             </div>
 
+            <div>
+              <label className="text-sm font-semibold text-slate-700">Max score</label>
+              <input
+                type="number"
+                value={maxScore}
+                onChange={(event) => {
+                  setMaxScoreOverride(event.target.value);
+                  if (fieldErrors.maxScore) {
+                    setFieldErrors((previous) => ({ ...previous, maxScore: undefined }));
+                  }
+                }}
+                min="0"
+                step="0.1"
+                className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 outline-none transition-colors focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
+                placeholder="Optional — e.g., 20"
+              />
+              {fieldErrors.maxScore && (
+                <p className="mt-2 text-xs font-semibold text-rose-600">
+                  {fieldErrors.maxScore}
+                </p>
+              )}
+            </div>
+
             <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
@@ -506,6 +540,7 @@ function AssignmentEditPageContent() {
                   setTitleOverride(null);
                   setDescriptionOverride(null);
                   setDeadlineOverride(null);
+                  setMaxScoreOverride(null);
                   setFieldErrors({});
                   setSubmitError(null);
                   clearSelectedPdf();

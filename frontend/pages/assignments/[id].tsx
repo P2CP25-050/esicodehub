@@ -205,6 +205,12 @@ function AssignmentDetailPageContent() {
       user &&
       `${user.first_name} ${user.last_name}`.trim() === assignment.professor_name.trim()
   );
+  const canEditAssignment = Boolean(
+    assignment &&
+      user &&
+      user.role === 'professor' &&
+      user.school_id === assignment.professor_school_id
+  );
   const deadlineBadge = assignment ? getDeadlineBadge(assignment) : null;
   const canSubmit = Boolean(assignment?.is_open);
   const hasSubmission = Boolean(mySubmission);
@@ -700,7 +706,7 @@ function AssignmentDetailPageContent() {
                         Run Plagiarism Check
                       </button>
                     )}
-                    {isCreator && (
+                    {canEditAssignment && (
                       <Link
                         href={`/assignments/${assignment.id}/edit`}
                         className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50"
@@ -725,6 +731,31 @@ function AssignmentDetailPageContent() {
               {assignment.description && (
                 <div className="mt-6 rounded-2xl bg-slate-50 p-4 text-sm leading-6 text-slate-700">
                   {assignment.description}
+                </div>
+              )}
+
+              {assignment.description_pdf && (
+                <div className="mt-6 rounded-2xl border border-blue-200 bg-blue-50 p-4">
+                  <div className="flex flex-wrap items-center gap-3">
+                    <p className="text-sm font-semibold text-blue-900">📄 Assignment PDF description</p>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <a
+                        href={assignment.description_pdf}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="rounded-lg border border-blue-300 bg-white px-3 py-1 text-xs font-semibold text-blue-700 transition-colors hover:bg-blue-100"
+                      >
+                        View PDF
+                      </a>
+                      <a
+                        href={assignment.description_pdf}
+                        download
+                        className="rounded-lg border border-blue-300 bg-white px-3 py-1 text-xs font-semibold text-blue-700 transition-colors hover:bg-blue-100"
+                      >
+                        Download
+                      </a>
+                    </div>
+                  </div>
                 </div>
               )}
 
