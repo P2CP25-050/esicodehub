@@ -83,7 +83,7 @@ export default function ResetPasswordPage() {
     if (!token) {
       router.replace("/forgot-password");
     }
-  }, [router.isReady, token]);
+  }, [router, router.isReady, token]);
 
   // True once Next.js has parsed the query string and a token is present.
   const tokenReady = router.isReady && !!token;
@@ -128,13 +128,21 @@ export default function ResetPasswordPage() {
     } catch (error: unknown) {
       if (error instanceof AxiosError) {
         const status = error.response?.status;
-        if (status === 400 || status === 410) {
+        const errorData = error.response?.data;
+        const isTokenError = status === 410 || 
+                        (status === 400 && errorData?.error?.toLowerCase().includes("token")) ||
+                        (status === 400 && errorData?.error?.toLowerCase().includes("link"));
+        if (isTokenError) {
           setExpired(true);
         } else {
-          setMessage({ text: "Something went wrong. Please try again.", type: "error" });
+          setMessage({ 
+          text: errorData?.error || "Something went wrong. Please try again.", 
+          type: "error" 
+          });
+          }
         }
       }
-    } finally {
+    finally {
       setLoading(false);
     }
   };
