@@ -85,6 +85,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } catch {
       // ignore server errors — local cleanup must always proceed
     } finally {
+      _authInitPromise = null;
       clearTokens();
       setUser(null);
       router.push('/login');
