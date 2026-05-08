@@ -750,5 +750,6 @@ function PlagiarismReportContent() {
         )}
       </main>
     </div>
+    </>
   );
 }
