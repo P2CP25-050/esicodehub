@@ -25,7 +25,6 @@ import { PublicRoute } from "@/components/PublicRoute";
 
 // ─── Types ────────────────────────────────────────────────
 type Page = "register" | "verify" | "success";
-type Role = "student" | "professor";
 
 // ─── Responsive width hook ────────────────────────────────
 function useWindowWidth(): number {
