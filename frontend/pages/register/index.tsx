@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { useRouter } from "next/router";
 import { AxiosError } from 'axios';
+import Head from 'next/head';
 
 // ─── Reusable auth components (no redefinition) ───────────
 import Logo             from "@/components/auth/Logo";
@@ -24,7 +25,6 @@ import { PublicRoute } from "@/components/PublicRoute";
 
 // ─── Types ────────────────────────────────────────────────
 type Page = "register" | "verify" | "success";
-type Role = "student" | "professor";
 
 // ─── Responsive width hook ────────────────────────────────
 function useWindowWidth(): number {
@@ -300,6 +300,9 @@ function RegisterPageContent() {
   // ─────────────────────────────────────────────────────
   return (
     <>
+      <Head>
+        <title>Register — ESICodeHub</title>
+      </Head>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Courier+Prime:wght@400;700&family=Rajdhani:wght@500;600;700&display=swap');
         *,*::before,*::after { box-sizing: border-box; margin: 0; padding: 0; }

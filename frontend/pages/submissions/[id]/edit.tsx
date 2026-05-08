@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef, ReactNode } from "react";
+import Head from 'next/head';
 import { useRouter } from "next/router";
 import  Link  from "next/link";
 
@@ -648,6 +649,9 @@ function EditSubmissionPage() {
   if (loading) {
     return (
       <div className="min-h-screen bg-[#f0f4ff]" style={{ fontFamily: "'Segoe UI', system-ui, sans-serif" }}>
+        <Head>
+          <title>Edit Submission — ESICodeHub</title>
+        </Head>
         <Header activePage="Submissions" />
         <div className="flex items-center justify-center gap-2.5 min-h-[calc(100vh-64px)] text-sm text-[#64748b]">
           <Spinner />
@@ -666,6 +670,9 @@ function EditSubmissionPage() {
       className="min-h-screen bg-[#f0f4ff] text-[#1a2340]"
       style={{ fontFamily: "'Segoe UI', system-ui, sans-serif" }}
     >
+      <Head>
+        <title>{submission ? `${submission.title} — Edit Submission — ESICodeHub` : 'Edit Submission — ESICodeHub'}</title>
+      </Head>
       <Header activePage="Submissions" />
 
       <div className="max-w-[900px] mx-auto px-3 sm:px-6 py-5 sm:py-8 pb-16">

@@ -1,4 +1,5 @@
 import { useState, useMemo } from "react";
+import Head from 'next/head';
 import { useRouter } from "next/router";
 import Link from "next/link";
 
@@ -61,6 +62,10 @@ function AssignmentsContent() {
   const count = filtered.length;
 
   return (
+    <>
+      <Head>
+        <title>Assignments — ESICodeHub</title>
+      </Head>
     <div className="min-h-screen bg-[#f0f4ff] font-sans text-[#1a2340]">
 
       {/*
@@ -192,5 +197,6 @@ function AssignmentsContent() {
 
       </div>
     </div>
+  </>
   );
 }

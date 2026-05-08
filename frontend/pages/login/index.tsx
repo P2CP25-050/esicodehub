@@ -6,6 +6,7 @@ import { login, getMe } from '@/services/auth';
 import { saveTokens } from '@/lib/tokens';
 import { AxiosError } from 'axios';
 import { useAuth } from '@/context/AuthContext';
+import Head from 'next/head';
 
 import Particles from "@/components/auth/Particles";
 import PillButton from "@/components/auth/PillButton";
@@ -88,7 +89,7 @@ function Message({ text, type }: { text: string; type: "error" | "success" }) {
 // ─── Main Component ───────────────────────────────────────
 function LoginPageContent() {
   const router = useRouter();
-  const { setUser } = useAuth(); // FIX: get setUser to populate auth state before navigating
+  const { setUser } = useAuth();
   const [page] = useState<Page>("Login");
   const [cardKey] = useState(0);
 
@@ -142,13 +143,15 @@ function LoginPageContent() {
     try {
       const { data } = await login({ email, password });
       saveTokens({ access: data.access });
-
-      // FIX: Fetch the user profile and populate auth context immediately.
-      // This ensures isAuthenticated is true before /home mounts,
-      // so ProtectedRoute does not redirect away.
-      const profile = await getMe();
-      setUser(profile.data);
-
+      if (data.user) {
+        setUser(data.user);
+      } else {
+        try {
+          const me = await getMe();
+          setUser(me.data);
+        } catch {
+        }
+      }
       router.push("/home");
     } catch (error: unknown) {
       if (error instanceof AxiosError) {
@@ -167,6 +170,9 @@ function LoginPageContent() {
 
   return (
     <>
+      <Head>
+        <title>Login — ESICodeHub</title>
+      </Head>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Courier+Prime:wght@400;700&family=Rajdhani:wght@500;600;700&display=swap');
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -290,7 +296,7 @@ function LoginPageContent() {
                 animation: "pageSlide 0.4s cubic-bezier(0.22,1,0.36,1) both",
               }}
             >
-              <BackButton onClick={() => router.push("/")} />
+              <BackButton onClick={() => router.back()} />
 
               {/* Logo */}
               <div
@@ -367,7 +373,7 @@ function LoginPageContent() {
               >
                 <button
                   type="button"
-                  onClick={() => router.push("/forgot-password")}
+                  onClick={() => router.push("/ForgotPassword")}
                   style={{
                     background: "none",
                     border: "none",
@@ -379,7 +385,9 @@ function LoginPageContent() {
                     padding: 0,
                     transition: "color 0.2s",
                   }}
-                  onMouseEnter={(e) => (e.currentTarget.style.color = "#3b82f6")}
+                  onMouseEnter={(e) =>
+                    (e.currentTarget.style.color = "#3b82f6")
+                  }
                   onMouseLeave={(e) => (e.currentTarget.style.color = "#555")}
                 >
                   Forgot password?

@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 // Import from the real Header location — it uses default export and only
 // accepts activePage?: string (no userInitials prop)
 import Header from "@/components/submissions/Header";
+import Head from 'next/head';
 import GreetingBar from "@/components/home/GreetingBar";
 import RecentSubmissions from "@/components/home/RecentSubmissions";
 import UpcomingDeadlines from "@/components/home/UpcomingDeadlines";
@@ -162,6 +163,9 @@ function HomePageContent() {
       }}
     >
       {/* activePage highlights the Home link in the existing Header nav */}
+      <Head>
+        <title>Home — ESICodeHub</title>
+      </Head>
       <Header activePage="Home" />
 
       <main style={{ maxWidth: 1200, margin: "0 auto", padding: "32px 24px 64px" }}>
