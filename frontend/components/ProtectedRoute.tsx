@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { useRouter } from 'next/router';
 import { useAuth } from '@/context/AuthContext';
-import { LoadingSpinner } from './LoadingSpinner';
+import { LoadingSpinner } from '@/components/LoadingSpinner';
 
 //types
 
@@ -10,7 +10,7 @@ interface ProtectedRouteProps {
   allowedRole?: 'student' | 'professor';
 }
 
-//component
+
 
 export const ProtectedRoute = ({
   children,
@@ -23,9 +23,9 @@ export const ProtectedRoute = ({
     // Still checking session — don't redirect yet
     if (isLoading) return;
 
-    // Not logged in => send to landing page
+    // Not logged in => send to login page
     if (!isAuthenticated) {
-      router.replace('/');
+      router.replace('/home');
       return;
     }
 
@@ -36,7 +36,7 @@ export const ProtectedRoute = ({
   }, [isLoading, isAuthenticated, user, allowedRole, router]);
 
   // show spinner (for the whole page since we don't know if they can access it or not yet)
-   if (isLoading) return <LoadingSpinner message="verifying session"/>
+   if (isLoading) return <LoadingSpinner message="verifying session" />
 
   // Not authenticated — null while redirect happens
   if (!isAuthenticated) return null;

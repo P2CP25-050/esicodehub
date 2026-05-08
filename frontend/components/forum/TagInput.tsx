@@ -2,11 +2,12 @@ import { useRef, useState } from "react";
 import type { KeyboardEvent } from "react";
 
 const SUGGESTED_TAGS = [
-  "CS101", "CS201", "CS301", "CS401", "MATH101", "MATH201", "STAT101",
-  "python", "javascript", "typescript", "java", "c++", "c", "rust", "go",
-  "react", "nextjs", "nodejs", "sql", "algorithms", "data-structures",
-  "debugging", "recursion", "async", "concurrency", "machine-learning",
-  "linear-algebra", "calculus", "os", "networks", "compilers",
+  "AL", "ALSDD", "ALSDS", "ARCH1", "ARCH2", "ARCH3", "BDA",
+  "BDD", "BDM", "BWEB", "COM", "CPROJ", "c", "rust", "go",
+  "react", "nextjs", "nodejs", "sql", "debugging", "recursion",
+   "async", "concurrency","ELECT","ELECF1","ELECF2","IGL","IHM",
+   "LOGM", "ML","MLA","OGL","POO","PRJP","PRJS","PROJ","RES1","RES2","RESA","RO","SFSD","SINF",
+   "SYS1","SYS2","SYST1","SYST2","TDM1","TDM2", "TDW","THP",
 ];
 
 /**

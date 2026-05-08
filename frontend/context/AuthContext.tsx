@@ -41,6 +41,7 @@ function getAuthInitPromise(): Promise<AuthUser | null> {
       .then((profile) => profile.data as AuthUser)
       .catch(() => {
         clearTokens();
+        _authInitPromise = null; 
         return null;
       });
   }
@@ -115,3 +116,4 @@ export function useAuth(): AuthContextValue {
 
   return ctx;
 }
+
