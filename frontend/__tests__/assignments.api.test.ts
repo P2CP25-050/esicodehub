@@ -85,4 +85,20 @@ describe('assignments.api', () => {
     );
     expect(result.id).toBe(7);
   });
+
+  it('calls POST /assignments/:id/upload-description/ with FormData file field', async () => {
+    (apiClient.post as jest.Mock).mockResolvedValue({
+      data: { url: 'https://storage.googleapis.com/signed.pdf' },
+    });
+
+    const file = new File(['pdf-content'], 'description.pdf', {
+      type: 'application/pdf',
+    });
+    await assignmentsApi.uploadAssignmentDescriptionPdf(9, file);
+
+    expect(apiClient.post).toHaveBeenCalledWith(
+      '/assignments/9/upload-description/',
+      expect.any(FormData)
+    );
+  });
 });

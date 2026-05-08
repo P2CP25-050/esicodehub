@@ -12,6 +12,10 @@ import type {
   Subject,
 } from './assignments.types';
 
+export interface AssignmentDescriptionPdfUploadResponse {
+  url: string;
+}
+
 export const listAssignments = async (
   params?: AssignmentListParams
 ): Promise<PaginatedResponse<Assignment>> => {
@@ -147,12 +151,12 @@ export const listSubjects = async (): Promise<Subject[]> => {
 export const uploadAssignmentDescriptionPdf = async (
   id: number,
   file: File
-): Promise<Assignment> => {
+): Promise<AssignmentDescriptionPdfUploadResponse> => {
   const formData = new FormData();
-  formData.append('description_pdf', file);
+  formData.append('file', file);
 
-  const res = await apiClient.post<Assignment>(
-    `/assignments/${id}/upload-description-pdf/`,
+  const res = await apiClient.post<AssignmentDescriptionPdfUploadResponse>(
+    `/assignments/${id}/upload-description/`,
     formData
   );
   return res.data;

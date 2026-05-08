@@ -203,14 +203,17 @@ function AssignmentDetailPageContent() {
   const isCreator = Boolean(
     assignment &&
       user &&
-      `${user.first_name} ${user.last_name}`.trim() === assignment.professor_name.trim()
-  );
-  const canEditAssignment = Boolean(
-    assignment &&
-      user &&
       user.role === 'professor' &&
-      user.school_id === assignment.professor_school_id
+      ((assignment.professor?.email &&
+        assignment.professor.email.toLowerCase() === user.email.toLowerCase()) ||
+        `${user.first_name} ${user.last_name}`.trim() ===
+          assignment.professor_name.trim())
   );
+  const canEditAssignment = isCreator;
+  const descriptionPdfUrl =
+    assignment?.description_pdf && /^https?:\/\//i.test(assignment.description_pdf)
+      ? assignment.description_pdf
+      : null;
   const deadlineBadge = assignment ? getDeadlineBadge(assignment) : null;
   const canSubmit = Boolean(assignment?.is_open);
   const hasSubmission = Boolean(mySubmission);
@@ -738,23 +741,29 @@ function AssignmentDetailPageContent() {
                 <div className="mt-6 rounded-2xl border border-blue-200 bg-blue-50 p-4">
                   <div className="flex flex-wrap items-center gap-3">
                     <p className="text-sm font-semibold text-blue-900">📄 Assignment PDF description</p>
-                    <div className="flex flex-wrap items-center gap-2">
-                      <a
-                        href={assignment.description_pdf}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="rounded-lg border border-blue-300 bg-white px-3 py-1 text-xs font-semibold text-blue-700 transition-colors hover:bg-blue-100"
-                      >
-                        View PDF
-                      </a>
-                      <a
-                        href={assignment.description_pdf}
-                        download
-                        className="rounded-lg border border-blue-300 bg-white px-3 py-1 text-xs font-semibold text-blue-700 transition-colors hover:bg-blue-100"
-                      >
-                        Download
-                      </a>
-                    </div>
+                    {descriptionPdfUrl ? (
+                      <div className="flex flex-wrap items-center gap-2">
+                        <a
+                          href={descriptionPdfUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="rounded-lg border border-blue-300 bg-white px-3 py-1 text-xs font-semibold text-blue-700 transition-colors hover:bg-blue-100"
+                        >
+                          View PDF
+                        </a>
+                        <a
+                          href={descriptionPdfUrl}
+                          download
+                          className="rounded-lg border border-blue-300 bg-white px-3 py-1 text-xs font-semibold text-blue-700 transition-colors hover:bg-blue-100"
+                        >
+                          Download
+                        </a>
+                      </div>
+                    ) : (
+                      <p className="text-xs text-blue-800">
+                        PDF uploaded. Signed access link is unavailable in this response.
+                      </p>
+                    )}
                   </div>
                 </div>
               )}

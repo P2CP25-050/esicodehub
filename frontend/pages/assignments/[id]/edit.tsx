@@ -25,7 +25,6 @@ type FieldErrors = {
   title?: string;
   deadline?: string;
   descriptionPdf?: string;
-  maxScore?: string;
 };
 
 const fetchAssignment = async (url: string): Promise<Assignment> => {
@@ -134,7 +133,6 @@ function AssignmentEditPageContent() {
   const [titleOverride, setTitleOverride] = useState<string | null>(null);
   const [descriptionOverride, setDescriptionOverride] = useState<string | null>(null);
   const [deadlineOverride, setDeadlineOverride] = useState<string | null>(null);
-  const [maxScoreOverride, setMaxScoreOverride] = useState<string | null>(null);
   const [selectedPdf, setSelectedPdf] = useState<File | null>(null);
   const [dragOver, setDragOver] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
@@ -146,10 +144,20 @@ function AssignmentEditPageContent() {
   const deadline =
     deadlineOverride ??
     (assignment?.deadline ? toLocalDateTimeValue(assignment.deadline) : '');
-  const maxScore = maxScoreOverride ?? (assignment?.max_score?.toString() ?? '');
-
-  const canEditAssignment = user?.role === 'professor';
+  const canEditAssignment = Boolean(
+    assignment &&
+      user &&
+      user.role === 'professor' &&
+      ((assignment.professor?.email &&
+        assignment.professor.email.toLowerCase() === user.email.toLowerCase()) ||
+        `${user.first_name} ${user.last_name}`.trim() ===
+          assignment.professor_name.trim())
+  );
   const hasExistingPdf = Boolean(assignment?.description_pdf);
+  const existingPdfUrl =
+    assignment?.description_pdf && /^https?:\/\//i.test(assignment.description_pdf)
+      ? assignment.description_pdf
+      : null;
 
   const openFileDialog = () => {
     fileInputRef.current?.click();
@@ -203,10 +211,6 @@ function AssignmentEditPageContent() {
     } else if (Number.isNaN(new Date(deadline).getTime())) {
       nextErrors.deadline = 'Enter a valid due date.';
     }
-    if (maxScore.trim() && (Number.isNaN(Number(maxScore)) || Number(maxScore) < 0)) {
-      nextErrors.maxScore = 'Enter a valid positive number.';
-    }
-
     setFieldErrors(nextErrors);
     if (Object.keys(nextErrors).length > 0) return;
 
@@ -219,17 +223,24 @@ function AssignmentEditPageContent() {
         description: description.trim(),
         deadline: new Date(deadline).toISOString(),
       };
-      if (maxScore.trim()) {
-        updateData.max_score = Number(maxScore);
-      }
-
-      await updateAssignment(assignmentId, updateData);
+      const updatedAssignment = await updateAssignment(assignmentId, updateData);
+      let descriptionPdf = updatedAssignment.description_pdf;
 
       if (selectedPdf) {
-        await uploadAssignmentDescriptionPdf(assignmentId, selectedPdf);
+        const uploadResponse = await uploadAssignmentDescriptionPdf(
+          assignmentId,
+          selectedPdf
+        );
+        descriptionPdf = uploadResponse.url;
       }
 
-      await mutate();
+      await mutate(
+        {
+          ...updatedAssignment,
+          description_pdf: descriptionPdf,
+        },
+        false
+      );
       await router.push(`/assignments/${assignmentId}`);
     } catch (err: unknown) {
       setSubmitError(getErrorMessage(err, 'Failed to update assignment.'));
@@ -344,9 +355,7 @@ function AssignmentEditPageContent() {
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div>
               <h1 className="text-3xl font-black text-[#0d1b2a]">Edit assignment</h1>
-              <p className="mt-2 text-sm text-slate-500">
-                Update the title, description, due date, or PDF instructions.
-              </p>
+              <p className="mt-2 text-sm text-slate-500">Update the title, description, due date, or PDF instructions.</p>
             </div>
             <Link
               href={`/assignments/${assignmentId}`}
@@ -416,29 +425,6 @@ function AssignmentEditPageContent() {
               )}
             </div>
 
-            <div>
-              <label className="text-sm font-semibold text-slate-700">Max score</label>
-              <input
-                type="number"
-                value={maxScore}
-                onChange={(event) => {
-                  setMaxScoreOverride(event.target.value);
-                  if (fieldErrors.maxScore) {
-                    setFieldErrors((previous) => ({ ...previous, maxScore: undefined }));
-                  }
-                }}
-                min="0"
-                step="0.1"
-                className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 outline-none transition-colors focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
-                placeholder="Optional — e.g., 20"
-              />
-              {fieldErrors.maxScore && (
-                <p className="mt-2 text-xs font-semibold text-rose-600">
-                  {fieldErrors.maxScore}
-                </p>
-              )}
-            </div>
-
             <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
@@ -480,13 +466,19 @@ function AssignmentEditPageContent() {
                     >
                       Replace PDF
                     </button>
-                    <a
-                      href={assignment.description_pdf}
-                      download
-                      className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50"
-                    >
-                      Download current PDF
-                    </a>
+                    {existingPdfUrl ? (
+                      <a
+                        href={existingPdfUrl}
+                        download
+                        className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50"
+                      >
+                        Download current PDF
+                      </a>
+                    ) : (
+                      <p className="text-xs text-slate-500">
+                        Download link unavailable in current API response.
+                      </p>
+                    )}
                   </div>
                 </div>
               ) : (
@@ -540,7 +532,6 @@ function AssignmentEditPageContent() {
                   setTitleOverride(null);
                   setDescriptionOverride(null);
                   setDeadlineOverride(null);
-                  setMaxScoreOverride(null);
                   setFieldErrors({});
                   setSubmitError(null);
                   clearSelectedPdf();
