@@ -3,6 +3,7 @@ import { useState, useEffect, ChangeEvent } from "react";
 import { useRouter } from "next/router";
 import Link from "next/link";
 import Header from "@/components/submissions/Header";
+import Head from 'next/head';
 import Field from "@/components/submissions/Field";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { listSubjects, createAssignment } from "@/services/assignments";

@@ -4,6 +4,7 @@ import { useRouter } from "next/router";
 import axios from "axios";
 
 import Header from "@/components/submissions/Header";
+import Head from 'next/head';
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { getAssignment } from "@/services/assignments";
 import type { Assignment } from "@/services/assignments";
@@ -390,10 +391,14 @@ function PlagiarismReportContent() {
   const showLoading = loadingAssignment || (loadingReport && reportState === "loading");
 
   return (
-    <div
-      className="min-h-screen bg-gradient-to-br from-[#f8fafc] via-[#eef2f7] to-[#e1f2ff]"
-      style={{ fontFamily: "'Outfit', sans-serif" }}
-    >
+    <>
+      <Head>
+        <title>{assignment ? `${assignment.title} — Plagiarism Report — ESICodeHub` : 'Plagiarism Report — ESICodeHub'}</title>
+      </Head>
+      <div
+        className="min-h-screen bg-gradient-to-br from-[#f8fafc] via-[#eef2f7] to-[#e1f2ff]"
+        style={{ fontFamily: "'Outfit', sans-serif" }}
+      >
       <Header activePage="Assignments" />
 
       <main className="mx-auto max-w-6xl px-4 pb-16 pt-8 sm:px-6">
@@ -745,5 +750,6 @@ function PlagiarismReportContent() {
         )}
       </main>
     </div>
+    </>
   );
 }

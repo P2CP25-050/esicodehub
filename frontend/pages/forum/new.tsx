@@ -1,4 +1,5 @@
 import { useState } from "react";
+import Head from 'next/head';
 import Link from "next/link";
 import { useRouter } from "next/router";
 import { createQuestion } from "@/services/forum";
@@ -55,6 +56,9 @@ function NewQuestionContent() {
 
   return (
     <>
+      <Head>
+        <title>Ask a Question — ESICodeHub</title>
+      </Head>
       <Header activePage="Q&A Forums" />
 
       <div className="min-h-screen bg-[#eef0f8]">
