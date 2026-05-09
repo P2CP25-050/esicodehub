@@ -1,7 +1,6 @@
 import io
 import zipfile
 from django.db import transaction
-from django.db.models import Q
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404
 from pathlib import PurePosixPath
@@ -27,18 +26,25 @@ MAX_TOTAL_SIZE = 50 * 1024 * 1024   # 50MB per submission
 
 
 class PersonalSubmissionListCreateView(APIView):
-    """List public submissions and create new personal submissions."""
+    """List visible submissions and create new personal submissions."""
 
     permission_classes = [IsAuthenticated]
 
+    def get_queryset(self):
+        user = self.request.user
+        base_queryset = PersonalSubmission.objects.select_related(
+            'owner'
+        ).prefetch_related('files')
+        queryset = base_queryset.filter(
+            owner__role=user.role
+        ).exclude(
+            visibility=PersonalSubmission.Visibility.PRIVATE
+        )
+        own_queryset = base_queryset.filter(owner=user)
+        return (queryset | own_queryset).distinct()
+
     def get(self, request):
-        queryset = PersonalSubmission.objects.select_related('owner').prefetch_related(
-            'files'
-        )
-        queryset = queryset.filter(
-            Q(visibility=PersonalSubmission.Visibility.PUBLIC)
-            | Q(owner=request.user)
-        )
+        queryset = self.get_queryset()
         mine = request.query_params.get('mine')
         if mine and mine.strip().lower() in {'1', 'true', 'yes'}:
             queryset = queryset.filter(owner=request.user)
