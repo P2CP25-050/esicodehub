@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect, ChangeEvent } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/router";
 import Link from "next/link";
 import Header from "@/components/submissions/Header";
@@ -201,7 +201,18 @@ const PAGE_CSS = `
   }
 `;
 
-function AssignmentPreview({ subjectName, title, year, assignmentType, languages, targetingSummary, deadline, allowLate }: any) {
+interface AssignmentPreviewProps {
+  subjectName: string | undefined;
+  title: string;
+  year: AcademicYear | "";
+  assignmentType: string;
+  languages: string[];
+  targetingSummary: string;
+  deadline: string;
+  allowLate: boolean;
+}
+
+function AssignmentPreview({ subjectName, title, year, assignmentType, languages, targetingSummary, deadline, allowLate }: AssignmentPreviewProps) {
   return (
     <div className="ap-preview-card">
       <h3 className="ap-preview-title">Preview</h3>
@@ -217,7 +228,14 @@ function AssignmentPreview({ subjectName, title, year, assignmentType, languages
   );
 }
 
-function Chip({ label, selected, onClick, disabled }: any) {
+interface ChipProps {
+  label: string;
+  selected: boolean;
+  onClick: () => void;
+  disabled: boolean;
+}
+
+function Chip({ label, selected, onClick, disabled }: ChipProps) {
   return (
     <button type="button" onClick={onClick} disabled={disabled} className={`ap-chip ${selected ? "selected" : ""}`}>
       {label}

@@ -32,12 +32,6 @@ const formatPercent = (value: number): string => {
   return `${Math.round(value)}%`;
 };
 
-const getSimilarityTone = (value: number) => {
-  if (value >= 70) return { row: "bg-rose-50/80", badge: "bg-rose-100 text-rose-700" };
-  if (value >= 50) return { row: "bg-amber-50/80", badge: "bg-amber-100 text-amber-700" };
-  return { row: "bg-emerald-50/60", badge: "bg-emerald-100 text-emerald-700" };
-};
-
 const languageBadgePalette = [
   "bg-sky-100 text-sky-700",
   "bg-indigo-100 text-indigo-700",

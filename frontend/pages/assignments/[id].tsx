@@ -1033,7 +1033,6 @@ function AssignmentDetailPageContent() {
   const lineCommentsCount        = getSubmissionLineCommentsCount(mySubmission);
   const targetSummary            = getTargetingSummary(assignment);
   const groupOptions             = assignment.target_groups.slice().sort((a, b) => a - b);
-  const groupLabel               = selectedGroup == null ? 'All groups' : `Group ${selectedGroup}`;
   const showStudentUploadZone    = isStudent && canSubmit && (!hasSubmission || showUploadZone);
   const showSubmittedFiles       = Boolean(mySubmission && submittedFiles.length > 0);
   const showStudentClosedBanner  = isStudent && showSubmissionClosed;
