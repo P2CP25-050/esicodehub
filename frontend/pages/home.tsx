@@ -356,21 +356,24 @@ function HomePageContent() {
         </nav>
 
         {/* Page header */}
-        <div className="hp-page-header hp-animate hp-animate-1">
-          <div>
-            <h1 className="hp-page-title">
-              Welcome, <span>{firstName}</span>
-            </h1>
-            <p className="hp-page-subtitle">
-              {role === "professor" ? "Professor Dashboard" : "Student Dashboard"}
-            </p>
-          </div>
-        </div>
+       
+<div className="hp-page-header hp-animate hp-animate-1">
+  <div>
+    <h1 className="hp-page-title">
+      Welcome, <span>{firstName}</span>
+    </h1>
+    <p className="hp-page-subtitle">
+      {role === "professor" ? "Professor Dashboard" : "Student Dashboard"}
+    </p>
+  </div>
+  <div className="hp-header-actions">
+    <GreetingBar role={role} />
+  </div>
+</div>
 
-        {/* Greeting / action bar */}
-        <div className="hp-greeting-wrap hp-animate hp-animate-2">
-          <GreetingBar role={role} />
-        </div>
+
+
+       
 
         {/* Two-column grid */}
         <div className="hp-grid hp-animate hp-animate-3">
