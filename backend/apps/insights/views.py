@@ -1,24 +1,16 @@
-from django.db.models import Count, Q
+from django.db.models import Avg, Count
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from apps.accounts.models import User
 from apps.assignment_submissions.models import Assignment, AssignmentSubmission
 from apps.forum.models import Answer, Question
+from apps.forum.utils import get_forum_leaderboard
 from apps.personal_submissions.models import PersonalSubmission
-
-
-def _build_avatar(user):
-    """Return a base64 data URL for the user's avatar, or None."""
-    profile = getattr(user, 'profile', None)
-    if profile and profile.avatar_data and profile.avatar_content_type:
-        return f"data:{profile.avatar_content_type};base64,{profile.avatar_data}"
-    return None
+from apps.plagiarism.models import PlagiarismReport, SimilarityMatch
 
 
 def _get_esi_record(user):
-    """Return the EsiStudent record for this user, or None if not found."""
     from apps.esi_db.models import EsiStudent
     try:
         return EsiStudent.objects.get(school_id=user.school_id)
@@ -27,11 +19,6 @@ def _get_esi_record(user):
 
 
 def _filter_targeted(assignments, esi):
-    """
-    Filter a list of Assignment objects down to those that target
-    this student's section and group.
-    Empty target_sections / target_groups means "all".
-    """
     result = []
     for assignment in assignments:
         if assignment.target_sections and esi.section not in assignment.target_sections:
@@ -42,98 +29,37 @@ def _filter_targeted(assignments, esi):
     return result
 
 
-class StudentInsightsView(APIView):
-    """
-    GET /api/insights/student/
+# -----------------------------------------------------------------------
+# Student endpoint
+# -----------------------------------------------------------------------
 
-    Returns leaderboard, recent assignments, recent personal submissions,
-    and personal stats for the requesting student in a single call.
-    """
+class StudentInsightsView(APIView):
+    """GET /api/insights/student/"""
 
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
         user = request.user
-
         return Response({
-            'leaderboard':          self._leaderboard(),
-            'recent_assignments':   self._recent_assignments(user),
-            'recent_submissions':   self._recent_submissions(user),
-            'personal_stats':       self._personal_stats(user),
+            'leaderboard':        get_forum_leaderboard(),
+            'recent_assignments': self._recent_assignments(user),
+            'recent_submissions': self._recent_submissions(user),
+            'personal_stats':     self._personal_stats(user),
         })
 
-    # ------------------------------------------------------------------
-    # Leaderboard
-    # ------------------------------------------------------------------
-
-    def _leaderboard(self):
-        top_questioners = (
-            User.objects
-            .filter(role=User.Role.STUDENT)
-            .select_related('profile')
-            .annotate(question_count=Count('questions'))
-            .order_by('-question_count')[:10]
-        )
-
-        top_answerers = (
-            User.objects
-            .filter(role=User.Role.STUDENT)
-            .select_related('profile')
-            .annotate(
-                answer_count=Count('forum_answers'),
-                accepted_count=Count(
-                    'forum_answers',
-                    filter=Q(forum_answers__is_accepted=True),
-                ),
-            )
-            .order_by('-answer_count')[:10]
-        )
-
-        return {
-            'top_questioners': [
-                {
-                    'school_id':      u.school_id,
-                    'first_name':     u.first_name,
-                    'last_name':      u.last_name,
-                    'avatar':         _build_avatar(u),
-                    'question_count': u.question_count,
-                }
-                for u in top_questioners
-            ],
-            'top_answerers': [
-                {
-                    'school_id':     u.school_id,
-                    'first_name':    u.first_name,
-                    'last_name':     u.last_name,
-                    'avatar':        _build_avatar(u),
-                    'answer_count':  u.answer_count,
-                    'accepted_count': u.accepted_count,
-                }
-                for u in top_answerers
-            ],
-        }
-
-    # ------------------------------------------------------------------
-    # Recent assignments
-    # ------------------------------------------------------------------
-
     def _recent_assignments(self, user):
-        """5 nearest upcoming deadlines that target this student."""
         esi = _get_esi_record(user)
         if esi is None:
             return []
 
-        # Fetch all assignments for this student's year, sorted by deadline
         assignments = list(
             Assignment.objects
             .filter(target_year=esi.study_year)
             .select_related('subject')
             .order_by('deadline')
         )
-
         targeted = _filter_targeted(assignments, esi)
 
-        # IDs the student has already submitted
         submitted_ids = set(
             AssignmentSubmission.objects
             .filter(student=user)
@@ -142,28 +68,22 @@ class StudentInsightsView(APIView):
 
         return [
             {
-                'id':           a.id,
-                'title':        a.title,
-                'subject':      a.subject.code,
-                'due_date':     a.deadline,
+                'id':            a.id,
+                'title':         a.title,
+                'subject':       a.subject.code,
+                'due_date':      a.deadline,
                 'has_submitted': a.id in submitted_ids,
-                'is_open':      a.is_open_for_submission(),
+                'is_open':       a.is_open_for_submission(),
             }
             for a in targeted[:5]
         ]
 
-    # ------------------------------------------------------------------
-    # Recent personal submissions
-    # ------------------------------------------------------------------
-
     def _recent_submissions(self, user):
-        """5 most recent personal submissions by this student."""
         submissions = (
             PersonalSubmission.objects
             .filter(owner=user)
             .order_by('-created_at')[:5]
         )
-
         return [
             {
                 'id':         s.id,
@@ -175,22 +95,15 @@ class StudentInsightsView(APIView):
             for s in submissions
         ]
 
-    # ------------------------------------------------------------------
-    # Personal stats
-    # ------------------------------------------------------------------
-
     def _personal_stats(self, user):
-        """Aggregated counts for this student's activity."""
         esi = _get_esi_record(user)
 
-        # Assignments the student has already submitted
         submitted_ids = set(
             AssignmentSubmission.objects
             .filter(student=user)
             .values_list('assignment_id', flat=True)
         )
 
-        # Open targeted assignments the student has NOT yet submitted
         if esi is not None:
             all_targeted = list(
                 Assignment.objects.filter(target_year=esi.study_year)
@@ -210,3 +123,91 @@ class StudentInsightsView(APIView):
             'forum_questions':       Question.objects.filter(author=user).count(),
             'forum_answers':         Answer.objects.filter(author=user).count(),
         }
+
+
+# -----------------------------------------------------------------------
+# Professor endpoint
+# -----------------------------------------------------------------------
+
+class ProfessorInsightsView(APIView):
+    """GET /api/insights/professor/"""
+
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        user = request.user
+        return Response({
+            'platform_ai_stats':  self._platform_ai_stats(),
+            'professor_ai_stats': self._professor_ai_stats(user),
+            'assignment_summary': self._assignment_summary(user),
+        })
+
+    def _platform_ai_stats(self):
+        checked = PlagiarismReport.objects.filter(
+            status=PlagiarismReport.Status.COMPLETE,
+        ).count()
+        flagged = SimilarityMatch.objects.filter(ai_moss_flag=True).count()
+        percentage = round(flagged / checked * 100, 1) if checked else 0.0
+
+        return {
+            'total_submissions_checked': checked,
+            'ai_flagged_count':          flagged,
+            'ai_flagged_percentage':     percentage,
+        }
+
+    def _professor_ai_stats(self, user):
+        prof_assignments = Assignment.objects.filter(professor=user)
+
+        checked = PlagiarismReport.objects.filter(
+            assignment__in=prof_assignments,
+            status=PlagiarismReport.Status.COMPLETE,
+        ).count()
+        flagged = SimilarityMatch.objects.filter(
+            report__assignment__in=prof_assignments,
+            ai_moss_flag=True,
+        ).count()
+        percentage = round(flagged / checked * 100, 1) if checked else 0.0
+
+        return {
+            'total_submissions_checked': checked,
+            'ai_flagged_count':          flagged,
+            'ai_flagged_percentage':     percentage,
+        }
+
+    def _assignment_summary(self, user):
+        assignments = (
+            Assignment.objects
+            .filter(professor=user)
+            .select_related('subject')
+            .annotate(
+                submission_count=Count('submissions', distinct=True),
+                avg_score=Avg('submissions__reviews__grade'),
+            )
+            .order_by('-created_at')
+        )
+
+        # Fetch flagged counts per assignment in one query
+        assignment_ids = [a.id for a in assignments]
+        flagged_counts = dict(
+            SimilarityMatch.objects
+            .filter(
+                report__assignment_id__in=assignment_ids,
+                ai_moss_flag=True,
+            )
+            .values('report__assignment_id')
+            .annotate(cnt=Count('id'))
+            .values_list('report__assignment_id', 'cnt')
+        )
+
+        return [
+            {
+                'id':               a.id,
+                'title':            a.title,
+                'subject':          a.subject.code,
+                'submission_count': a.submission_count,
+                'flagged_count':    flagged_counts.get(a.id, 0),
+                'avg_score':        round(a.avg_score, 1) if a.avg_score else None,
+                'due_date':         a.deadline,
+            }
+            for a in assignments
+        ]
