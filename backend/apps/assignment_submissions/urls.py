@@ -4,6 +4,7 @@ from .views import (
     AssignmentDescriptionPDFUploadView,
     AssignmentDetailView,
     AssignmentListCreateView,
+    AssignmentSubmissionsDownloadView,
     ProfessorSubmissionDetailView,
     ProfessorSubmissionListView,
     StudentMySubmissionView,
@@ -49,4 +50,9 @@ urlpatterns = [
     path(
         '<int:pk>/submissions/<int:submission_id>/reviews/',
         SubmissionReviewView.as_view(), name='submission-reviews'),
+    path(
+        '<int:pk>/download-submissions/',
+        AssignmentSubmissionsDownloadView.as_view(),
+        name='assignment-download-submissions',
+    ),
 ]
