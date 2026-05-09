@@ -2,6 +2,7 @@ import React from 'react';
 import { render, screen, waitFor, act } from '@testing-library/react';
 import { AuthProvider, useAuth, _resetAuthInit } from '@/context/AuthContext';
 import * as authService from '@/services/auth';
+import * as profileService from '@/services/profile/api';
 import * as tokensLib from '@/lib/tokens';
 
 // ============================================================================
@@ -20,6 +21,10 @@ jest.mock('@/services/auth', () => ({
   logout: jest.fn(),
 }));
 
+jest.mock('@/services/profile/api', () => ({
+  getProfile: jest.fn(),
+}));
+
 jest.mock('@/lib/tokens', () => ({
   saveTokens: jest.fn(),
   clearTokens: jest.fn(),
@@ -33,6 +38,7 @@ jest.mock('@/lib/tokens', () => ({
 const mockedRefreshToken = authService.refreshToken as jest.Mock;
 const mockedGetMe = authService.getMe as jest.Mock;
 const mockedLogout = authService.logout as jest.Mock;
+const mockedGetProfile = profileService.getProfile as jest.Mock;
 const mockedSaveTokens = tokensLib.saveTokens as jest.Mock;
 const mockedClearTokens = tokensLib.clearTokens as jest.Mock;
 
@@ -72,6 +78,7 @@ describe('AuthProvider', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    mockedGetProfile.mockResolvedValue({ school_id: '23/0145' });
     // Reset the module-scope init promise so each test gets a fresh auth init.
     _resetAuthInit();
   });
