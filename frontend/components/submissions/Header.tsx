@@ -3,8 +3,6 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from 'next/router';
 import { useAuth } from "@/context/AuthContext";
-import { logout } from '@/services/auth';
-import { clearTokens } from '@/lib/tokens';
 import { getProfile } from '@/services/profile/api';
 import { useNotifications } from '@/hooks/useNotifications';
 import type { Notification } from '@/services/notifications/notifications';
@@ -59,7 +57,7 @@ export default function Header({ activePage = "" }: HeaderProps) {
   const [bellOpen, setBellOpen]       = useState(false);
   const bellRef                       = useRef<HTMLDivElement>(null);
   const router                        = useRouter();
-  const { user }                      = useAuth();
+  const { user, logout }              = useAuth();
   const { notifications, unreadCount, markAllRead, markOneRead } = useNotifications();
 
   const userName = user ? `${user.first_name} ${user.last_name}` : "—";
@@ -120,10 +118,7 @@ export default function Header({ activePage = "" }: HeaderProps) {
     return () => { document.body.style.overflow = ""; };
   }, [menuOpen]);
 
-  const handleLogout = async () => {
-    try { await logout(); } catch { }
-    finally { clearTokens(); router.replace('/login'); }
-  };
+  const handleLogout = () => logout();
 
   const handleNotificationClick = async (n: Notification) => {
     if (!n.is_read) {
