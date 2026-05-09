@@ -54,6 +54,8 @@ function getAuthInitPromise(): Promise<AuthUser | null> {
       })
       .catch(() => {
         clearTokens();
+        // FIX: Reset so a subsequent login can re-trigger a fresh fetch
+        _authInitPromise = null;
         return null;
       });
   }
@@ -97,9 +99,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } catch {
       // ignore server errors — local cleanup must always proceed
     } finally {
-      clearTokens();
-      setUser(null);
+      // Reset singleton so the next login triggers a fresh auth check
+      _authInitPromise = null;
+      // Navigate BEFORE clearing state so ProtectedRoute doesn't see
+      // isAuthenticated=false while still on a protected page and race us.
       router.push('/login');
+      clearTokens();
+      if (typeof window !== 'undefined') {
+        window.localStorage.removeItem('profile_avatar_url');
+      }
+      setUser(null);
     }
   }, [router]);
 

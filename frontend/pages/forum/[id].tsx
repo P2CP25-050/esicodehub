@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import Head from "next/head";
 import Link from "next/link";
 import { useRouter } from "next/router";
 import {
@@ -121,6 +122,9 @@ function QuestionDetailContent() {
 
   return (
     <>
+      <Head>
+        <title>{question ? `${question.title} — ESICodeHub` : 'Q&A Forum — ESICodeHub'}</title>
+      </Head>
       <Header activePage="Q&A Forums" />
 
       <div className="min-h-screen bg-[#eef0f8]">
