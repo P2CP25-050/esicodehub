@@ -65,3 +65,25 @@ class PersonalSubmissionFile(models.Model):
 
     def __str__(self):
         return self.file_name
+
+
+class SubmissionComment(models.Model):
+    submission = models.ForeignKey(
+        PersonalSubmission,
+        on_delete=models.CASCADE,
+        related_name='comments',
+    )
+    author = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+    )
+    line_number = models.PositiveIntegerField()
+    body = models.TextField(max_length=1000)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'personal_submission_comments'
+        ordering = ['line_number', 'created_at']
+
+    def __str__(self):
+        return f"Comment by {self.author.email} on line {self.line_number}"

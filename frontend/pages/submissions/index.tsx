@@ -22,10 +22,12 @@ export default function SubmissionsPage() {
   const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const [search, setSearch] = useState('');
-  const [language, setLanguage] = useState('');
-  const [type, setType] = useState('');
-  const [course, setCourse] = useState('');
+  const [search,         setSearch]         = useState('');
+  const [language,       setLanguage]       = useState('');
+
+  const [type,           setType]           = useState('');
+  const [course,         setCourse]         = useState('');
+  const [visibility, setVisibility] = useState<SubmissionListParams['visibility'] | ''>('');
 
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const searchRef = useRef(search);
@@ -56,11 +58,35 @@ export default function SubmissionsPage() {
     type: type || undefined,
     course: course || undefined,
     search: searchValue || undefined,
-  }), [language, type, course]);
+    visibility: visibility || undefined,
+  }), [language, type, course, visibility]);
 
-  // Immediate filter changes
-  useEffect(() => {
-    if (isLoading || !isAuthenticated) return;
+
+  
+
+// Dropdown/tag filters → immediate
+useEffect(() => {
+  if (isLoading || !isAuthenticated) return;
+  setPage(1);
+  fetchSubmissions({ ...buildParams(searchRef.current), page: 1 });
+}, [isAuthenticated, isLoading, language, type, course, visibility, buildParams, fetchSubmissions]); 
+
+// Debounced search
+useEffect(() => {
+  if (isLoading || !isAuthenticated) return;
+
+  if (skipInitialSearchEffectRef.current) {
+    skipInitialSearchEffectRef.current = false;
+    return;
+  }
+
+  if (skipNextSearchDebounceRef.current) {
+    skipNextSearchDebounceRef.current = false;
+    return;
+  }
+
+  if (debounceRef.current) clearTimeout(debounceRef.current);
+  debounceRef.current = setTimeout(() => {
     setPage(1);
     fetchSubmissions({ ...buildParams(searchRef.current), page: 1 });
   }, [isAuthenticated, isLoading, language, type, course, buildParams, fetchSubmissions]);
@@ -101,9 +127,10 @@ export default function SubmissionsPage() {
     setLanguage('');
     setType('');
     setCourse('');
+    setVisibility('');
     setPage(1);
   };
-  const hasActiveFilter = !!(search || language || type || course);
+  const hasActiveFilter = !!(search || language || type || course || visibility);
 
   // Style injection (same design system as new.tsx)
   useEffect(() => {
@@ -203,6 +230,8 @@ export default function SubmissionsPage() {
                   onLanguageChange={setLanguage}
                   onSubmissionTypeChange={setType}
                   onCourseTagChange={setCourse}
+                  visibility={visibility}
+	                onVisibilityChange={setVisibility}
                   onClear={handleClear}
                   hasActiveFilter={hasActiveFilter}
                   total={total}

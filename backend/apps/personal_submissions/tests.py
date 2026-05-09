@@ -73,6 +73,77 @@ class FileUploadViewTests(APITestCase):
         self.assertIn('Invalid file path', response.data['detail'])
 
 
+class PersonalSubmissionListSecurityTests(APITestCase):
+    def setUp(self):
+        self.user_one = User.objects.create_user(
+            email='student1@test.local',
+            password='testpass123',
+            first_name='Student',
+            last_name='One',
+            is_active=True,
+            is_verified=True,
+        )
+        self.user_two = User.objects.create_user(
+            email='student2@test.local',
+            password='testpass123',
+            first_name='Student',
+            last_name='Two',
+            is_active=True,
+            is_verified=True,
+        )
+        self.own_submission = PersonalSubmission.objects.create(
+            owner=self.user_one,
+            title='Mine',
+            description='desc',
+            language='python',
+            course_tag='CS101',
+            submission_type=PersonalSubmission.SubmissionType.REVIEW,
+            visibility=PersonalSubmission.Visibility.PUBLIC,
+            gcs_prefix=PersonalSubmission.build_gcs_prefix(
+                self.user_one.id,
+                1,
+            ),
+        )
+        self.other_submission = PersonalSubmission.objects.create(
+            owner=self.user_two,
+            title='Other',
+            description='desc',
+            language='python',
+            course_tag='CS102',
+            submission_type=PersonalSubmission.SubmissionType.SHARING,
+            visibility=PersonalSubmission.Visibility.PUBLIC,
+            gcs_prefix=PersonalSubmission.build_gcs_prefix(
+                self.user_two.id,
+                2,
+            ),
+        )
+
+    def test_list_includes_public_and_own_submissions(self):
+        self.client.force_authenticate(user=self.user_one)
+
+        response = self.client.get(reverse('submission-list-create'))
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['count'], 2)
+        result_ids = {item['id'] for item in response.data['results']}
+        self.assertSetEqual(
+            result_ids,
+            {self.own_submission.id, self.other_submission.id},
+        )
+
+    def test_list_mine_only_returns_own_submissions(self):
+        self.client.force_authenticate(user=self.user_one)
+
+        response = self.client.get(
+            reverse('submission-list-create'),
+            {'mine': 'true'},
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['count'], 1)
+        self.assertEqual(response.data['results'][0]['id'], self.own_submission.id)
+
+
 class FileValidatorTests(APITestCase):
     @patch(
             'apps.personal_submissions.validators.magic.from_buffer',

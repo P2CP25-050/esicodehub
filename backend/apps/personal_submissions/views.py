@@ -1,6 +1,8 @@
+import io
+import zipfile
 from django.db import transaction
-from django.http import HttpResponse
 from django.db.models import Q
+from django.http import HttpResponse
 from django.shortcuts import get_object_or_404
 from pathlib import PurePosixPath
 from rest_framework import status, serializers
@@ -33,21 +35,29 @@ class PersonalSubmissionListCreateView(APIView):
         queryset = PersonalSubmission.objects.select_related('owner').prefetch_related(
             'files'
         )
-
         queryset = queryset.filter(
             Q(visibility=PersonalSubmission.Visibility.PUBLIC)
             | Q(owner=request.user)
         )
-
         mine = request.query_params.get('mine')
         if mine and mine.strip().lower() in {'1', 'true', 'yes'}:
             queryset = queryset.filter(owner=request.user)
-
+        visibility = request.query_params.get('visibility')
+        if visibility:
+            visibility = visibility.strip().lower()
+            if visibility == PersonalSubmission.Visibility.PRIVATE:
+                queryset = queryset.filter(
+                    owner=request.user,
+                    visibility=PersonalSubmission.Visibility.PRIVATE
+                )
+            elif visibility == PersonalSubmission.Visibility.PUBLIC:
+                queryset = queryset.filter(
+                    visibility=PersonalSubmission.Visibility.PUBLIC
+                )
         language = request.query_params.get('language')
         submission_type = request.query_params.get('type')
         course = request.query_params.get('course')
         search = request.query_params.get('search')
-
         if language:
             queryset = queryset.filter(language__iexact=language.strip())
         if submission_type:
@@ -58,7 +68,6 @@ class PersonalSubmissionListCreateView(APIView):
             queryset = queryset.filter(course_tag__iexact=course.strip())
         if search:
             queryset = queryset.filter(title__icontains=search.strip())
-
         paginator = PageNumberPagination()
         page = paginator.paginate_queryset(queryset, request, view=self)
         serializer = PersonalSubmissionListSerializer(page, many=True)
@@ -67,14 +76,12 @@ class PersonalSubmissionListCreateView(APIView):
     def post(self, request):
         serializer = PersonalSubmissionCreateSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-
         submission = serializer.save(owner=request.user, gcs_prefix='')
         submission.gcs_prefix = PersonalSubmission.build_gcs_prefix(
             request.user.id,
             submission.id,
         )
         submission.save(update_fields=['gcs_prefix'])
-
         detail_serializer = PersonalSubmissionDetailSerializer(submission)
         return Response(detail_serializer.data, status=status.HTTP_201_CREATED)
 
@@ -335,3 +342,56 @@ class FileContentView(APIView):
                 {'detail': 'File is binary and cannot be displayed as text'},
                 status=status.HTTP_400_BAD_REQUEST,
             )
+
+
+class SubmissionDownloadView(APIView):
+    """
+    Download the submission file or all files as a zip archive.
+    -Public submissions: no auth required
+    -Private submissions: owner only
+    """
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, pk):
+        submission = get_object_or_404(
+            PersonalSubmission.objects.select_related('owner').prefetch_related('files'),
+            pk=pk,
+        )
+
+        is_public = submission.visibility == PersonalSubmission.Visibility.PUBLIC
+        is_owner = submission.owner == request.user
+
+        if not is_public and not is_owner:
+            return Response(
+                {'detail': 'You do not have permission to perform this action.'},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        files = list(submission.files.all())
+
+        if not files:
+            return Response(
+                {'detail': 'This submission has no files to download.'},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        if len(files) == 1:
+            f = files[0]
+            content = get_file_content(f.gcs_path)
+            response = HttpResponse(
+                content.encode('utf-8'),
+                content_type='text/plain; charset=utf-8'
+            )
+            response['Content-Disposition'] = f'attachment; filename="{f.file_name}"'
+            return response
+
+        buffer = io.BytesIO()
+        with zipfile.ZipFile(buffer, mode='w', compression=zipfile.ZIP_DEFLATED) as zf:
+            for f in files:
+                content = get_file_content(f.gcs_path)
+                # file_path preserves folder structure
+                zf.writestr(f.file_path, content.encode('utf-8'))
+        buffer.seek(0)
+        response = HttpResponse(buffer.read(), content_type='application/zip')
+        response['Content-Disposition'] = f'attachment; filename="{submission.title}.zip"'
+        return response

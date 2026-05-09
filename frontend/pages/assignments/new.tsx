@@ -1,12 +1,12 @@
 "use client";
-import { useState, useEffect, ChangeEvent } from "react";
+import { useState, useEffect, ChangeEvent, DragEvent, useRef } from "react";
 import { useRouter } from "next/router";
 import Link from "next/link";
 import Header from "@/components/submissions/Header";
 import Head from 'next/head';
 import Field from "@/components/submissions/Field";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
-import { listSubjects, createAssignment } from "@/services/assignments";
+import { listSubjects, createAssignment, uploadAssignmentDescriptionPdf } from "@/services/assignments";
 import type { Subject } from "@/services/assignments";
 
 // Types & constants
@@ -312,6 +312,53 @@ const PAGE_CSS = `
     cursor: pointer;
   }
 
+  .na-pdf-dropzone {
+    border: 2px dashed #cbd5e1;
+    background: #f8fafc;
+    cursor: pointer;
+    text-align: center;
+    padding: 32px 24px;
+    color: #64748b;
+    transition: border-color 0.15s, background 0.15s, color 0.15s;
+  }
+  .na-pdf-dropzone.drag-over {
+    border-color: var(--navy);
+    background: #f0f8ff;
+    color: var(--navy);
+  }
+  .na-pdf-file {
+    border: 1.5px solid #ccc;
+    background: #fafafa;
+    padding: 12px;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+  }
+  .na-pdf-name {
+    margin: 0 0 4px;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--ink);
+  }
+  .na-pdf-size {
+    margin: 0;
+    font-size: 12px;
+    color: #666;
+  }
+  .na-pdf-helper-title {
+    margin: 0 0 8px;
+    font-size: 14px;
+    font-weight: 600;
+    color: currentColor;
+  }
+  .na-pdf-helper-subtitle {
+    margin: 0;
+    font-size: 12px;
+    color: currentColor;
+  }
+
   /* Actions */
   .na-actions {
     display: flex;
@@ -487,6 +534,21 @@ const PAGE_CSS = `
   }
 `;
 
+// PDF helpers
+
+const formatFileSize = (value: number): string => {
+  if (!Number.isFinite(value) || value < 0) return '-';
+  if (value < 1024) return `${value} B`;
+  const kb = value / 1024;
+  if (kb < 1024) return `${kb.toFixed(1)} KB`;
+  return `${(kb / 1024).toFixed(1)} MB`;
+};
+
+const isPdfFile = (file: File): boolean => {
+  if (file.type === 'application/pdf') return true;
+  return file.name.toLowerCase().endsWith('.pdf');
+};
+
 // Preview
 
 interface AssignmentPreviewProps {
@@ -560,6 +622,7 @@ function Chip({ label, selected, onClick, disabled }: ChipProps) {
 
 function NewAssignmentForm() {
   const router = useRouter();
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const [subject, setSubject] = useState("");
   const [title, setTitle] = useState("");
@@ -571,6 +634,8 @@ function NewAssignmentForm() {
   const [targetGroups, setTargetGroups] = useState<number[]>([]);
   const [deadline, setDeadline] = useState("");
   const [allowLate, setAllowLate] = useState(false);
+  const [selectedPdf, setSelectedPdf] = useState<File | null>(null);
+  const [dragOver, setDragOver] = useState(false);
 
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [loadingSubjects, setLoadingSubjects] = useState(true);
@@ -584,6 +649,40 @@ function NewAssignmentForm() {
       .catch(() => setSubjects([]))
       .finally(() => setLoadingSubjects(false));
   }, []);
+
+  const openFileDialog = () => {
+    fileInputRef.current?.click();
+  };
+
+  const setPdfFile = (file: File) => {
+    if (!isPdfFile(file)) {
+      setSubmitError('Please upload a PDF file.');
+      return;
+    }
+    setSubmitError(null);
+    setSelectedPdf(file);
+  };
+
+  const handleFileInput = (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    setPdfFile(file);
+    event.target.value = '';
+  };
+
+  const handleDrop = (event: DragEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    setDragOver(false);
+    const file = event.dataTransfer.files?.[0];
+    if (file) setPdfFile(file);
+  };
+
+  const clearSelectedPdf = () => {
+    setSelectedPdf(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
 
   const isSpecialityYear = year === "2CS" || year === "3CS";
   const availableSections = year ? SECTIONS_BY_YEAR[year as AcademicYear] : [];
@@ -678,6 +777,12 @@ function NewAssignmentForm() {
         deadline: new Date(deadline).toISOString(),
         allow_late: allowLate,
       });
+
+      // Upload PDF if selected
+      if (selectedPdf) {
+        await uploadAssignmentDescriptionPdf(assignment.id, selectedPdf);
+      }
+
       router.push(`/assignments/${assignment.id}`);
     } catch (err: unknown) {
       const message =
@@ -944,6 +1049,61 @@ function NewAssignmentForm() {
               </div>
             </Field>
 
+            <Field label="PDF Description" hint="Optional — upload PDF instructions for students">
+              {selectedPdf ? (
+                <div className="na-pdf-file">
+                  <div>
+                    <p className="na-pdf-name">{selectedPdf.name}</p>
+                    <p className="na-pdf-size">
+                      {formatFileSize(selectedPdf.size)}
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={clearSelectedPdf}
+                    disabled={submitting}
+                    className="na-btn-outline"
+                  >
+                    Remove
+                  </button>
+                </div>
+              ) : (
+                <div
+                  onDragOver={(event) => {
+                    event.preventDefault();
+                    setDragOver(true);
+                  }}
+                  onDragLeave={() => setDragOver(false)}
+                  onDrop={handleDrop}
+                  onClick={openFileDialog}
+                  className={`na-pdf-dropzone${dragOver ? ' drag-over' : ''}`}
+                  role="button"
+                  tabIndex={0}
+                  onKeyDown={(event) => {
+                    if (event.key === 'Enter' || event.key === ' ') {
+                      event.preventDefault();
+                      openFileDialog();
+                    }
+                  }}
+                >
+                  <p className="na-pdf-helper-title">
+                    Drag and drop PDF or click to browse
+                  </p>
+                  <p className="na-pdf-helper-subtitle">
+                    Optional PDF with assignment details
+                  </p>
+                </div>
+              )}
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".pdf"
+                onChange={handleFileInput}
+                style={{ display: 'none' }}
+              />
+            </Field>
+
+            {/* Progress */}
             {submitting && (
               <div className="na-progress-wrap">
                 <span className="na-progress-label">Creating assignment…</span>

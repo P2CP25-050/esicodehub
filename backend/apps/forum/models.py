@@ -7,6 +7,18 @@ from django.db import models
 from django.utils import timezone
 
 
+class Tag(models.Model):
+    name = models.CharField(max_length=50, unique=True)
+    is_subject = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'forum_tags'
+
+    def __str__(self):
+        return self.name
+
+
 class Question(models.Model):
     author = models.ForeignKey(
         settings.AUTH_USER_MODEL,
@@ -17,7 +29,7 @@ class Question(models.Model):
     body = models.TextField()
     code_snippet = models.TextField(blank=True)
     code_language = models.CharField(max_length=50, blank=True)
-    tags = models.JSONField(default=list, blank=True)
+    tags = models.ManyToManyField(Tag, blank=True, related_name='questions')
     is_closed = models.BooleanField(default=False)
     accepted_answer = models.ForeignKey(
         'Answer',
