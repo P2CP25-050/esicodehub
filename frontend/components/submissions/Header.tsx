@@ -1,13 +1,3 @@
-/**
- * components/submissions/Header.tsx  (updated)
- *
- * Changes from original:
- *  - Added NavSearchButton + UserSearchModal for global user search
- *  - Search button appears between bell and logout on desktop
- *  - Search also available in mobile drawer
- *  - Everything else is identical to the original
- */
-
 import { useState, CSSProperties, useEffect, useRef } from "react";
 import Image from "next/image";
 import Link from "next/link";
