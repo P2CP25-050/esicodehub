@@ -58,6 +58,7 @@ export interface PersonalSubmissionCreatePayload {
 
 // Parameters for listing submissions with optional filters and pagination
 export interface SubmissionListParams {
+  mine?: boolean;
   language?: string; //  typed filter
 
   type?:     string;

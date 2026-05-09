@@ -1,8 +1,8 @@
 import io
 import zipfile
 from django.db import transaction
-from django.http import HttpResponse
 from django.db.models import Q
+from django.http import HttpResponse
 from django.shortcuts import get_object_or_404
 from pathlib import PurePosixPath
 from rest_framework import status, serializers
@@ -35,16 +35,13 @@ class PersonalSubmissionListCreateView(APIView):
         queryset = PersonalSubmission.objects.select_related('owner').prefetch_related(
             'files'
         )
-
         queryset = queryset.filter(
             Q(visibility=PersonalSubmission.Visibility.PUBLIC)
             | Q(owner=request.user)
         )
-
         mine = request.query_params.get('mine')
         if mine and mine.strip().lower() in {'1', 'true', 'yes'}:
             queryset = queryset.filter(owner=request.user)
-
         visibility = request.query_params.get('visibility')
         if visibility:
             visibility = visibility.strip().lower()
@@ -57,12 +54,10 @@ class PersonalSubmissionListCreateView(APIView):
                 queryset = queryset.filter(
                     visibility=PersonalSubmission.Visibility.PUBLIC
                 )
-
         language = request.query_params.get('language')
         submission_type = request.query_params.get('type')
         course = request.query_params.get('course')
         search = request.query_params.get('search')
-
         if language:
             queryset = queryset.filter(language__iexact=language.strip())
         if submission_type:
@@ -73,7 +68,6 @@ class PersonalSubmissionListCreateView(APIView):
             queryset = queryset.filter(course_tag__iexact=course.strip())
         if search:
             queryset = queryset.filter(title__icontains=search.strip())
-
         paginator = PageNumberPagination()
         page = paginator.paginate_queryset(queryset, request, view=self)
         serializer = PersonalSubmissionListSerializer(page, many=True)

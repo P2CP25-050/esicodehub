@@ -25,7 +25,7 @@ export const listSubmissions = async (
   params?: SubmissionListParams
 ): Promise<PaginatedResponse<PersonalSubmission>> => {
   const res = await apiClient.get<PaginatedResponse<PersonalSubmission>>(
-    '/personal-submissions/',
+    '/submissions/',
     { params }
   );
   return res.data;
@@ -46,7 +46,7 @@ export const getSubmission = async (
   id: number
 ): Promise<PersonalSubmission> => {
   const res = await apiClient.get<PersonalSubmission>(
-    `/personal-submissions/${id}/`
+    `/submissions/${id}/`
   );
   return res.data;
 };
@@ -68,7 +68,7 @@ export const createSubmission = async (
   data: PersonalSubmissionCreatePayload
 ): Promise<PersonalSubmission> => {
   const res = await apiClient.post<PersonalSubmission>(
-    '/personal-submissions/',
+    '/submissions/',
     data
   );
   return res.data;
@@ -87,7 +87,7 @@ export const updateSubmission = async (
   data: Partial<PersonalSubmissionCreatePayload>
 ): Promise<PersonalSubmission> => {
   const res = await apiClient.patch<PersonalSubmission>(
-    `/personal-submissions/${id}/`,
+    `/submissions/${id}/`,
     data
   );
   return res.data;
@@ -101,7 +101,7 @@ export const updateSubmission = async (
  * await deleteSubmission(5);
  */
 export const deleteSubmission = async (id: number): Promise<void> => {
-  await apiClient.delete(`/personal-submissions/${id}/`);
+  await apiClient.delete(`/submissions/${id}/`);
 };
 
 /**
@@ -132,7 +132,7 @@ export const uploadFiles = async (
 
   //  No Content-Type header needed — axios sets it automatically for FormData
   const res = await apiClient.post<PersonalSubmissionFile[]>(
-    `/personal-submissions/${submissionId}/files/`,
+    `/submissions/${submissionId}/files/`,
     formData
   );
   return res.data;
@@ -149,7 +149,7 @@ export const deleteFile = async (
   fileId:       number
 ): Promise<void> => {
   await apiClient.delete(
-    `/personal-submissions/${submissionId}/files/${fileId}/`
+    `/submissions/${submissionId}/files/${fileId}/`
   );
 };
 
@@ -166,7 +166,7 @@ export const getFileContent = async (
   fileId:       number
 ): Promise<string> => {
   const res = await apiClient.get<string>(
-    `/personal-submissions/${submissionId}/files/${fileId}/content/`
+    `/submissions/${submissionId}/files/${fileId}/content/`
   );
   return res.data;
 };

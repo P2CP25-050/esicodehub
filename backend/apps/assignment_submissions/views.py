@@ -92,15 +92,13 @@ class AssignmentListCreateView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        queryset = Assignment.objects.select_related(
-            'subject',
-            'professor',
-        ).prefetch_related(
-            'submissions',
-        ).all()
-
         if request.user.role == 'professor':
-            queryset = queryset.filter(professor=request.user)
+            queryset = Assignment.objects.select_related(
+                'subject',
+                'professor',
+            ).prefetch_related(
+                'submissions',
+            ).filter(professor=request.user)
             group_filter = request.query_params.get('group')
 
             if group_filter:
@@ -121,7 +119,12 @@ class AssignmentListCreateView(APIView):
                 if not esi_student:
                     queryset = Assignment.objects.none()
                 else:
-                    queryset = queryset.filter(target_year=esi_student.study_year)
+                    queryset = Assignment.objects.select_related(
+                        'subject',
+                        'professor',
+                    ).prefetch_related(
+                        'submissions',
+                    ).filter(target_year=esi_student.study_year)
                     targeted_ids = [
                         assignment.id
                         for assignment in queryset
