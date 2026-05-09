@@ -53,7 +53,10 @@ function NotificationTypeIcon({ type }: { type: string }) {
 export default function Header({ activePage = "" }: HeaderProps) {
   const [hoveredNav, setHoveredNav]   = useState<string | null>(null);
   const [menuOpen, setMenuOpen]       = useState(false);
-  const [avatarUrl, setAvatarUrl]     = useState<string | null>(null);
+  const [avatarUrl, setAvatarUrl]     = useState<string | null>(() => {
+    if (typeof window === 'undefined') return null;
+    return normalizeAvatarUrl(window.localStorage.getItem(PROFILE_AVATAR_KEY));
+  });
   const [bellOpen, setBellOpen]       = useState(false);
   const bellRef                       = useRef<HTMLDivElement>(null);
   const router                        = useRouter();
@@ -65,8 +68,6 @@ export default function Header({ activePage = "" }: HeaderProps) {
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
-    const fromStorage = normalizeAvatarUrl(window.localStorage.getItem(PROFILE_AVATAR_KEY));
-    setAvatarUrl(fromStorage);
     const onAvatarUpdated = (event: Event) => {
       const customEvent = event as CustomEvent<{ avatarUrl?: string | null }>;
       setAvatarUrl(normalizeAvatarUrl(customEvent.detail?.avatarUrl ?? null));
@@ -112,7 +113,11 @@ export default function Header({ activePage = "" }: HeaderProps) {
     return () => document.removeEventListener('mousedown', handler);
   }, [bellOpen]);
 
-  useEffect(() => { setMenuOpen(false); }, [router.pathname]);
+  useEffect(() => {
+    const handleRouteChange = () => setMenuOpen(false);
+    router.events.on('routeChangeStart', handleRouteChange);
+    return () => router.events.off('routeChangeStart', handleRouteChange);
+  }, [router.events]);
   useEffect(() => {
     document.body.style.overflow = menuOpen ? "hidden" : "";
     return () => { document.body.style.overflow = ""; };
