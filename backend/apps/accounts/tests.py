@@ -10,7 +10,7 @@ from rest_framework.test import APIClient, APITestCase
 
 from apps.accounts.models import Profile
 from apps.esi_db.models import EsiStudent
-from apps.forum.models import Answer, Question
+from apps.forum.models import Answer, Question, Tag
 from apps.personal_submissions.models import PersonalSubmission
 
 User = get_user_model()
@@ -184,7 +184,7 @@ class PublicProfileApiTests(TestCase):
             is_active=True,
             is_verified=True,
         )
-
+        self.python_tag = Tag.objects.get_or_create(name='python')[0]
         profile, _ = Profile.objects.get_or_create(user=self.student)
         profile.bio = 'Student bio'
         profile.avatar_data = base64.b64encode(b'avatar-bytes').decode('ascii')
@@ -218,7 +218,7 @@ class PublicProfileApiTests(TestCase):
                 title=f'Question {index + 1}',
                 body='Question body',
             )
-            question.tags.set(['python'])
+            question.tags.set([self.python_tag])
             Answer.objects.create(
                 question=question,
                 author=self.student,

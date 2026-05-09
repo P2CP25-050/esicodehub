@@ -3,12 +3,20 @@ from django.test import TestCase
 from rest_framework.test import APIRequestFactory, force_authenticate
 
 from apps.accounts.models import User
-from apps.forum.models import Answer, Question, QuestionView, Vote
+from apps.forum.models import Answer, Question, QuestionView, Vote, Tag
 from apps.forum.serializers import AnswerCreateSerializer, QuestionCreateSerializer
 from apps.forum.views import AnswerCreateView, QuestionDetailView, QuestionListCreateView
 
 
-class AnswerCreateSerializerTests(TestCase):
+class ForumTestBase(TestCase):
+    """Shared base — creates the python tag once per test suite."""
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.python_tag = Tag.objects.get_or_create(name='python')[0]
+
+
+class AnswerCreateSerializerTests(ForumTestBase):
     def setUp(self):
         self.professor = User.objects.create_user(
             email='prof@example.com',
@@ -34,13 +42,13 @@ class AnswerCreateSerializerTests(TestCase):
             title='Q1',
             body='Question 1 body',
         )
-        self.question_1.tags.set(['python'])
+        self.question_1.tags.set([self.python_tag])
         self.question_2 = Question.objects.create(
             author=self.student,
             title='Q2',
             body='Question 2 body',
         )
-        self.question_2.tags.set(['python'])
+        self.question_2.tags.set([self.python_tag])
         self.parent_answer = Answer.objects.create(
             question=self.question_1,
             author=self.student,
@@ -83,7 +91,7 @@ class AnswerCreateSerializerTests(TestCase):
         self.assertIn('parent_id', serializer.errors)
 
 
-class QuestionCreateSerializerTests(TestCase):
+class QuestionCreateSerializerTests(ForumTestBase):
     def test_rejects_blank_title(self):
         serializer = QuestionCreateSerializer(
             data={
@@ -134,7 +142,7 @@ class QuestionCreateSerializerTests(TestCase):
         self.assertTrue(serializer.is_valid(), serializer.errors)
 
 
-class QuestionListApiTests(TestCase):
+class QuestionListApiTests(ForumTestBase):
     def setUp(self):
         self.factory = APIRequestFactory()
         ContentType.objects.get_for_model(Question)
@@ -162,19 +170,19 @@ class QuestionListApiTests(TestCase):
             title='Newest question',
             body='Newest body',
         )
-        self.newest_question.tags.set(['python'])
+        self.newest_question.tags.set([self.python_tag])
         self.unanswered_question = Question.objects.create(
             author=self.student,
             title='Unanswered question',
             body='Unanswered body',
         )
-        self.unanswered_question.tags.set(['python'])
+        self.unanswered_question.tags.set([self.python_tag])
         self.answered_question = Question.objects.create(
             author=self.student,
             title='Answered question',
             body='Answered body',
         )
-        self.answered_question.tags.set(['python'])
+        self.answered_question.tags.set([self.python_tag])
         Answer.objects.create(
             question=self.answered_question,
             author=self.student,
@@ -199,7 +207,7 @@ class QuestionListApiTests(TestCase):
         request = self.factory.get('/api/forum/questions/?ordering=newest')
         force_authenticate(request, user=self.student)
 
-        with self.assertNumQueries(2):
+        with self.assertNumQueries(3):
             response = QuestionListCreateView.as_view()(request)
 
         self.assertEqual(response.status_code, 200)
@@ -217,7 +225,7 @@ class QuestionListApiTests(TestCase):
         request = self.factory.get('/api/forum/questions/?ordering=unanswered')
         force_authenticate(request, user=self.student)
 
-        with self.assertNumQueries(2):
+        with self.assertNumQueries(3):
             response = QuestionListCreateView.as_view()(request)
 
         self.assertEqual(response.status_code, 200)
@@ -225,7 +233,7 @@ class QuestionListApiTests(TestCase):
         self.assertTrue(all(item['answer_count'] == 0 for item in response.data['results']))
 
 
-class AnswerCreateApiTests(TestCase):
+class AnswerCreateApiTests(ForumTestBase):
     def setUp(self):
         self.factory = APIRequestFactory()
         ContentType.objects.get_for_model(Answer)
@@ -253,13 +261,13 @@ class AnswerCreateApiTests(TestCase):
             title='Question 1',
             body='Body 1',
         )
-        self.question_1.tags.set(['python'])
+        self.question_1.tags.set([self.python_tag])
         self.question_2 = Question.objects.create(
             author=self.student,
             title='Question 2',
             body='Body 2',
         )
-        self.question_2.tags.set(['python'])
+        self.question_2.tags.set([self.python_tag])
         self.parent_answer = Answer.objects.create(
             question=self.question_1,
             author=self.other_student,
@@ -283,7 +291,7 @@ class AnswerCreateApiTests(TestCase):
         self.assertIn('parent_id', response.data)
 
 
-class QuestionDetailViewCountTests(TestCase):
+class QuestionDetailViewCountTests(ForumTestBase):
     def setUp(self):
         self.factory = APIRequestFactory()
         self.author = User.objects.create_user(
@@ -309,7 +317,7 @@ class QuestionDetailViewCountTests(TestCase):
             title='View count test',
             body='View count body',
         )
-        self.question.tags.set(['python'])
+        self.question.tags.set([self.python_tag])
 
     def _get_question(self, user):
         request = self.factory.get(

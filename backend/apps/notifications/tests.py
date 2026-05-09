@@ -12,7 +12,7 @@ from apps.assignment_submissions.models import (
     SubmissionReview,
 )
 from apps.esi_db.models import EsiStudent
-from apps.forum.models import Answer, Question
+from apps.forum.models import Answer, Question, Tag
 from .models import Notification
 
 
@@ -168,6 +168,7 @@ class NotificationSignalTests(APITestCase):
             name='Algorithms',
             code='ALGO-NOTIFY',
         )
+        self.python_tag = Tag.objects.get_or_create(name='python')[0]
 
     def test_forum_answer_signal_notifies_question_author(self):
         question = Question.objects.create(
@@ -175,7 +176,7 @@ class NotificationSignalTests(APITestCase):
             title='How do I sort this?',
             body='I need sorting help.',
         )
-        question.tags.set(['python'])
+        question.tags.set([self.python_tag])
 
         Answer.objects.create(
             question=question,
@@ -194,7 +195,7 @@ class NotificationSignalTests(APITestCase):
             title='How do I parse this?',
             body='Parser question.',
         )
-        question.tags.set(['python'])
+        question.tags.set([self.python_tag])
         parent_answer = Answer.objects.create(
             question=question,
             author=self.other_student,
