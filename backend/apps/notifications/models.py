@@ -24,6 +24,10 @@ class Notification(models.Model):
             'assignment_reviewed',
             'Your submission received a review',
         )
+        SUBMISSION_COMMENTED = (
+            'submission_commented',
+            'Someone commented on your submission',
+        )
 
     recipient = models.ForeignKey(
         settings.AUTH_USER_MODEL,
