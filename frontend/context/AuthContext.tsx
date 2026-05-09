@@ -86,11 +86,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } catch {
       // ignore server errors — local cleanup must always proceed
     } finally {
-      // FIX: Reset singleton so the next login triggers a fresh auth check
+      // Reset singleton so the next login triggers a fresh auth check
       _authInitPromise = null;
       // Navigate BEFORE clearing state so ProtectedRoute doesn't see
       // isAuthenticated=false while still on a protected page and race us.
-      router.replace('/login');
+      router.push('/login');
       clearTokens();
       if (typeof window !== 'undefined') {
         window.localStorage.removeItem('profile_avatar_url');
