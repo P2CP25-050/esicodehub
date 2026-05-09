@@ -31,6 +31,7 @@ export default function SubmissionsPage() {
 
   const [type,           setType]           = useState('');
   const [course,         setCourse]         = useState('');
+  const [visibility, setVisibility] = useState('');
 
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const searchRef = useRef(search);
@@ -69,7 +70,8 @@ export default function SubmissionsPage() {
     type: type || undefined,
     course: course || undefined,
     search: searchValue || undefined,
-  }), [language, type, course]);
+    visibility: visibility || undefined,
+  }), [language, type, course, visibility]);
 
 
   
@@ -79,7 +81,7 @@ useEffect(() => {
   if (isLoading || !isAuthenticated) return;
   setPage(1);
   fetchSubmissions({ ...buildParams(searchRef.current), page: 1 });
-}, [isAuthenticated, isLoading, language, type, course, buildParams, fetchSubmissions]); 
+}, [isAuthenticated, isLoading, language, type, course, visibility, buildParams, fetchSubmissions]); 
 
 // Debounced search
 useEffect(() => {
@@ -129,9 +131,10 @@ useEffect(() => {
     setLanguage('');
     setType('');
     setCourse('');
+    setVisibility('');
     setPage(1);
   };
-  const hasActiveFilter = !!(search || language || type || course);
+  const hasActiveFilter = !!(search || language || type || course || visibility);
 
   return (
     <ProtectedRoute>
@@ -202,6 +205,8 @@ useEffect(() => {
 
               submissionType={type}
               courseTag={course}
+	      visibility={visibility}
+	      onVisibilityChange={setVisibility}
               onLanguageChange={setLanguage}
               onSubmissionTypeChange={setType}
               onCourseTagChange={setCourse}
