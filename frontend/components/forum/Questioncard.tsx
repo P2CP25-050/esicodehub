@@ -32,6 +32,7 @@ function initials(name: string): string {
 interface QuestionCardProps {
   question: QuestionListItem;
   voteScore: number;
+  userVote: 1 | -1 | null;
   onVote: (q: QuestionListItem, v: 1 | -1) => void;
   activeTag: string | undefined;
   onTagClick: (tag: string) => void;
@@ -40,6 +41,7 @@ interface QuestionCardProps {
 export function QuestionCard({
   question,
   voteScore,
+  userVote,
   onVote,
   activeTag,
   onTagClick,
@@ -109,6 +111,8 @@ export function QuestionCard({
         }
         .qc-vote-up:hover   { color: var(--navy); border-color: var(--navy); background: rgba(5,22,80,0.05); }
         .qc-vote-down:hover { color: #cc2200;     border-color: #cc2200;    background: rgba(204,34,0,0.05); }
+        .qc-vote-up-active   { color: var(--paper); border-color: var(--navy); background: var(--navy); }
+        .qc-vote-down-active { color: var(--paper); border-color: #cc2200;    background: #cc2200; }
 
         .qc-vote-score {
           font-family: var(--font-mono);
@@ -311,7 +315,7 @@ export function QuestionCard({
         {/* ── Vote ── */}
         <div className="qc-vote-col">
           <button
-            className="qc-vote-btn qc-vote-up"
+            className={`qc-vote-btn qc-vote-up${userVote === 1 ? " qc-vote-up-active" : ""}`}
             onClick={(e) => { e.stopPropagation(); onVote(question, 1); }}
             title="Upvote"
           >
@@ -325,7 +329,7 @@ export function QuestionCard({
           </span>
 
           <button
-            className="qc-vote-btn qc-vote-down"
+            className={`qc-vote-btn qc-vote-down${userVote === -1 ? " qc-vote-down-active" : ""}`}
             onClick={(e) => { e.stopPropagation(); onVote(question, -1); }}
             title="Downvote"
           >
