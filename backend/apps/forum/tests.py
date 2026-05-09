@@ -33,14 +33,14 @@ class AnswerCreateSerializerTests(TestCase):
             author=self.student,
             title='Q1',
             body='Question 1 body',
-            tags=['python'],
         )
+        self.question_1.tags.set(['python'])
         self.question_2 = Question.objects.create(
             author=self.student,
             title='Q2',
             body='Question 2 body',
-            tags=['python'],
         )
+        self.question_2.tags.set(['python'])
         self.parent_answer = Answer.objects.create(
             question=self.question_1,
             author=self.student,
@@ -161,20 +161,20 @@ class QuestionListApiTests(TestCase):
             author=self.student,
             title='Newest question',
             body='Newest body',
-            tags=['python'],
         )
+        self.newest_question.tags.set(['python'])
         self.unanswered_question = Question.objects.create(
             author=self.student,
             title='Unanswered question',
             body='Unanswered body',
-            tags=['python'],
         )
+        self.unanswered_question.tags.set(['python'])
         self.answered_question = Question.objects.create(
             author=self.student,
             title='Answered question',
             body='Answered body',
-            tags=['python'],
         )
+        self.answered_question.tags.set(['python'])
         Answer.objects.create(
             question=self.answered_question,
             author=self.student,
@@ -252,14 +252,14 @@ class AnswerCreateApiTests(TestCase):
             author=self.student,
             title='Question 1',
             body='Body 1',
-            tags=['python'],
         )
+        self.question_1.tags.set(['python'])
         self.question_2 = Question.objects.create(
             author=self.student,
             title='Question 2',
             body='Body 2',
-            tags=['python'],
         )
+        self.question_2.tags.set(['python'])
         self.parent_answer = Answer.objects.create(
             question=self.question_1,
             author=self.other_student,
@@ -308,8 +308,8 @@ class QuestionDetailViewCountTests(TestCase):
             author=self.author,
             title='View count test',
             body='View count body',
-            tags=['python'],
         )
+        self.question.tags.set(['python'])
 
     def _get_question(self, user):
         request = self.factory.get(

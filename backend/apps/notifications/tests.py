@@ -174,8 +174,8 @@ class NotificationSignalTests(APITestCase):
             author=self.student,
             title='How do I sort this?',
             body='I need sorting help.',
-            tags=['python'],
         )
+        question.tags.set(['python'])
 
         Answer.objects.create(
             question=question,
@@ -193,8 +193,8 @@ class NotificationSignalTests(APITestCase):
             author=self.student,
             title='How do I parse this?',
             body='Parser question.',
-            tags=['python'],
         )
+        question.tags.set(['python'])
         parent_answer = Answer.objects.create(
             question=question,
             author=self.other_student,

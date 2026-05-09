@@ -217,8 +217,8 @@ class PublicProfileApiTests(TestCase):
                 author=self.student,
                 title=f'Question {index + 1}',
                 body='Question body',
-                tags=['python'],
             )
+            question.tags.set(['python'])
             Answer.objects.create(
                 question=question,
                 author=self.student,
