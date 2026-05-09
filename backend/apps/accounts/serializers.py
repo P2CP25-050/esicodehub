@@ -148,6 +148,7 @@ class PublicProfileSerializer(serializers.ModelSerializer):
             'role',
             'bio',
             'avatar',
+            'email',
             'study_year',
             'section',
             'group',
