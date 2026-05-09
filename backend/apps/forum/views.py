@@ -1,6 +1,6 @@
 from django.contrib.contenttypes.models import ContentType
 from django.db import transaction
-from django.db.models import Count, F, IntegerField, OuterRef, Prefetch, Subquery, Sum, Value
+from django.db.models import Count, F, IntegerField, OuterRef, Prefetch, Subquery, Sum, Value, Q
 from django.db.models.functions import Coalesce
 from django.shortcuts import get_object_or_404
 from rest_framework import status
@@ -9,13 +9,14 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from .models import Answer, Question, QuestionView, Vote
+from .models import Answer, Question, QuestionView, Vote, Tag
 from .serializers import (
     AnswerCreateSerializer,
     AnswerSerializer,
     QuestionCreateSerializer,
     QuestionDetailSerializer,
     QuestionListSerializer,
+    TagSerializer,
 )
 
 
@@ -151,7 +152,7 @@ class QuestionListCreateView(APIView):
 
     def get(self, request):
         queryset = _annotate_questions(
-            Question.objects.select_related('author')
+            Question.objects.select_related('author').prefetch_related('tags')
         )
 
         tag = request.query_params.get('tag')
@@ -160,9 +161,14 @@ class QuestionListCreateView(APIView):
         ordering = request.query_params.get('ordering', 'newest')
 
         if tag:
-            queryset = queryset.filter(tags__icontains=tag.lower())
+            matching_tags = Tag.objects.filter(name__icontains=tag.strip())
+            queryset = queryset.filter(tags__in=matching_tags).distinct()
         if search:
-            queryset = queryset.filter(title__icontains=search.strip())
+            search_clean = search.strip()
+            queryset = queryset.filter(
+                Q(title__icontains=search_clean) |
+                Q(tags__name__icontains=search_clean)
+            ).distinct()
         if author:
             queryset = queryset.filter(author__email__iexact=author.strip())
 
@@ -589,3 +595,28 @@ class AnswerVoteView(APIView):
             {'vote_score': _get_vote_score(answer, Answer)},
             status=status.HTTP_200_OK,
         )
+
+
+class TagListView(APIView):
+    """
+    GET /api/forum/tags/?q=algo   — search tags, returns top 10 matches.
+    No ?q param returns the 10 most recent tags (useful for default autocomplete state).
+    """
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        q = request.query_params.get('q', '').strip().strip('/')
+        qs = Tag.objects.filter(name__icontains=q) if q else Tag.objects.all()
+        tags = qs.order_by('name')[:10]
+        return Response(TagSerializer(tags, many=True).data)
+
+
+class SubjectTagListView(APIView):
+    """
+    GET /api/forum/tags/subjects/  — all subject tags for the autocomplete picker.
+    """
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        tags = Tag.objects.filter(is_subject=True).order_by('name')
+        return Response(TagSerializer(tags, many=True).data)

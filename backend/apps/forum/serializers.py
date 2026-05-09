@@ -2,7 +2,13 @@ from django.contrib.contenttypes.models import ContentType
 from django.db.models import Count, IntegerField, OuterRef, Subquery, Sum, Value
 from django.db.models.functions import Coalesce
 from rest_framework import serializers
-from .models import Answer, Question, Vote
+from .models import Answer, Question, Vote, Tag
+
+
+class TagSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Tag
+        fields = ['id', 'name', 'is_subject']
 
 
 class AnswerSerializer(serializers.ModelSerializer):
@@ -194,6 +200,9 @@ class QuestionListSerializer(serializers.ModelSerializer):
     # True if any answer has been accepted
     has_accepted_answer = serializers.SerializerMethodField()
 
+    # List of tag names associated with this question
+    tags = serializers.SerializerMethodField()
+
     class Meta:
         model = Question
         fields = [
@@ -236,6 +245,10 @@ class QuestionListSerializer(serializers.ModelSerializer):
         """Return True if this question has an accepted answer."""
         return obj.accepted_answer_id is not None
 
+    def get_tags(self, obj):
+        """Return a list of tag names associated with this question."""
+        return [tag.name for tag in obj.tags.all()]
+
 
 class QuestionDetailSerializer(serializers.ModelSerializer):
     """
@@ -255,6 +268,9 @@ class QuestionDetailSerializer(serializers.ModelSerializer):
 
     # Top-level answers only (parent=None), each with nested replies
     answers = serializers.SerializerMethodField()
+
+    # List of tag names associated with this question
+    tags = serializers.SerializerMethodField()
 
     class Meta:
         model = Question
@@ -313,6 +329,10 @@ class QuestionDetailSerializer(serializers.ModelSerializer):
         """Return True if 24 hours have passed since question creation."""
         return obj.can_accept_answer
 
+    def get_tags(self, obj):
+        """Return a list of tag names associated with this question."""
+        return [tag.name for tag in obj.tags.all()]
+
     def get_answers(self, obj):
         """
         Return top-level answers with nested replies via AnswerSerializer.
@@ -363,6 +383,12 @@ class QuestionCreateSerializer(serializers.ModelSerializer):
     Validates title, body and tags format.
     """
 
+    tags = serializers.ListField(
+        child=serializers.CharField(max_length=50),
+        required=False,
+        default=list,
+    )
+
     class Meta:
         model = Question
         fields = [
@@ -407,6 +433,30 @@ class QuestionCreateSerializer(serializers.ModelSerializer):
                     f'Tag "{tag}" exceeds the 50 character limit.'
                 )
         return value
+
+    @staticmethod
+    def _resolve_tags(tag_names: list[str]) -> list[Tag]:
+        """Get or create a Tag row for each name. Subject tags are never created here."""
+        tags = []
+        for name in tag_names:
+            tag, _ = Tag.objects.get_or_create(name=name, defaults={'is_subject': False})
+            tags.append(tag)
+        return tags
+
+    def create(self, validated_data):
+        tag_names = validated_data.pop('tags', [])
+        question = Question.objects.create(**validated_data)
+        question.tags.set(self._resolve_tags(tag_names))
+        return question
+
+    def update(self, instance, validated_data):
+        tag_names = validated_data.pop('tags', None)
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+        instance.save()
+        if tag_names is not None:
+            instance.tags.set(self._resolve_tags(tag_names))
+        return instance
 
 
 class AnswerCreateSerializer(serializers.ModelSerializer):
