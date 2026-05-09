@@ -477,6 +477,154 @@ const PAGE_CSS = `
     gap: 24px;
   }
 
+  /* ── Professor layout ── */
+  .ap-prof-header-bar {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    padding: 14px 20px;
+    border: var(--rule);
+    border-top: 3px solid var(--navy);
+    background: var(--surface);
+    margin-bottom: 0;
+    flex-wrap: wrap;
+  }
+  .ap-prof-header-title {
+    font-family: var(--font-display);
+    font-size: 20px;
+    font-weight: 900;
+    color: var(--ink);
+    letter-spacing: -0.02em;
+    flex: 1;
+    min-width: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .ap-prof-header-deadline {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--text-muted);
+    white-space: nowrap;
+  }
+  .ap-prof-header-actions {
+    display: flex;
+    gap: 8px;
+    flex-shrink: 0;
+  }
+
+  .ap-stats-bar {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    border: var(--rule);
+    border-top: none;
+    background: var(--paper);
+    margin-bottom: 24px;
+    overflow: hidden;
+  }
+  .ap-stats-bar-item {
+    flex: 1;
+    padding: 10px 16px;
+    border-right: var(--rule);
+    text-align: center;
+  }
+  .ap-stats-bar-item:last-child {
+    border-right: none;
+  }
+  .ap-stats-bar-num {
+    font-family: var(--font-display);
+    font-size: 20px;
+    font-weight: 900;
+    color: var(--ink);
+    line-height: 1;
+    margin-bottom: 2px;
+  }
+  .ap-stats-bar-num-flagged { color: var(--orange); }
+  .ap-stats-bar-num-reviewed { color: var(--green); }
+  .ap-stats-bar-label {
+    font-family: var(--font-mono);
+    font-size: 9px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+  }
+
+  .ap-desc-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: none;
+    border: none;
+    font-family: var(--font-mono);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    cursor: pointer;
+    padding: 0;
+    margin-bottom: 12px;
+    transition: color 0.15s;
+  }
+  .ap-desc-toggle:hover { color: var(--navy); }
+
+  .ap-desc-panel {
+    background: var(--surface);
+    border: var(--rule);
+    border-left: 3px solid var(--navy);
+    padding: 16px;
+    margin-bottom: 20px;
+    font-size: 13px;
+    line-height: 1.7;
+    color: var(--text-sub);
+  }
+
+  .ap-sub-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 18px;
+    border-bottom: 1px solid var(--border-soft);
+    background: var(--paper);
+    transition: background 0.1s;
+  }
+  .ap-sub-row:last-child { border-bottom: none; }
+  .ap-sub-row:hover { background: var(--surface); }
+  .ap-sub-row-name {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--ink);
+    flex: 1;
+    min-width: 0;
+  }
+  .ap-sub-row-meta {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--text-muted);
+    white-space: nowrap;
+  }
+  .ap-sub-row-right {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-shrink: 0;
+  }
+  .ap-sub-list-wrapper {
+    border: var(--rule);
+    border-top: 2px solid var(--blue);
+    background: var(--paper);
+  }
+  .ap-sub-list-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 18px;
+    background: var(--surface-2);
+    border-bottom: var(--rule);
+    gap: 12px;
+  }
+
   @media (max-width: 960px) {
     .ap-layout-grid { grid-template-columns: 1fr; }
     .ap-meta-grid { grid-template-columns: 1fr 1fr; }
@@ -616,6 +764,7 @@ function AssignmentDetailPageContent() {
   const [deleteLoading,      setDeleteLoading]      = useState(false);
   const [toast,              setToast]              = useState<{ type: 'success' | 'error' | 'info'; message: string } | null>(null);
   const [fileInputKey,       setFileInputKey]       = useState(0);
+  const [showDescription,    setShowDescription]    = useState(false);
 
   const hasLoadedRoleDataRef          = useRef(false);
   const reviewNotificationReadyRef    = useRef(false);
@@ -910,80 +1059,214 @@ function AssignmentDetailPageContent() {
           <span>detail</span>
         </nav>
 
-        <div className="ap-layout-grid">
-          {/* ── Left column ── */}
-          <div>
-            {/* Header card */}
-            <div className="ap-card" style={{ borderTop: `2px solid var(--navy)` }}>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px', justifyContent: 'space-between' }}>
-                <div style={{ flex: 1 }}>
-                  <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '16px' }}>
-                    <span className="ap-badge ap-badge-accent">{assignment.subject.code}</span>
-                    {deadlineBadge && <span className={`ap-badge ${deadlineBadge.cls}`}>{deadlineBadge.label}</span>}
-                  </div>
-                  <h1 className="ap-page-title" style={{ marginBottom: '8px', fontSize: '28px' }}>{assignment.title}</h1>
-                  <p style={{ fontSize: '13px', color: 'var(--text-sub)', marginBottom: '4px' }}>
-                    Professor: <span style={{ fontWeight: 600, color: 'var(--ink)' }}>{assignment.professor_name}</span>
-                  </p>
-                  <p style={{ fontSize: '11px', fontFamily: 'var(--font-mono)', color: 'var(--text-muted)' }}>
-                    Posted {timeAgo(assignment.created_at)}
-                  </p>
-                </div>
-
-                {(isProfessor || isCreator) && (
-                  <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-                    {isProfessor && (
-                      <button
-                        type="button"
-                        onClick={handleRunPlagiarism}
-                        disabled={!deadlinePassed}
-                        title={deadlinePassed ? 'Run plagiarism check' : 'Available after the deadline passes.'}
-                        className="ap-btn"
-                        style={!deadlinePassed ? { opacity: 0.4, cursor: 'not-allowed' } : {}}
-                      >
-                        Plagiarism Check
-                      </button>
-                    )}
-                    {isCreator && (
-                      <Link href={`/assignments/${assignment.id}/edit`} className="ap-btn">
-                        Edit
-                      </Link>
-                    )}
-                    {isCreator && (
-                      <button type="button" onClick={handleDeleteAssignment} disabled={deleteLoading} className="ap-btn ap-btn-danger">
-                        {deleteLoading ? 'Deleting…' : 'Delete'}
-                      </button>
-                    )}
-                  </div>
-                )}
-              </div>
-
-              {assignment.description && (
-                <div className="ap-description">{assignment.description}</div>
+        {/* ══ PROFESSOR LAYOUT ══ */}
+        {showProfessorTable ? (
+          <>
+            {/* Slim header bar */}
+            <div className="ap-prof-header-bar">
+              <div className="ap-prof-header-title" title={assignment.title}>{assignment.title}</div>
+              <span className="ap-prof-header-deadline">
+                Due {formatDateTime(assignment.deadline)}
+              </span>
+              {deadlineBadge && (
+                <span className={`ap-badge ${deadlineBadge.cls}`}>{deadlineBadge.label}</span>
               )}
-
-              <div className="ap-meta-grid">
-                <div className="ap-meta-tile">
-                  <div className="ap-meta-label">Targeting</div>
-                  {targetSummary.map((item) => (
-                    <div key={item} className="ap-meta-value" style={{ marginBottom: 2 }}>{item}</div>
-                  ))}
-                </div>
-                <div className="ap-meta-tile">
-                  <div className="ap-meta-label">Deadline</div>
-                  <div className="ap-meta-value">{formatDateTime(assignment.deadline)}</div>
-                  <div className="ap-meta-sub">{countdown}</div>
-                </div>
-                <div className="ap-meta-tile">
-                  <div className="ap-meta-label">Status</div>
-                  <div className="ap-meta-value">{assignment.is_open ? 'Open' : 'Closed'}</div>
-                  <div className="ap-meta-sub">{assignment.allow_late ? 'Late subs allowed' : 'No late submissions'}</div>
-                </div>
+              <div className="ap-prof-header-actions">
+                {isProfessor && (
+                  <button
+                    type="button"
+                    onClick={handleRunPlagiarism}
+                    disabled={!deadlinePassed}
+                    title={deadlinePassed ? 'Run plagiarism check' : 'Available after the deadline passes.'}
+                    className="ap-btn ap-btn-sm"
+                    style={!deadlinePassed ? { opacity: 0.4, cursor: 'not-allowed' } : {}}
+                  >
+                    Plagiarism
+                  </button>
+                )}
+                {isCreator && (
+                  <Link href={`/assignments/${assignment.id}/edit`} className="ap-btn ap-btn-sm">
+                    Edit
+                  </Link>
+                )}
+                {isCreator && (
+                  <button type="button" onClick={handleDeleteAssignment} disabled={deleteLoading} className="ap-btn ap-btn-sm ap-btn-danger">
+                    {deleteLoading ? 'Deleting…' : 'Delete'}
+                  </button>
+                )}
               </div>
             </div>
 
-            {/* Student submission section */}
-            {isStudent && (
+            {/* Stats bar */}
+            {(() => {
+              const total    = assignment.submission_count ?? 0;
+              const flagged  = submissions.filter((s) => s.is_late).length;
+              const reviewed = submissions.filter((s) => s.reviews_count > 0).length;
+              return (
+                <div className="ap-stats-bar">
+                  <div className="ap-stats-bar-item">
+                    <div className="ap-stats-bar-num">{total}</div>
+                    <div className="ap-stats-bar-label">Submitted</div>
+                  </div>
+                  <div className="ap-stats-bar-item">
+                    <div className={`ap-stats-bar-num ${flagged > 0 ? 'ap-stats-bar-num-flagged' : ''}`}>{flagged}</div>
+                    <div className="ap-stats-bar-label">Late</div>
+                  </div>
+                  <div className="ap-stats-bar-item">
+                    <div className={`ap-stats-bar-num ${reviewed > 0 ? 'ap-stats-bar-num-reviewed' : ''}`}>{reviewed}</div>
+                    <div className="ap-stats-bar-label">Reviewed</div>
+                  </div>
+                  <div className="ap-stats-bar-item">
+                    <div className="ap-stats-bar-num" style={{ color: 'var(--text-muted)' }}>{total - reviewed}</div>
+                    <div className="ap-stats-bar-label">Pending</div>
+                  </div>
+                </div>
+              );
+            })()}
+
+            {/* Description toggle */}
+            {assignment.description && (
+              <>
+                <button
+                  type="button"
+                  className="ap-desc-toggle"
+                  onClick={() => setShowDescription((v) => !v)}
+                >
+                  <span>{showDescription ? '▲' : '▼'}</span>
+                  {showDescription ? 'Hide description' : 'Show description'}
+                </button>
+                {showDescription && (
+                  <div className="ap-desc-panel">{assignment.description}</div>
+                )}
+              </>
+            )}
+
+            {/* Full-width submissions list */}
+            <div className="ap-sub-list-wrapper">
+              <div className="ap-sub-list-head">
+                <div className="ap-section-label" style={{ margin: 0 }}>
+                  <div className="ap-section-bar" style={{ background: 'var(--blue)' }} />
+                  <span className="ap-section-text" style={{ color: 'var(--blue)' }}>
+                    Student Submissions
+                    {!loadingSubmissions && ` (${submissions.length})`}
+                  </span>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  {groupOptions.length > 0 && (
+                    <select
+                      className="ap-select"
+                      value={selectedGroup ?? ''}
+                      onChange={(e) => setSelectedGroup(e.target.value ? Number(e.target.value) : undefined)}
+                      style={{ width: 'auto', minWidth: '130px' }}
+                    >
+                      <option value="">All groups</option>
+                      {groupOptions.map((g) => <option key={g} value={g}>Group {g}</option>)}
+                    </select>
+                  )}
+                </div>
+              </div>
+
+              {sectionError && (
+                <div style={{ padding: '12px 18px' }}>
+                  <div className="ap-alert ap-alert-red" style={{ margin: 0 }}>{sectionError}</div>
+                </div>
+              )}
+
+              {loadingSubmissions || loadingRoleData ? (
+                <div style={{ padding: '8px 0' }}>
+                  {[1,2,3,4].map((i) => (
+                    <div key={i} className="ap-skeleton" style={{ height: 52, margin: '0 18px 8px', borderRadius: 0 }} />
+                  ))}
+                </div>
+              ) : submissions.length === 0 ? (
+                <div className="ap-alert" style={{ margin: '16px 18px', textAlign: 'center', background: 'var(--surface-2)' }}>
+                  No submissions yet
+                </div>
+              ) : (
+                <div>
+                  {submissions.map((sub) => (
+                    <div key={sub.id} className="ap-sub-row">
+                      <div className="ap-sub-row-name">
+                        {sub.student_name}
+                        {sub.is_late && (
+                          <span className="ap-badge ap-badge-orange" style={{ marginLeft: '8px', fontSize: '9px', verticalAlign: 'middle' }}>Late</span>
+                        )}
+                      </div>
+                      <span className="ap-sub-row-meta">{formatPlural(sub.file_count, 'file')}</span>
+                      <span className="ap-sub-row-meta">{formatDateTime(sub.submitted_at)}</span>
+                      <div className="ap-sub-row-right">
+                        {sub.reviews_count > 0 ? (
+                          <span className="ap-badge ap-badge-green" style={{ fontSize: '9px' }}>
+                            {sub.reviews_count} review{sub.reviews_count !== 1 ? 's' : ''}
+                          </span>
+                        ) : (
+                          <span className="ap-badge" style={{ fontSize: '9px', color: 'var(--text-muted)', borderColor: 'var(--border-soft)' }}>
+                            Not reviewed
+                          </span>
+                        )}
+                        <Link
+                          href={`/assignments/${assignment.id}/submissions/${sub.id}`}
+                          className="ap-btn ap-btn-primary ap-btn-sm"
+                          style={{ textDecoration: 'none' }}
+                        >
+                          Review →
+                        </Link>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </>
+        ) : (
+          /* ══ STUDENT LAYOUT (unchanged) ══ */
+          <div className="ap-layout-grid">
+            {/* ── Left column ── */}
+            <div>
+              {/* Header card */}
+              <div className="ap-card" style={{ borderTop: `2px solid var(--navy)` }}>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px', justifyContent: 'space-between' }}>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '16px' }}>
+                      <span className="ap-badge ap-badge-accent">{assignment.subject.code}</span>
+                      {deadlineBadge && <span className={`ap-badge ${deadlineBadge.cls}`}>{deadlineBadge.label}</span>}
+                    </div>
+                    <h1 className="ap-page-title" style={{ marginBottom: '8px', fontSize: '28px' }}>{assignment.title}</h1>
+                    <p style={{ fontSize: '13px', color: 'var(--text-sub)', marginBottom: '4px' }}>
+                      Professor: <span style={{ fontWeight: 600, color: 'var(--ink)' }}>{assignment.professor_name}</span>
+                    </p>
+                    <p style={{ fontSize: '11px', fontFamily: 'var(--font-mono)', color: 'var(--text-muted)' }}>
+                      Posted {timeAgo(assignment.created_at)}
+                    </p>
+                  </div>
+                </div>
+
+                {assignment.description && (
+                  <div className="ap-description">{assignment.description}</div>
+                )}
+
+                <div className="ap-meta-grid">
+                  <div className="ap-meta-tile">
+                    <div className="ap-meta-label">Targeting</div>
+                    {targetSummary.map((item) => (
+                      <div key={item} className="ap-meta-value" style={{ marginBottom: 2 }}>{item}</div>
+                    ))}
+                  </div>
+                  <div className="ap-meta-tile">
+                    <div className="ap-meta-label">Deadline</div>
+                    <div className="ap-meta-value">{formatDateTime(assignment.deadline)}</div>
+                    <div className="ap-meta-sub">{countdown}</div>
+                  </div>
+                  <div className="ap-meta-tile">
+                    <div className="ap-meta-label">Status</div>
+                    <div className="ap-meta-value">{assignment.is_open ? 'Open' : 'Closed'}</div>
+                    <div className="ap-meta-sub">{assignment.allow_late ? 'Late subs allowed' : 'No late submissions'}</div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Student submission section */}
+              {isStudent && (
               <div className="ap-card" style={{ borderTop: `2px solid var(--blue)` }}>
                 <div className="ap-section-label">
                   <div className="ap-section-bar" style={{ background: 'var(--blue)' }} />
@@ -1147,133 +1430,30 @@ function AssignmentDetailPageContent() {
 
           {/* ── Right column ── */}
           <aside>
-            {showProfessorTable ? (
-              <>
-                <div className="ap-card" style={{ borderTop: `2px solid var(--blue)` }}>
-                  <div className="ap-section-label">
-                    <div className="ap-section-bar" style={{ background: 'var(--blue)' }} />
-                    <span className="ap-section-text" style={{ color: 'var(--blue)' }}>
-                      Submissions ({assignment.submission_count})
-                    </span>
-                  </div>
-                  <p style={{ fontSize: '13px', color: 'var(--text-sub)', marginBottom: '16px' }}>
-                    Review student submissions for this assignment.
-                  </p>
-
-                  <div style={{ marginBottom: '16px' }}>
-                    <div style={{ fontSize: '10px', fontFamily: 'var(--font-mono)', letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '8px' }}>
-                      Group Filter
-                    </div>
-                    <select
-                      className="ap-select"
-                      value={selectedGroup ?? ''}
-                      onChange={(e) => setSelectedGroup(e.target.value ? Number(e.target.value) : undefined)}
-                    >
-                      <option value="">All groups</option>
-                      {groupOptions.map((g) => <option key={g} value={g}>Group {g}</option>)}
-                    </select>
-                  </div>
-
-                  {sectionError && <div className="ap-alert ap-alert-red">{sectionError}</div>}
-
-                  {loadingSubmissions || loadingRoleData ? (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                      {[1,2,3].map((i) => <div key={i} className="ap-skeleton" style={{ height: 44 }} />)}
-                    </div>
-                  ) : submissions.length === 0 ? (
-                    <div className="ap-alert" style={{ textAlign: 'center', background: 'var(--surface-2)' }}>
-                      No submissions yet
-                    </div>
-                  ) : (
-                    <div className="ap-table-wrapper">
-                      <table className="ap-table">
-                        <thead>
-                          <tr>
-                            <th>Student</th>
-                            <th>Submitted</th>
-                            <th>Files</th>
-                            <th>Reviews</th>
-                            <th></th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {submissions.map((sub) => (
-                            <tr key={sub.id}>
-                              <td>
-                                <span style={{ fontWeight: 600 }}>{sub.student_name}</span>
-                                {sub.is_late && <span className="ap-badge ap-badge-orange" style={{ marginLeft: '8px', fontSize: '9px' }}>Late</span>}
-                              </td>
-                              <td style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', color: 'var(--text-muted)' }}>
-                                {formatDateTime(sub.submitted_at)}
-                              </td>
-                              <td style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', color: 'var(--text-muted)' }}>
-                                {formatPlural(sub.file_count, 'file')}
-                              </td>
-                              <td style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', color: 'var(--text-muted)' }}>
-                                {sub.reviews_count}
-                              </td>
-                              <td>
-                                <Link
-                                  href={`/assignments/${assignment.id}/submissions/${sub.id}`}
-                                  className="ap-btn ap-btn-primary ap-btn-sm"
-                                  style={{ textDecoration: 'none' }}
-                                >
-                                  Review
-                                </Link>
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  )}
-                </div>
-
-                <div className="ap-card" style={{ borderTop: `2px solid var(--navy)` }}>
-                  <div className="ap-section-label">
-                    <div className="ap-section-bar" style={{ background: 'var(--navy)' }} />
-                    <span className="ap-section-text">Summary</span>
-                  </div>
-                  {[
-                    { label: 'Subject',    value: assignment.subject.name },
-                    { label: 'Deadline',   value: formatDateTime(assignment.deadline) },
-                    { label: 'Visibility', value: assignment.is_open ? 'Open' : 'Closed' },
-                    { label: 'Filter',     value: groupLabel },
-                  ].map(({ label, value }) => (
-                    <div key={label} className="ap-summary-item">
-                      <span className="ap-summary-label">{label}</span>
-                      <span className="ap-summary-value">{value}</span>
-                    </div>
-                  ))}
-                </div>
-              </>
-            ) : (
-              <>
-                {sectionError && (
-                  <div className="ap-card">
-                    <div className="ap-alert ap-alert-red">{sectionError}</div>
-                  </div>
-                )}
-                <div className="ap-card" style={{ borderTop: `2px solid var(--navy)` }}>
-                  <div className="ap-section-label">
-                    <div className="ap-section-bar" style={{ background: 'var(--navy)' }} />
-                    <span className="ap-section-text">Quick Facts</span>
-                  </div>
-                  {[
-                    { label: 'Submitted Files', value: String(submittedFiles.length) },
-                    { label: 'Line Comments',   value: String(lineCommentsCount) },
-                    { label: 'Status',          value: assignment.is_open ? 'Open' : 'Closed' },
-                  ].map(({ label, value }) => (
-                    <div key={label} className="ap-summary-item">
-                      <span className="ap-summary-label">{label}</span>
-                      <span className="ap-summary-value">{value}</span>
-                    </div>
-                  ))}
-                </div>
-              </>
+            {sectionError && (
+              <div className="ap-card">
+                <div className="ap-alert ap-alert-red">{sectionError}</div>
+              </div>
             )}
+            <div className="ap-card" style={{ borderTop: `2px solid var(--navy)` }}>
+              <div className="ap-section-label">
+                <div className="ap-section-bar" style={{ background: 'var(--navy)' }} />
+                <span className="ap-section-text">Quick Facts</span>
+              </div>
+              {[
+                { label: 'Submitted Files', value: String(submittedFiles.length) },
+                { label: 'Line Comments',   value: String(lineCommentsCount) },
+                { label: 'Status',          value: assignment.is_open ? 'Open' : 'Closed' },
+              ].map(({ label, value }) => (
+                <div key={label} className="ap-summary-item">
+                  <span className="ap-summary-label">{label}</span>
+                  <span className="ap-summary-value">{value}</span>
+                </div>
+              ))}
+            </div>
           </aside>
         </div>
+        )}
       </div>
     </div>
   );

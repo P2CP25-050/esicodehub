@@ -321,6 +321,17 @@ function PlagiarismReportContent() {
               {assignment ? assignment.title : "Loading..."}
             </p>
           </div>
+          {!showLoading && (
+            <button
+              className="btn-primary"
+              onClick={handleRunCheck}
+              disabled={!canRunCheck}
+              title={deadlinePassed ? "Run plagiarism check" : "Available after the deadline passes"}
+              style={{ alignSelf: "flex-end" }}
+            >
+              {triggering ? "Starting…" : deadlinePassed ? "Run Plagiarism Check" : "Deadline Not Passed"}
+            </button>
+          )}
         </div>
 
         {pageError && (

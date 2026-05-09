@@ -162,8 +162,17 @@ const PAGE_CSS = `
   }
   .ap-error-retry:hover { background: rgba(204,0,0,0.08); }
 
-  /* Grid */
-  .ap-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
+  /* Grid – horizontal scroll */
+  .ap-grid {
+    display: flex;
+    overflow-x: auto;
+    gap: 20px;
+    padding-bottom: 16px;
+    scrollbar-width: thin;
+  }
+  .ap-grid > * {
+    flex: 0 0 320px;
+  }
 
   /* Animations */
   @keyframes ap-fade-up {
@@ -175,8 +184,8 @@ const PAGE_CSS = `
   .ap-animate-2 { animation-delay: 0.10s; }
   .ap-animate-3 { animation-delay: 0.17s; }
 
-  @media (max-width: 960px)  { .ap-grid { grid-template-columns: repeat(2, 1fr); } .ap-page-title { font-size: 30px; } .ap-page::before { display: none; } }
-  @media (max-width: 620px)  { .ap-container { padding: 20px 16px 60px; } .ap-grid { grid-template-columns: 1fr; } .ap-page-title { font-size: 24px; } }
+  @media (max-width: 960px)  { .ap-page-title { font-size: 30px; } .ap-page::before { display: none; } }
+  @media (max-width: 620px)  { .ap-container { padding: 20px 16px 60px; } .ap-page-title { font-size: 24px; } }
 `;
 
 // ── Page ──────────────────────────────────────────────────────────────────────
@@ -297,7 +306,7 @@ function AssignmentsContent() {
           </div>
         )}
 
-        {/* Cards grid */}
+        {/* Cards grid – horizontal scroll */}
         <div className="ap-grid ap-animate ap-animate-3">
           {loading ? (
             <AssignmentsSkeleton />
