@@ -1007,6 +1007,15 @@ function SubmissionDetailPage() {
     zoneNode.style.background = '#f8fafc';
     zoneNode.style.borderTop = '1px solid #e2e8f0';
     zoneNode.style.borderBottom = '1px solid #e2e8f0';
+    zoneNode.addEventListener('mousedown', (event) => {
+      event.stopPropagation();
+    });
+    zoneNode.addEventListener('mouseup', (event) => {
+      event.stopPropagation();
+    });
+    zoneNode.addEventListener('click', (event) => {
+      event.stopPropagation();
+    });
 
     const header = document.createElement('div');
     header.style.display = 'flex';
@@ -1185,6 +1194,12 @@ function SubmissionDetailPage() {
       textarea.addEventListener('keyup', (e) => {
         e.stopPropagation();
       }, { capture: true });
+      textarea.addEventListener('mousedown', (e) => {
+        e.stopPropagation();
+      }, { capture: true });
+      textarea.addEventListener('click', (e) => {
+        e.stopPropagation();
+      }, { capture: true });
 
       const composerActions = document.createElement('div');
       composerActions.style.display = 'flex';
@@ -1285,7 +1300,11 @@ function SubmissionDetailPage() {
           targetType === monaco.editor.MouseTargetType.GUTTER_GLYPH_MARGIN ||
           targetType === monaco.editor.MouseTargetType.GUTTER_LINE_NUMBERS
         ) {
-          openThreadAtLine(lineNumber);
+          event.event.preventDefault();
+          event.event.stopPropagation();
+          window.setTimeout(() => {
+            openThreadAtLine(lineNumber);
+          }, 0);
         }
       });
 
