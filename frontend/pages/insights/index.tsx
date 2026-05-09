@@ -1,18 +1,20 @@
 import { useEffect, useMemo, useState } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
+import { useRouter } from 'next/router';
 
 import Header from '@/components/submissions/Header';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
 import { useAuth } from '@/context/AuthContext';
-import { listAssignments } from '@/services/assignments';
-import type { Assignment } from '@/services/assignments';
+import { listAssignments, getSubmissions, getReviews } from '@/services/assignments';
+import type { Assignment, PaginatedResponse } from '@/services/assignments';
 import { listQuestions, getQuestion } from '@/services/forum';
 import type { Answer, QuestionDetail, QuestionListItem } from '@/services/forum';
-import { getProfessorStats } from '@/services/profile/api';
-import type { ProfessorStats } from '@/services/profile/api';
+import { getPlagiarismReport } from '@/services/plagiarism';
+import type { PlagiarismReport } from '@/services/plagiarism';
 import { listSubmissions } from '@/services/submissions';
 import type { PersonalSubmission } from '@/services/submissions';
+import apiClient from '@/lib/axios';
 import { timeAgo } from '@/utils/time';
 
 const INSIGHTS_CSS = `
@@ -478,6 +480,144 @@ const INSIGHTS_CSS = `
     margin: 0;
   }
 
+  .ip-ai-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 18px;
+  }
+
+  .ip-ai-card {
+    background: var(--paper);
+    border: var(--rule);
+    border-top: 4px solid var(--navy);
+    padding: 20px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .ip-ai-card::after {
+    content: '';
+    position: absolute;
+    bottom: -1px;
+    right: -1px;
+    width: 20px;
+    height: 20px;
+    border-bottom: 3px solid var(--navy);
+    border-right: 3px solid var(--navy);
+  }
+
+  .ip-ai-title {
+    margin: 0 0 8px;
+    font-family: var(--font-mono);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    font-size: 10px;
+    color: var(--text-muted);
+    font-weight: 700;
+  }
+
+  .ip-ai-rate {
+    margin: 0;
+    font-size: 44px;
+    line-height: 1;
+    color: var(--navy);
+    font-weight: 900;
+    font-family: var(--font-display);
+  }
+
+  .ip-ai-label {
+    margin: 10px 0 12px;
+    color: var(--text-sub);
+    font-size: 13px;
+  }
+
+  .ip-ai-bar {
+    width: 100%;
+    height: 10px;
+    border-radius: 999px;
+    background: #e5e7eb;
+    overflow: hidden;
+    border: 1px solid #d1d5db;
+  }
+
+  .ip-ai-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #dc2626, #f97316);
+  }
+
+  .ip-ai-meta {
+    margin: 8px 0 0;
+    font-size: 11px;
+    color: var(--text-muted);
+    font-family: var(--font-mono);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+
+  .ip-table-wrap {
+    background: var(--paper);
+    border: var(--rule);
+    border-top: 4px solid var(--navy);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .ip-table-wrap::after {
+    content: '';
+    position: absolute;
+    bottom: -1px;
+    right: -1px;
+    width: 20px;
+    height: 20px;
+    border-bottom: 3px solid var(--navy);
+    border-right: 3px solid var(--navy);
+  }
+
+  .ip-performance-table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+
+  .ip-performance-table th,
+  .ip-performance-table td {
+    padding: 12px 12px;
+    border-bottom: 1px solid #ececec;
+    font-size: 13px;
+    text-align: left;
+  }
+
+  .ip-performance-table th {
+    font-family: var(--font-mono);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    font-size: 10px;
+    color: var(--text-muted);
+    white-space: nowrap;
+  }
+
+  .ip-sort-btn {
+    all: unset;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .ip-row-link {
+    cursor: pointer;
+    transition: background 0.12s;
+  }
+
+  .ip-row-link:hover {
+    background: #f8fafc;
+  }
+
+  .ip-score {
+    font-family: var(--font-mono);
+    color: #1e3a8a;
+    font-weight: 700;
+  }
+
   .ip-error { color: #b91c1c; }
 
   @keyframes ip-fade-up {
@@ -490,6 +630,7 @@ const INSIGHTS_CSS = `
     .ip-page::after { display: none; }
     .ip-page-title { font-size: 34px; }
     .ip-stats-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .ip-ai-grid { grid-template-columns: 1fr; }
     .ip-two-col { grid-template-columns: 1fr; }
     .ip-board-grid { grid-template-columns: 1fr; }
   }
@@ -543,6 +684,31 @@ interface InsightsState {
   topAnswerers: LeaderboardEntry[];
 }
 
+interface AIDetectionSummary {
+  checked: number;
+  flagged: number;
+}
+
+interface ProfessorAssignmentRow {
+  id: number;
+  title: string;
+  subject: string;
+  submissions: number;
+  flagged: number;
+  avgScore: number | null;
+  deadline: string;
+}
+
+type SortColumn =
+  | 'title'
+  | 'subject'
+  | 'submissions'
+  | 'flagged'
+  | 'avgScore'
+  | 'deadline';
+
+type SortDirection = 'asc' | 'desc';
+
 const INITIAL_STATE: InsightsState = {
   loading: true,
   error: null,
@@ -589,6 +755,72 @@ function countdownText(deadline: string): string {
   return `${Math.max(totalMins, 1)}m left`;
 }
 
+function formatPercent(flagged: number, checked: number): string {
+  if (checked <= 0) return '0.0%';
+  return `${((flagged / checked) * 100).toFixed(1)}%`;
+}
+
+const FLAGGED_SIMILARITY_THRESHOLD = 70;
+
+function getReportSummary(report: PlagiarismReport): AIDetectionSummary {
+  const flaggedSet = new Set<string>();
+
+  const isAiReferenceSide = (name: string, email: string): boolean =>
+    name.trim() === 'AI Reference' || email.trim().length === 0;
+
+  (report.matches ?? []).forEach((match) => {
+    const a = (match.student_a_email ?? '').trim().toLowerCase();
+    const b = (match.student_b_email ?? '').trim().toLowerCase();
+    const aName = (match.student_a_name ?? '').trim();
+    const bName = (match.student_b_name ?? '').trim();
+
+    // Mirror plagiarism page semantics: AI-reference rows are informative but
+    // should not count as flagged plagiarism submissions in summary cards.
+    if (isAiReferenceSide(aName, a) || isAiReferenceSide(bName, b)) {
+      return;
+    }
+
+    const maxSimilarity = Number(match.max_similarity ?? 0);
+    if (maxSimilarity >= FLAGGED_SIMILARITY_THRESHOLD) {
+      if (a) flaggedSet.add(a);
+      if (b) flaggedSet.add(b);
+    }
+  });
+
+  return {
+    checked: 0,
+    flagged: flaggedSet.size,
+  };
+}
+
+function averageOrNull(values: number[]): number | null {
+  if (values.length === 0) return null;
+  const avg = values.reduce((sum, n) => sum + n, 0) / values.length;
+  return Number(avg.toFixed(1));
+}
+
+function sortProfessorRows(
+  rows: ProfessorAssignmentRow[],
+  column: SortColumn,
+  direction: SortDirection
+): ProfessorAssignmentRow[] {
+  const next = [...rows].sort((a, b) => {
+    const dir = direction === 'asc' ? 1 : -1;
+
+    if (column === 'title') return a.title.localeCompare(b.title) * dir;
+    if (column === 'subject') return a.subject.localeCompare(b.subject) * dir;
+    if (column === 'submissions') return (a.submissions - b.submissions) * dir;
+    if (column === 'flagged') return (a.flagged - b.flagged) * dir;
+    if (column === 'avgScore') return ((a.avgScore ?? -1) - (b.avgScore ?? -1)) * dir;
+
+    return (
+      (new Date(a.deadline).getTime() - new Date(b.deadline).getTime()) * dir
+    );
+  });
+
+  return next;
+}
+
 function initialsFromName(name: string): string {
   const words = name.trim().split(/\s+/).filter(Boolean);
   if (words.length === 0) return '?';
@@ -625,6 +857,27 @@ async function fetchQuestionPages(maxPages = 5): Promise<QuestionListItem[]> {
     pagesFetched += 1;
 
     const nextPage = parseNextPage(res.next);
+    if (!nextPage) break;
+    page = nextPage;
+  }
+
+  return all;
+}
+
+async function fetchAllAssignmentsPages(maxPages = 20): Promise<Assignment[]> {
+  let page = 1;
+  let pagesFetched = 0;
+  const all: Assignment[] = [];
+
+  while (pagesFetched < maxPages) {
+    const res = await apiClient.get<PaginatedResponse<Assignment>>('/assignments/', {
+      params: { page },
+    });
+
+    all.push(...(res.data.results ?? []));
+    pagesFetched += 1;
+
+    const nextPage = parseNextPage(res.data.next);
     if (!nextPage) break;
     page = nextPage;
   }
@@ -1087,16 +1340,30 @@ function StudentInsightsContent() {
 }
 
 function ProfessorInsightsContent() {
+  const router = useRouter();
   const { user, isLoading, isAuthenticated } = useAuth();
   const [loadingPage, setLoadingPage] = useState(true);
+  const [leaderboardLoading, setLeaderboardLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [stats, setStats] = useState<ProfessorStats | null>(null);
-  const [questionCount, setQuestionCount] = useState(0);
+  const [platformSummary, setPlatformSummary] = useState<AIDetectionSummary>({ checked: 0, flagged: 0 });
+  const [mySummary, setMySummary] = useState<AIDetectionSummary>({ checked: 0, flagged: 0 });
+  const [rows, setRows] = useState<ProfessorAssignmentRow[]>([]);
+  const [topQuestioners, setTopQuestioners] = useState<LeaderboardEntry[]>([]);
+  const [topAnswerers, setTopAnswerers] = useState<LeaderboardEntry[]>([]);
+  const [sortColumn, setSortColumn] = useState<SortColumn>('deadline');
+  const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
 
   const fullName = useMemo(() => {
     if (!user) return '';
     return buildFullName(user.first_name, user.last_name);
   }, [user]);
+
+  const sortedRows = useMemo(
+    () => sortProfessorRows(rows, sortColumn, sortDirection),
+    [rows, sortColumn, sortDirection]
+  );
+
+  const hasAiData = platformSummary.checked > 0 || mySummary.checked > 0;
 
   useEffect(() => {
     if (isLoading || !isAuthenticated || !user) return;
@@ -1107,28 +1374,137 @@ function ProfessorInsightsContent() {
 
     async function loadProfessorData() {
       setLoadingPage(true);
+      setLeaderboardLoading(true);
       setError(null);
 
-      const [statsRes, questionRes] = await Promise.allSettled([
-        getProfessorStats(),
-        fetchUserQuestionCount(authUser.email, fullName),
+      let allAssignments: Assignment[] = [];
+      try {
+        allAssignments = await fetchAllAssignmentsPages();
+      } catch {
+        setError('Failed to load professor insights right now.');
+        setLoadingPage(false);
+        setLeaderboardLoading(false);
+        return;
+      }
+
+      if (cancelled) return;
+
+      const myAssignments = allAssignments.filter((a) => normalize(a.professor_name) === normalize(fullName));
+
+      const reportResults = await Promise.allSettled(
+        allAssignments.map(async (assignment) => {
+          try {
+            const report = await getPlagiarismReport(assignment.id);
+            return { assignmentId: assignment.id, report };
+          } catch {
+            return { assignmentId: assignment.id, report: null as PlagiarismReport | null };
+          }
+        })
+      );
+
+      if (cancelled) return;
+
+      const reportMap = new Map<number, PlagiarismReport>();
+      reportResults.forEach((result) => {
+        if (result.status === 'fulfilled' && result.value.report) {
+          reportMap.set(result.value.assignmentId, result.value.report);
+        }
+      });
+
+      let platformChecked = 0;
+      let platformFlagged = 0;
+      let myChecked = 0;
+      let myFlagged = 0;
+
+      allAssignments.forEach((assignment) => {
+        const report = reportMap.get(assignment.id);
+        if (!report) return;
+        const sum = getReportSummary(report);
+        const checkedCount = Math.max(assignment.submission_count ?? 0, 0);
+        platformChecked += checkedCount;
+        platformFlagged += Math.min(sum.flagged, checkedCount);
+      });
+
+      myAssignments.forEach((assignment) => {
+        const report = reportMap.get(assignment.id);
+        if (!report) return;
+        const sum = getReportSummary(report);
+        const checkedCount = Math.max(assignment.submission_count ?? 0, 0);
+        myChecked += checkedCount;
+        myFlagged += Math.min(sum.flagged, checkedCount);
+      });
+
+      const performanceRows = await Promise.all(
+        myAssignments.map(async (assignment): Promise<ProfessorAssignmentRow> => {
+          const report = reportMap.get(assignment.id);
+          const reportSum = report ? getReportSummary(report) : { checked: 0, flagged: 0 };
+
+          try {
+            const submissionsRes = await getSubmissions(assignment.id);
+            const submissions = submissionsRes.results ?? [];
+            const submissionCount = assignment.submission_count ?? submissions.length;
+
+            const reviewResults = await Promise.allSettled(
+              submissions
+                .filter((s) => s.has_reviews)
+                .map((s) => getReviews(assignment.id, s.id))
+            );
+
+            const grades: number[] = [];
+            reviewResults.forEach((r) => {
+              if (r.status !== 'fulfilled') return;
+              r.value.forEach((review) => {
+                if (typeof review.grade === 'number') grades.push(review.grade);
+              });
+            });
+
+            return {
+              id: assignment.id,
+              title: assignment.title,
+              subject: assignment.subject?.code ?? assignment.subject?.name ?? 'N/A',
+              submissions: submissionCount,
+              flagged: Math.min(reportSum.flagged, Math.max(submissionCount, 0)),
+              avgScore: averageOrNull(grades),
+              deadline: assignment.deadline,
+            };
+          } catch {
+            const submissionCount = Math.max(assignment.submission_count ?? 0, 0);
+            return {
+              id: assignment.id,
+              title: assignment.title,
+              subject: assignment.subject?.code ?? assignment.subject?.name ?? 'N/A',
+              submissions: submissionCount,
+              flagged: Math.min(reportSum.flagged, submissionCount),
+              avgScore: null,
+              deadline: assignment.deadline,
+            };
+          }
+        })
+      );
+
+      if (cancelled) return;
+
+      setPlatformSummary({ checked: platformChecked, flagged: platformFlagged });
+      setMySummary({ checked: myChecked, flagged: myFlagged });
+      setRows(performanceRows);
+
+      setLoadingPage(false);
+
+      const [leaderboardRes] = await Promise.allSettled([
+        buildLeaderboard(authUser.email, fullName),
       ]);
 
       if (cancelled) return;
 
-      if (statsRes.status === 'fulfilled') {
-        setStats(statsRes.value);
+      if (leaderboardRes.status === 'fulfilled') {
+        setTopQuestioners(leaderboardRes.value.topQuestioners);
+        setTopAnswerers(leaderboardRes.value.topAnswerers);
+      } else {
+        setTopQuestioners([]);
+        setTopAnswerers([]);
       }
 
-      if (questionRes.status === 'fulfilled') {
-        setQuestionCount(questionRes.value);
-      }
-
-      if (statsRes.status !== 'fulfilled' && questionRes.status !== 'fulfilled') {
-        setError('Failed to load professor insights right now.');
-      }
-
-      setLoadingPage(false);
+      setLeaderboardLoading(false);
     }
 
     loadProfessorData();
@@ -1140,12 +1516,21 @@ function ProfessorInsightsContent() {
 
   if (!user) return null;
 
-  const professorStats: StatTile[] = [
-    { label: 'Assignments Created', value: stats?.total_assignments ?? 0 },
-    { label: 'Submissions Received', value: stats?.total_submissions_received ?? 0 },
-    { label: 'Reviews Given', value: stats?.total_reviews_given ?? 0 },
-    { label: 'Forum Questions', value: questionCount },
-  ];
+  const onSort = (column: SortColumn) => {
+    setSortColumn((prevCol) => {
+      if (prevCol === column) {
+        setSortDirection((prevDir) => (prevDir === 'asc' ? 'desc' : 'asc'));
+        return prevCol;
+      }
+      setSortDirection(column === 'deadline' ? 'asc' : 'desc');
+      return column;
+    });
+  };
+
+  const sortIndicator = (column: SortColumn) => {
+    if (sortColumn !== column) return '↕';
+    return sortDirection === 'asc' ? '↑' : '↓';
+  };
 
   return (
     <>
@@ -1171,7 +1556,7 @@ function ProfessorInsightsContent() {
               <h1 className="ip-page-title">
                 Professor <span>Insights</span>
               </h1>
-              <p className="ip-page-subtitle">Your teaching impact and engagement snapshot</p>
+              <p className="ip-page-subtitle">AI detection, assignment performance, and community engagement</p>
             </div>
           </div>
 
@@ -1180,50 +1565,130 @@ function ProfessorInsightsContent() {
           <section className="ip-section ip-section-1">
             <div className="ip-section-head">
               <div className="ip-section-mark" />
-              <h2 className="ip-section-title">Impact Stats</h2>
+              <h2 className="ip-section-title">AI Detection Summary</h2>
               <div className="ip-section-line" />
             </div>
 
             {loadingPage ? (
-              <p className="ip-loading">Loading your stats...</p>
+              <p className="ip-loading">Loading AI detection summary...</p>
             ) : (
-              <div className="ip-stats-grid">
-                {professorStats.map((tile) => (
-                  <article key={tile.label} className="ip-stat-tile">
-                    <p className="ip-stat-number">{tile.value}</p>
-                    <p className="ip-stat-label">{tile.label}</p>
+              <>
+                {!hasAiData && (
+                  <p className="ip-empty" style={{ marginBottom: 14 }}>
+                    No data yet - run a plagiarism check on an assignment to see results here.
+                  </p>
+                )}
+
+                <div className="ip-ai-grid">
+                  <article className="ip-ai-card">
+                    <p className="ip-ai-title">Assignments You Can Access</p>
+                    <p className="ip-ai-rate">{formatPercent(platformSummary.flagged, platformSummary.checked)}</p>
+                    <p className="ip-ai-label">of all checked submissions flagged as AI-generated</p>
+                    <div className="ip-ai-bar">
+                      <div
+                        className="ip-ai-fill"
+                        style={{ width: `${Math.min((platformSummary.flagged / Math.max(platformSummary.checked, 1)) * 100, 100)}%` }}
+                      />
+                    </div>
+                    <p className="ip-ai-meta">
+                      Flagged {platformSummary.flagged} / Checked {platformSummary.checked}
+                    </p>
                   </article>
-                ))}
-              </div>
+
+                  <article className="ip-ai-card">
+                    <p className="ip-ai-title">Your Assignments AI Detection</p>
+                    <p className="ip-ai-rate">{formatPercent(mySummary.flagged, mySummary.checked)}</p>
+                    <p className="ip-ai-label">of checked submissions in your assignments flagged as AI-generated</p>
+                    <div className="ip-ai-bar">
+                      <div
+                        className="ip-ai-fill"
+                        style={{ width: `${Math.min((mySummary.flagged / Math.max(mySummary.checked, 1)) * 100, 100)}%` }}
+                      />
+                    </div>
+                    <p className="ip-ai-meta">
+                      Flagged {mySummary.flagged} / Checked {mySummary.checked}
+                    </p>
+                  </article>
+                </div>
+              </>
             )}
           </section>
 
           <section className="ip-section ip-section-2">
-            <div className="ip-two-col">
-              <article className="ip-card">
-                <h3 className="ip-card-title">Professor View</h3>
-                <p className="ip-row-meta" style={{ lineHeight: 1.6 }}>
-                  This route is role-aware and now serves a dedicated professor view instead of student-only content.
-                  You can navigate to assignments and forum from the header for deeper actions.
-                </p>
-                <div style={{ marginTop: 14, display: 'flex', gap: 10 }}>
-                  <Link href="/assignments" className="ip-list-link" style={{ width: 'fit-content' }}>
-                    Open Assignments
-                  </Link>
-                  <Link href="/forum" className="ip-list-link" style={{ width: 'fit-content' }}>
-                    Open Forum
-                  </Link>
-                </div>
-              </article>
-
-              <article className="ip-card">
-                <h3 className="ip-card-title">Role Routing</h3>
-                <p className="ip-row-meta" style={{ lineHeight: 1.6 }}>
-                  Students automatically see personal progress insights. Professors see this teaching-oriented panel.
-                  This keeps a single Insights URL while respecting account role.
-                </p>
-              </article>
+            <div className="ip-section-head" style={{ marginBottom: 10 }}>
+              <div className="ip-section-mark" />
+              <h2 className="ip-section-title">Assignment Performance Table</h2>
+              <div className="ip-section-line" />
             </div>
+
+            {loadingPage ? (
+              <p className="ip-loading">Loading assignments...</p>
+            ) : rows.length === 0 ? (
+              <p className="ip-empty">No assignments created yet.</p>
+            ) : (
+              <div className="ip-table-wrap">
+                <table className="ip-performance-table">
+                  <thead>
+                    <tr>
+                      <th><button className="ip-sort-btn" onClick={() => onSort('title')}>Title {sortIndicator('title')}</button></th>
+                      <th><button className="ip-sort-btn" onClick={() => onSort('subject')}>Subject {sortIndicator('subject')}</button></th>
+                      <th><button className="ip-sort-btn" onClick={() => onSort('submissions')}>Submissions {sortIndicator('submissions')}</button></th>
+                      <th><button className="ip-sort-btn" onClick={() => onSort('flagged')}>Flagged {sortIndicator('flagged')}</button></th>
+                      <th><button className="ip-sort-btn" onClick={() => onSort('avgScore')}>Avg Score {sortIndicator('avgScore')}</button></th>
+                      <th><button className="ip-sort-btn" onClick={() => onSort('deadline')}>Deadline {sortIndicator('deadline')}</button></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {sortedRows.map((row) => (
+                      <tr
+                        key={row.id}
+                        className="ip-row-link"
+                        tabIndex={0}
+                        onClick={() => router.push(`/assignments/${row.id}`)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault();
+                            router.push(`/assignments/${row.id}`);
+                          }
+                        }}
+                      >
+                        <td style={{ fontWeight: 700 }}>{row.title}</td>
+                        <td>{row.subject}</td>
+                        <td>{row.submissions}</td>
+                        <td>{row.flagged}</td>
+                        <td className="ip-score">{row.avgScore === null ? '-' : row.avgScore}</td>
+                        <td>{new Date(row.deadline).toLocaleDateString()}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </section>
+
+          <section className="ip-section ip-section-3">
+            <div className="ip-section-head">
+              <div className="ip-section-mark" />
+              <h2 className="ip-section-title">Community Leaderboard</h2>
+              <div className="ip-section-line" />
+            </div>
+
+            {loadingPage || leaderboardLoading ? (
+              <p className="ip-loading">Loading leaderboard...</p>
+            ) : (
+              <div className="ip-board-grid">
+                <LeaderboardTable
+                  title="Top Questioners"
+                  rows={topQuestioners}
+                  countLabel="Questions"
+                />
+                <LeaderboardTable
+                  title="Top Answerers"
+                  rows={topAnswerers}
+                  countLabel="Answers"
+                />
+              </div>
+            )}
           </section>
         </div>
       </div>
