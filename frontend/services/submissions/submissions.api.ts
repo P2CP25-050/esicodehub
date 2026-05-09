@@ -3,6 +3,8 @@ import type {
   PersonalSubmission,
   PersonalSubmissionFile,
   PersonalSubmissionCreatePayload,
+  SubmissionComment,
+  SubmissionCommentCreatePayload,
   SubmissionListParams,
   PaginatedResponse,
 } from './submissions.types';
@@ -180,4 +182,43 @@ export const getFileContent = async (
     `/personal-submissions/${submissionId}/files/${fileId}/content/`
   );
   return res.data;
+};
+
+/**
+ * Lists all inline comments for a submission.
+ * Backend: GET /submissions/{id}/comments/
+ */
+export const listSubmissionComments = async (
+  submissionId: number
+): Promise<SubmissionComment[]> => {
+  const res = await apiClient.get<SubmissionComment[]>(
+    `/personal-submissions/${submissionId}/comments/`
+  );
+  return res.data;
+};
+
+/**
+ * Creates a new inline comment on a submission.
+ * Backend: POST /submissions/{id}/comments/
+ */
+export const createSubmissionComment = async (
+  submissionId: number,
+  payload: SubmissionCommentCreatePayload
+): Promise<SubmissionComment> => {
+  const res = await apiClient.post<SubmissionComment>(
+    `/personal-submissions/${submissionId}/comments/`,
+    payload
+  );
+  return res.data;
+};
+
+/**
+ * Deletes a comment authored by the current user.
+ * Backend: DELETE /submissions/{id}/comments/{cid}/
+ */
+export const deleteSubmissionComment = async (
+  submissionId: number,
+  commentId: number
+): Promise<void> => {
+  await apiClient.delete(`/personal-submissions/${submissionId}/comments/${commentId}/`);
 };
