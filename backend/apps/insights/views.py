@@ -137,10 +137,10 @@ class ProfessorInsightsView(APIView):
     def get(self, request):
         user = request.user
         return Response({
-        'platform_ai_stats':  self._platform_ai_stats(),
-        'professor_ai_stats': self._professor_ai_stats(user),
-        'assignment_summary': self._assignment_summary(user),
-    })
+            'platform_ai_stats':  self._platform_ai_stats(),
+            'professor_ai_stats': self._professor_ai_stats(user),
+            'assignment_summary': self._assignment_summary(user),
+        })
 
     def _platform_ai_stats(self):
         checked = PlagiarismReport.objects.filter(
