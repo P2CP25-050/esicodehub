@@ -76,14 +76,12 @@ class PersonalSubmissionListCreateView(APIView):
     def post(self, request):
         serializer = PersonalSubmissionCreateSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-
         submission = serializer.save(owner=request.user, gcs_prefix='')
         submission.gcs_prefix = PersonalSubmission.build_gcs_prefix(
             request.user.id,
             submission.id,
         )
         submission.save(update_fields=['gcs_prefix'])
-
         detail_serializer = PersonalSubmissionDetailSerializer(submission)
         return Response(detail_serializer.data, status=status.HTTP_201_CREATED)
 

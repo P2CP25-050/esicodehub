@@ -58,14 +58,14 @@ export interface PersonalSubmissionCreatePayload {
 
 // Parameters for listing submissions with optional filters and pagination
 export interface SubmissionListParams {
-  mine?: boolean;
   language?: string; //  typed filter
 
   type?:     string;
   course?:   string;
   search?:   string;            // search by title or description
   page?:     number;            // which page to fetch
-  visibility?: string;
+  visibility?: 'public' | 'private';
+  mine?:     boolean;
 }
 
 /**

@@ -118,16 +118,30 @@ class PersonalSubmissionListSecurityTests(APITestCase):
             ),
         )
 
-    def test_list_returns_public_and_own_submissions(self):
+    def test_list_includes_public_and_own_submissions(self):
         self.client.force_authenticate(user=self.user_one)
 
         response = self.client.get(reverse('submission-list-create'))
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data['count'], 2)
-        returned_ids = {item['id'] for item in response.data['results']}
-        self.assertIn(self.own_submission.id, returned_ids)
-        self.assertIn(self.other_submission.id, returned_ids)
+        result_ids = {item['id'] for item in response.data['results']}
+        self.assertSetEqual(
+            result_ids,
+            {self.own_submission.id, self.other_submission.id},
+        )
+
+    def test_list_mine_only_returns_own_submissions(self):
+        self.client.force_authenticate(user=self.user_one)
+
+        response = self.client.get(
+            reverse('submission-list-create'),
+            {'mine': 'true'},
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['count'], 1)
+        self.assertEqual(response.data['results'][0]['id'], self.own_submission.id)
 
 
 class FileValidatorTests(APITestCase):

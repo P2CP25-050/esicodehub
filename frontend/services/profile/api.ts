@@ -267,7 +267,7 @@ export async function getRecentActivity(): Promise<ActivityItem[]> {
   const items: ActivityItem[] = [];
 
   try {
-    const { data } = await apiClient.get("/submissions/", {
+    const { data } = await apiClient.get("/personal-submissions/", {
       params: { mine: true, page: 1 },
     });
 

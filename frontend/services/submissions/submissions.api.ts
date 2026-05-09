@@ -24,9 +24,20 @@ import type {
 export const listSubmissions = async (
   params?: SubmissionListParams
 ): Promise<PaginatedResponse<PersonalSubmission>> => {
+  const requestParams = params
+    ? {
+        language: params.language,
+        type: params.type,
+        course: params.course,
+        search: params.search,
+        page: params.page,
+        visibility: params.visibility,
+        mine: params.mine,
+      }
+    : undefined;
   const res = await apiClient.get<PaginatedResponse<PersonalSubmission>>(
     '/submissions/',
-    { params }
+    { params: requestParams }
   );
   return res.data;
 };
@@ -46,7 +57,7 @@ export const getSubmission = async (
   id: number
 ): Promise<PersonalSubmission> => {
   const res = await apiClient.get<PersonalSubmission>(
-    `/submissions/${id}/`
+    `/personal-submissions/${id}/`
   );
   return res.data;
 };
@@ -68,7 +79,7 @@ export const createSubmission = async (
   data: PersonalSubmissionCreatePayload
 ): Promise<PersonalSubmission> => {
   const res = await apiClient.post<PersonalSubmission>(
-    '/submissions/',
+    '/personal-submissions/',
     data
   );
   return res.data;
@@ -87,7 +98,7 @@ export const updateSubmission = async (
   data: Partial<PersonalSubmissionCreatePayload>
 ): Promise<PersonalSubmission> => {
   const res = await apiClient.patch<PersonalSubmission>(
-    `/submissions/${id}/`,
+    `/personal-submissions/${id}/`,
     data
   );
   return res.data;
@@ -101,7 +112,7 @@ export const updateSubmission = async (
  * await deleteSubmission(5);
  */
 export const deleteSubmission = async (id: number): Promise<void> => {
-  await apiClient.delete(`/submissions/${id}/`);
+  await apiClient.delete(`/personal-submissions/${id}/`);
 };
 
 /**
@@ -132,7 +143,7 @@ export const uploadFiles = async (
 
   //  No Content-Type header needed — axios sets it automatically for FormData
   const res = await apiClient.post<PersonalSubmissionFile[]>(
-    `/submissions/${submissionId}/files/`,
+    `/personal-submissions/${submissionId}/files/`,
     formData
   );
   return res.data;
@@ -149,7 +160,7 @@ export const deleteFile = async (
   fileId:       number
 ): Promise<void> => {
   await apiClient.delete(
-    `/submissions/${submissionId}/files/${fileId}/`
+    `/personal-submissions/${submissionId}/files/${fileId}/`
   );
 };
 
@@ -166,7 +177,7 @@ export const getFileContent = async (
   fileId:       number
 ): Promise<string> => {
   const res = await apiClient.get<string>(
-    `/submissions/${submissionId}/files/${fileId}/content/`
+    `/personal-submissions/${submissionId}/files/${fileId}/content/`
   );
   return res.data;
 };

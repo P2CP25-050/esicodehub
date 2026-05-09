@@ -38,26 +38,36 @@ describe('submissions.api', () => {
 
     expect(apiClient.get).toHaveBeenCalledWith(
       '/submissions/',
-      { params: { language: 'Python', page: 2 } }
+      {
+        params: {
+          language: 'Python',
+          type: undefined,
+          course: undefined,
+          search: undefined,
+          page: 2,
+          visibility: undefined,
+          mine: undefined,
+        }
+      }
     );
   });
 
   // ── getSubmission ──────────────────────────────────────────────────────────
 
-  it('calls GET /submissions/5/', async () => {
+  it('calls GET /personal-submissions/5/', async () => {
     (apiClient.get as jest.Mock).mockResolvedValue({
       data: { id: 5, title: 'Bubble Sort' }
     });
 
     const result = await submissionsApi.getSubmission(5);
 
-    expect(apiClient.get).toHaveBeenCalledWith('/submissions/5/');
+    expect(apiClient.get).toHaveBeenCalledWith('/personal-submissions/5/');
     expect(result.title).toBe('Bubble Sort');
   });
 
   // ── createSubmission ───────────────────────────────────────────────────────
 
-  it('calls POST /submissions/', async () => {
+  it('calls POST /personal-submissions/', async () => {
     const payload = {
       title: 'Bubble Sort', language: 'Python' as const,
       submission_type: 'review', course_tag: 'Algorithms',
@@ -69,14 +79,14 @@ describe('submissions.api', () => {
     const result = await submissionsApi.createSubmission(payload);
 
     expect(apiClient.post).toHaveBeenCalledWith(
-      '/submissions/', payload
+      '/personal-submissions/', payload
     );
     expect(result.id).toBe(1);
   });
 
   // ── updateSubmission ───────────────────────────────────────────────────────
 
-  it('calls PATCH /submissions/5/', async () => {
+  it('calls PATCH /personal-submissions/5/', async () => {
     (apiClient.patch as jest.Mock).mockResolvedValue({
       data: { id: 5, title: 'New Title' }
     });
@@ -84,19 +94,19 @@ describe('submissions.api', () => {
     const result = await submissionsApi.updateSubmission(5, { title: 'New Title' });
 
     expect(apiClient.patch).toHaveBeenCalledWith(
-      '/submissions/5/', { title: 'New Title' }
+      '/personal-submissions/5/', { title: 'New Title' }
     );
     expect(result.title).toBe('New Title');
   });
 
   // ── deleteSubmission ───────────────────────────────────────────────────────
 
-  it('calls DELETE /submissions/5/', async () => {
+  it('calls DELETE /personal-submissions/5/', async () => {
     (apiClient.delete as jest.Mock).mockResolvedValue({});
 
     await submissionsApi.deleteSubmission(5);
 
-    expect(apiClient.delete).toHaveBeenCalledWith('/submissions/5/');
+    expect(apiClient.delete).toHaveBeenCalledWith('/personal-submissions/5/');
   });
 
   // ── uploadFiles ────────────────────────────────────────────────────────────
@@ -108,26 +118,26 @@ describe('submissions.api', () => {
     await submissionsApi.uploadFiles(5, [file], ['src/main.py']);
 
     expect(apiClient.post).toHaveBeenCalledWith(
-      '/submissions/5/files/',
+      '/personal-submissions/5/files/',
       expect.any(FormData)  // we just check FormData was sent
     );
   });
 
   // ── deleteFile ─────────────────────────────────────────────────────────────
 
-  it('calls DELETE /submissions/5/files/12/', async () => {
+  it('calls DELETE /personal-submissions/5/files/12/', async () => {
     (apiClient.delete as jest.Mock).mockResolvedValue({});
 
     await submissionsApi.deleteFile(5, 12);
 
     expect(apiClient.delete).toHaveBeenCalledWith(
-      '/submissions/5/files/12/'
+      '/personal-submissions/5/files/12/'
     );
   });
 
   // ── getFileContent ─────────────────────────────────────────────────────────
 
-  it('calls GET /submissions/5/files/12/content/', async () => {
+  it('calls GET /personal-submissions/5/files/12/content/', async () => {
     (apiClient.get as jest.Mock).mockResolvedValue({
       data: 'def bubble_sort(): ...'
     });
@@ -135,7 +145,7 @@ describe('submissions.api', () => {
     const content = await submissionsApi.getFileContent(5, 12);
 
     expect(apiClient.get).toHaveBeenCalledWith(
-      '/submissions/5/files/12/content/'
+      '/personal-submissions/5/files/12/content/'
     );
     expect(content).toBe('def bubble_sort(): ...');
   });
