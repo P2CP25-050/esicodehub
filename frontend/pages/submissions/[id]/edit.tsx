@@ -1,7 +1,8 @@
 import { useState, useEffect, useCallback, useRef, ReactNode } from "react";
 import Head from 'next/head';
 import { useRouter } from "next/router";
-import Link from "next/link";
+import  Link  from "next/link";
+import axios from "axios";
 
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { useAuth } from "@/context/AuthContext";
@@ -16,8 +17,11 @@ import type { PersonalSubmission } from "@/services/submissions/submissions.type
 import VisibilityToggle from "@/components/submissions/VisibilityToggle";
 
 const LANGUAGES = [
-  "Python", "JavaScript", "Java", "C++", "C",
-  "SQL", "TypeScript", "Pascal", "Other",
+  "Python", "C", "C++", "Java", "JavaScript", "TypeScript",
+  "C#", "Visual Basic", "Fortran", "ML", "Haskell",
+  "Lisp", "Scheme", "Pascal", "Modula2", "Ada",
+  "Perl", "TCL", "MATLAB", "VHDL", "Verilog",
+  "Spice", "MIPS Assembly", "x86 Assembly", "HCL2", "Other",
 ] as const;
 type Language = (typeof LANGUAGES)[number];
 
@@ -37,6 +41,25 @@ function fmtSize(bytes: number): string {
   if (bytes >= 1024) return `${(bytes / 1024).toFixed(0)} KB`;
   return `${bytes} B`;
 }
+
+const getUploadErrorMessage = (err: unknown, language: string): string => {
+  if (axios.isAxiosError(err)) {
+    const detail = err.response?.data?.detail;
+    if (err.response?.status === 400) {
+      if (language === "Other") {
+        return "Invalid file type. When 'Other' is selected, only .pdf, .txt, .docx, and .zip files are allowed.";
+      } else {
+        return `Invalid file type for ${language}. Only code files are allowed. If you want to upload a PDF, DOCX, or ZIP, select 'Other' as the language.`;
+      }
+    }
+    if (typeof detail === "string" && detail.trim().length > 0) return detail;
+    if (typeof err.message === "string" && err.message.trim().length > 0) return err.message;
+  }
+  if (err instanceof Error && err.message.trim().length > 0) return err.message;
+  return "File upload failed. Please try again.";
+};
+
+// ─── Spinner ──────────────────────────────────────────────────────────────────
 
 function Spinner({ light = false }: { light?: boolean }) {
   return (
@@ -141,8 +164,12 @@ function MetadataTab({ submission, onSaved }: { submission: PersonalSubmission; 
     setSaving(true); setError(null);
     try {
       const updated = await updateSubmission(submission.id, {
-        title: form.title, description: form.description, language: form.language,
-        course_tag: form.course_tag, submission_type: form.submission_type, visibility: form.visibility,
+        title:           form.title,
+        description:     form.description,
+        language:        form.language === "Other" ? "other" : form.language,
+        course_tag:      form.course_tag,
+        submission_type: form.submission_type,
+        visibility:      form.visibility,
       });
       setSaved(true); onSaved(updated); setTimeout(() => setSaved(false), 5000);
     } catch (err) { setError(err instanceof Error ? err.message : "Failed to save."); }
@@ -236,8 +263,17 @@ function FilesTab({ submission }: { submission: PersonalSubmission }) {
       setStaged([]);
       setUploadDone(true);
       setTimeout(() => setUploadDone(false), 4000);
-    } catch (err) { setUploadError(err instanceof Error ? err.message : "Upload failed. Please try again."); }
-    finally { setUploading(false); setUploadProgress(0); }
+    } catch (err: unknown) {
+      setUploadError(
+        getUploadErrorMessage(
+          err,
+          submission.language === "other" ? "Other" : submission.language
+        )
+      );
+    } finally {
+      setUploading(false);
+      setUploadProgress(0);
+    }
   }
 
   return (

@@ -19,7 +19,7 @@ from .serializers import (
     PersonalSubmissionDetailSerializer,
     PersonalSubmissionListSerializer,
 )
-from .validators import validate_code_file
+from .validators import validate_code_file, validate_attachment_file
 
 # File size limits in bytes
 MAX_FILE_SIZE = 10 * 1024 * 1024    # 10MB per file
@@ -222,6 +222,8 @@ class FileUploadView(APIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
+        is_other_submission = submission.language == 'other'
+
         # Validate each file before doing anything
         for file in files:
             # Check individual file size
@@ -233,7 +235,10 @@ class FileUploadView(APIView):
 
             # Check file extension and MIME type through the validator
             try:
-                validate_code_file(file)
+                if is_other_submission:
+                    validate_attachment_file(file)
+                else:
+                    validate_code_file(file)
             except serializers.ValidationError as e:
                 return Response(
                     {'detail': e.detail[0]},
