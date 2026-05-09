@@ -8,6 +8,7 @@ import {
 } from 'react';
 import Head from 'next/head';
 import dynamic from 'next/dynamic';
+import Link from 'next/link';
 import { useRouter } from 'next/router';
 import type { EditorProps } from '@monaco-editor/react';
 import type { IDisposable, editor as MonacoEditorNS } from 'monaco-editor';
@@ -21,12 +22,20 @@ import {
   getSubmission,
   getSubmissionFileContent,
 } from '@/services/assignments/assignments.api';
+import {
+  getPlagiarismReport,
+  triggerPlagiarismCheck,
+} from '@/services/plagiarism/plagiarism.api';
 import type {
   AssignmentSubmission,
   AssignmentSubmissionFile,
   ReviewCreatePayload,
   SubmissionReview,
 } from '@/services/assignments/assignments.types';
+import type {
+  PlagiarismReport,
+  SimilarityMatch,
+} from '@/services/plagiarism/plagiarism.types';
 
 const MonacoEditor = dynamic<EditorProps>(
   () => import('@monaco-editor/react').then((module) => module.default),
@@ -82,6 +91,20 @@ type ToastState = {
   message: string;
 } | null;
 
+type PlagiarismPanelState = 'loading' | 'ready' | 'not-run' | 'error';
+
+type SubmissionPair = {
+  id: number;
+  language: string;
+  similarityForSubmission: number;
+  maxSimilarity: number;
+  linesMatched: number;
+  counterpartName: string;
+  counterpartEmail: string;
+  isAiFlag: boolean;
+  mossLink: string;
+};
+
 const normalizePath = (path: string): string => {
   const normalized = path.replace(/\\/g, '/').replace(/^\/+/, '');
   return normalized || path;
@@ -109,6 +132,24 @@ const formatFileSize = (value: number): string => {
   if (kb < 1024) return `${kb.toFixed(1)} KB`;
   const mb = kb / 1024;
   return `${mb.toFixed(1)} MB`;
+};
+
+const normalizeIdentity = (value: string | null | undefined): string =>
+  (value ?? '').trim().toLowerCase();
+
+const getAiConfidenceLabel = (
+  score: number | null
+): 'High' | 'Medium' | 'Low' | 'None' => {
+  if (score == null || !Number.isFinite(score)) return 'None';
+  if (score >= 70) return 'High';
+  if (score >= 50) return 'Medium';
+  return 'Low';
+};
+
+const toneForSimilarity = (value: number): string => {
+  if (value >= 70) return 'text-rose-700 bg-rose-50 border-rose-200';
+  if (value >= 50) return 'text-amber-700 bg-amber-50 border-amber-200';
+  return 'text-emerald-700 bg-emerald-50 border-emerald-200';
 };
 
 const languageFromFilename = (filename: string): string => {
@@ -409,6 +450,12 @@ function AssignmentSubmissionReviewPageContent() {
   const [lineSelectorValue, setLineSelectorValue] = useState('1');
 
   const [toast, setToast] = useState<ToastState>(null);
+  const [plagiarismOpen, setPlagiarismOpen] = useState(true);
+  const [plagiarismState, setPlagiarismState] =
+    useState<PlagiarismPanelState>('loading');
+  const [plagiarismReport, setPlagiarismReport] = useState<PlagiarismReport | null>(null);
+  const [plagiarismError, setPlagiarismError] = useState<string | null>(null);
+  const [runningPlagiarismCheck, setRunningPlagiarismCheck] = useState(false);
 
   const editorRef = useRef<MonacoEditorNS.IStandaloneCodeEditor | null>(null);
   const monacoRef = useRef<typeof import('monaco-editor') | null>(null);
@@ -563,6 +610,77 @@ function AssignmentSubmissionReviewPageContent() {
     );
   }, [commentLinesForSelectedFile]);
 
+  const fullPlagiarismReportHref = useMemo(() => {
+    if (!assignmentId) return '#';
+    return `/assignments/${assignmentId}/plagiarism`;
+  }, [assignmentId]);
+
+  const submissionPairs = useMemo(() => {
+    if (!plagiarismReport) return [] as SubmissionPair[];
+
+    const targetEmail = normalizeIdentity(submission?.student_email);
+    const targetName = normalizeIdentity(submission?.student_name);
+
+    const pairs: SubmissionPair[] = [];
+
+    (plagiarismReport.matches ?? []).forEach((match: SimilarityMatch) => {
+      const aEmail = normalizeIdentity(match.student_a_email);
+      const bEmail = normalizeIdentity(match.student_b_email);
+      const aName = normalizeIdentity(match.student_a_name);
+      const bName = normalizeIdentity(match.student_b_name);
+
+      const isA =
+        (targetEmail.length > 0 && aEmail === targetEmail) ||
+        (targetName.length > 0 && aName === targetName);
+      const isB =
+        (targetEmail.length > 0 && bEmail === targetEmail) ||
+        (targetName.length > 0 && bName === targetName);
+
+      if (!isA && !isB) return;
+
+      const similarityForSubmission = isA
+        ? Number(match.similarity_a ?? 0)
+        : Number(match.similarity_b ?? 0);
+
+      pairs.push({
+        id: match.id,
+        language: match.language || 'Unknown',
+        similarityForSubmission,
+        maxSimilarity: Number(match.max_similarity ?? similarityForSubmission),
+        linesMatched: Number(match.lines_matched ?? 0),
+        counterpartName: isA ? match.student_b_name || 'Unknown User' : match.student_a_name || 'Unknown User',
+        counterpartEmail: isA ? match.student_b_email || '' : match.student_a_email || '',
+        isAiFlag: Boolean(match.ai_moss_flag),
+        mossLink: match.moss_link || '',
+      });
+    });
+
+    return pairs.sort((a, b) => b.similarityForSubmission - a.similarityForSubmission);
+  }, [plagiarismReport, submission?.student_email, submission?.student_name]);
+
+  const highestPair = submissionPairs.length > 0 ? submissionPairs[0] : null;
+
+  const aiSummary = useMemo(() => {
+    const aiPairs = submissionPairs.filter((pair) => pair.isAiFlag);
+    if (aiPairs.length === 0) {
+      return {
+        flagged: false,
+        confidence: 'None' as const,
+        score: null as number | null,
+      };
+    }
+
+    const highestAi = aiPairs.reduce((max, pair) =>
+      pair.similarityForSubmission > max ? pair.similarityForSubmission : max,
+    0);
+
+    return {
+      flagged: true,
+      confidence: getAiConfidenceLabel(highestAi),
+      score: highestAi,
+    };
+  }, [submissionPairs]);
+
   useEffect(() => {
     refreshLineDecorations();
   }, [refreshLineDecorations]);
@@ -668,6 +786,61 @@ function AssignmentSubmissionReviewPageContent() {
     applyReviewIntoForm(split.myReview);
   }, [applyReviewIntoForm, assignmentId, submissionId, user]);
 
+  const fetchPlagiarism = useCallback(async () => {
+    if (!assignmentId) return;
+
+    setPlagiarismError(null);
+    setPlagiarismState('loading');
+
+    try {
+      const report = await getPlagiarismReport(assignmentId);
+      setPlagiarismReport(report);
+      setPlagiarismState('ready');
+    } catch (error: unknown) {
+      const maybeStatus =
+        typeof error === 'object' &&
+        error !== null &&
+        'response' in error &&
+        typeof (error as { response?: { status?: number } }).response?.status === 'number'
+          ? (error as { response?: { status?: number } }).response?.status
+          : null;
+
+      if (maybeStatus === 404) {
+        setPlagiarismReport(null);
+        setPlagiarismState('not-run');
+        return;
+      }
+
+      setPlagiarismReport(null);
+      setPlagiarismState('error');
+      setPlagiarismError('Failed to load plagiarism data.');
+    }
+  }, [assignmentId]);
+
+  const handleRunPlagiarismCheck = useCallback(async () => {
+    if (!assignmentId || runningPlagiarismCheck) return;
+
+    setRunningPlagiarismCheck(true);
+    setPlagiarismError(null);
+
+    try {
+      await triggerPlagiarismCheck(assignmentId);
+      await fetchPlagiarism();
+      setToast({
+        type: 'success',
+        message: 'Plagiarism check started. Refreshing report data...',
+      });
+    } catch {
+      setPlagiarismError('Unable to start plagiarism check right now.');
+      setToast({
+        type: 'error',
+        message: 'Unable to start plagiarism check.',
+      });
+    } finally {
+      setRunningPlagiarismCheck(false);
+    }
+  }, [assignmentId, fetchPlagiarism, runningPlagiarismCheck]);
+
   const openFile = useCallback(
     async (file: AssignmentSubmissionFile) => {
       if (!assignmentId || !submissionId) return;
@@ -756,6 +929,22 @@ function AssignmentSubmissionReviewPageContent() {
     submissionId,
     user,
   ]);
+
+  useEffect(() => {
+    if (!assignmentId || !router.isReady) return;
+    void fetchPlagiarism();
+  }, [assignmentId, fetchPlagiarism, router.isReady]);
+
+  useEffect(() => {
+    if (!plagiarismReport) return;
+    if (plagiarismReport.status !== 'pending' && plagiarismReport.status !== 'running') return;
+
+    const interval = window.setInterval(() => {
+      void fetchPlagiarism();
+    }, 5000);
+
+    return () => window.clearInterval(interval);
+  }, [fetchPlagiarism, plagiarismReport]);
 
   useEffect(() => {
     if (!submission) return;
@@ -1145,44 +1334,60 @@ function AssignmentSubmissionReviewPageContent() {
               </div>
             </aside>
 
-            <section className="h-[56vh] min-h-95 overflow-hidden rounded-2xl border border-slate-200 bg-slate-900 shadow-sm lg:h-[74vh]">
-              <div className="flex items-center justify-between gap-3 border-b border-slate-700 px-4 py-3">
-                <div className="min-w-0">
-                  <p className="truncate text-sm font-semibold text-slate-100">
-                    {selectedFilePath || 'Select a file'}
-                  </p>
-                  {selectedFileMeta ? (
-                    <p className="text-xs text-slate-400">{formatFileSize(selectedFileMeta.file_size)}</p>
+            <div
+              className={
+                'grid gap-4 ' +
+                (plagiarismOpen
+                  ? 'xl:grid-cols-[minmax(0,1fr)_340px]'
+                  : 'xl:grid-cols-1')
+              }
+            >
+              <section className="h-[56vh] min-h-95 overflow-hidden rounded-2xl border border-slate-200 bg-slate-900 shadow-sm lg:h-[74vh]">
+                <div className="flex items-center justify-between gap-3 border-b border-slate-700 px-4 py-3">
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-semibold text-slate-100">
+                      {selectedFilePath || 'Select a file'}
+                    </p>
+                    {selectedFileMeta ? (
+                      <p className="text-xs text-slate-400">{formatFileSize(selectedFileMeta.file_size)}</p>
+                    ) : null}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="text-xs text-slate-400">
+                      {commentLinesForSelectedFile.length} commented line
+                      {commentLinesForSelectedFile.length === 1 ? '' : 's'}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setPlagiarismOpen((prev) => !prev)}
+                      className="rounded-lg border border-slate-600 bg-slate-800 px-2.5 py-1.5 text-xs font-semibold text-slate-200 transition-colors hover:bg-slate-700"
+                    >
+                      {plagiarismOpen ? 'Hide plagiarism panel' : 'Show plagiarism panel'}
+                    </button>
+                  </div>
+                </div>
+                <div className="relative h-[calc(56vh-57px)] lg:h-[calc(74vh-57px)]">
+                  {selectedFileId && hoveredLine && !inlineComment ? (
+                    <button
+                      type="button"
+                      onClick={() => openInlineComment(hoveredLine)}
+                      onMouseEnter={() => {
+                        hoverButtonInteractingRef.current = true;
+                        clearHoverHideTimer();
+                      }}
+                      onMouseLeave={() => {
+                        hoverButtonInteractingRef.current = false;
+                        scheduleHoverHide();
+                      }}
+                      style={{ top: hoverButtonTop }}
+                      className="absolute right-3 z-10 inline-flex h-7 w-7 items-center justify-center rounded-full border border-yellow-300 bg-yellow-200/90 text-base font-bold text-yellow-900 shadow transition-all duration-200 hover:scale-105 hover:bg-yellow-100"
+                      title={`Add line comment at line ${hoveredLine}`}
+                    >
+                      +
+                    </button>
                   ) : null}
-                </div>
-                <div className="text-xs text-slate-400">
-                  {commentLinesForSelectedFile.length} commented line
-                  {commentLinesForSelectedFile.length === 1 ? '' : 's'}
-                </div>
-              </div>
 
-              <div className="relative h-[calc(56vh-57px)] lg:h-[calc(74vh-57px)]">
-                {selectedFileId && hoveredLine && !inlineComment ? (
-                  <button
-                    type="button"
-                    onClick={() => openInlineComment(hoveredLine)}
-                    onMouseEnter={() => {
-                      hoverButtonInteractingRef.current = true;
-                      clearHoverHideTimer();
-                    }}
-                    onMouseLeave={() => {
-                      hoverButtonInteractingRef.current = false;
-                      scheduleHoverHide();
-                    }}
-                    style={{ top: hoverButtonTop }}
-                    className="absolute right-3 z-10 inline-flex h-7 w-7 items-center justify-center rounded-full border border-yellow-300 bg-yellow-200/90 text-base font-bold text-yellow-900 shadow transition-all duration-200 hover:scale-105 hover:bg-yellow-100"
-                    title={`Add line comment at line ${hoveredLine}`}
-                  >
-                    +
-                  </button>
-                ) : null}
-
-                {inlineComment ? (
+                  {inlineComment ? (
                   <div
                     style={{ top: inlineComment.top }}
                     className="absolute left-4 right-4 z-20 w-auto rounded-xl border border-slate-200 bg-white p-3 shadow-lg animate-[fadeUp_0.18s_ease] sm:left-auto sm:right-4 sm:w-[320px]"
@@ -1223,18 +1428,18 @@ function AssignmentSubmissionReviewPageContent() {
                       </button>
                     </div>
                   </div>
-                ) : null}
+                  ) : null}
 
-                {fileLoading ? (
+                  {fileLoading ? (
                   <div className="absolute inset-0 z-10 flex items-center justify-center bg-slate-900/65">
                     <div className="inline-flex items-center gap-2 rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100">
                       <span className="h-4 w-4 animate-spin rounded-full border-2 border-slate-400 border-t-slate-100" />
                       Loading file...
                     </div>
                   </div>
-                ) : null}
+                  ) : null}
 
-                {selectedFileId == null ? (
+                  {selectedFileId == null ? (
                   <div className="flex h-full items-center justify-center px-4 text-center">
                     <div>
                       <p className="text-base font-semibold text-slate-100">No file selected</p>
@@ -1243,7 +1448,7 @@ function AssignmentSubmissionReviewPageContent() {
                       </p>
                     </div>
                   </div>
-                ) : (
+                  ) : (
                   <MonacoEditor
                     height="100%"
                     theme="vs-dark"
@@ -1263,15 +1468,201 @@ function AssignmentSubmissionReviewPageContent() {
                       lineDecorationsWidth: 16,
                     }}
                   />
-                )}
-              </div>
-
-              {fileError ? (
-                <div className="border-t border-rose-700/30 bg-rose-900/15 px-4 py-2 text-xs text-rose-200">
-                  {fileError}
+                  )}
                 </div>
+
+                {fileError ? (
+                  <div className="border-t border-rose-700/30 bg-rose-900/15 px-4 py-2 text-xs text-rose-200">
+                    {fileError}
+                  </div>
+                ) : null}
+              </section>
+
+              {plagiarismOpen ? (
+                <aside className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+                  <div className="flex items-start justify-between gap-2">
+                    <div>
+                      <h3 className="text-sm font-semibold uppercase tracking-[0.08em] text-slate-700">
+                        Plagiarism Snapshot
+                      </h3>
+                      <p className="mt-1 text-xs text-slate-500">
+                        For {submission.student_email || submission.student_name}
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setPlagiarismOpen(false)}
+                      className="rounded-md border border-slate-200 px-2 py-1 text-xs font-semibold text-slate-600 hover:bg-slate-50"
+                    >
+                      Collapse
+                    </button>
+                  </div>
+
+                  {plagiarismState === 'loading' ? (
+                    <p className="mt-4 text-sm text-slate-500">Loading plagiarism data...</p>
+                  ) : null}
+
+                  {plagiarismState === 'error' ? (
+                    <div className="mt-4 rounded-xl border border-rose-200 bg-rose-50 p-3">
+                      <p className="text-sm font-medium text-rose-700">
+                        {plagiarismError || 'Failed to load plagiarism data.'}
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => void fetchPlagiarism()}
+                        className="mt-2 rounded-lg border border-rose-200 bg-white px-3 py-1.5 text-xs font-semibold text-rose-700 hover:bg-rose-100"
+                      >
+                        Retry
+                      </button>
+                    </div>
+                  ) : null}
+
+                  {plagiarismState === 'not-run' ? (
+                    <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50 p-3">
+                      <p className="text-sm font-semibold text-slate-800">Plagiarism check not run yet</p>
+                      <p className="mt-1 text-xs text-slate-500">
+                        Run a plagiarism check to see MOSS and AI indicators for this submission.
+                      </p>
+                      <button
+                        type="button"
+                        onClick={handleRunPlagiarismCheck}
+                        disabled={runningPlagiarismCheck}
+                        className="mt-3 rounded-lg bg-slate-900 px-3 py-1.5 text-xs font-semibold text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
+                      >
+                        {runningPlagiarismCheck ? 'Starting...' : 'Run plagiarism check'}
+                      </button>
+                    </div>
+                  ) : null}
+
+                  {plagiarismState === 'ready' && plagiarismReport ? (
+                    <>
+                      {(plagiarismReport.status === 'pending' || plagiarismReport.status === 'running') ? (
+                        <div className="mt-4 rounded-xl border border-blue-200 bg-blue-50 p-3">
+                          <p className="text-sm font-semibold text-blue-800">
+                            Plagiarism check is {plagiarismReport.status}
+                          </p>
+                          <p className="mt-1 text-xs text-blue-700">
+                            This panel auto-refreshes while analysis is running.
+                          </p>
+                        </div>
+                      ) : null}
+
+                      {plagiarismReport.status === 'complete' ? (
+                        <>
+                          <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50 p-3">
+                            <p className="text-xs font-semibold uppercase tracking-[0.08em] text-slate-500">
+                              Highest MOSS Match
+                            </p>
+                            {highestPair ? (
+                              <p className="mt-1 text-sm font-semibold text-slate-900">
+                                {Math.round(highestPair.similarityForSubmission)}% match with{' '}
+                                {highestPair.counterpartEmail || highestPair.counterpartName}
+                              </p>
+                            ) : (
+                              <p className="mt-1 text-sm text-slate-600">No similarity pairs for this submission.</p>
+                            )}
+                          </div>
+
+                          <div
+                            className={
+                              'mt-3 rounded-xl border p-3 ' +
+                              (aiSummary.flagged
+                                ? 'border-rose-200 bg-rose-50'
+                                : 'border-emerald-200 bg-emerald-50')
+                            }
+                          >
+                            <p className="text-xs font-semibold uppercase tracking-[0.08em] text-slate-500">
+                              AI Usage Flag
+                            </p>
+                            <p className="mt-1 text-sm font-semibold text-slate-900">
+                              {aiSummary.flagged ? 'Flagged as AI-like' : 'Not flagged as AI-like'}
+                            </p>
+                            <p className="mt-1 text-xs text-slate-600">
+                              Confidence: {aiSummary.confidence}
+                              {aiSummary.score != null ? ` (${Math.round(aiSummary.score)}%)` : ''}
+                            </p>
+                          </div>
+
+                          <div className="mt-3">
+                            <p className="text-xs font-semibold uppercase tracking-[0.08em] text-slate-500">
+                              Pairs Involving This Submission
+                            </p>
+
+                            {submissionPairs.length === 0 ? (
+                              <p className="mt-2 text-sm text-slate-500">No pairs found for this submission.</p>
+                            ) : (
+                              <div className="mt-2 max-h-72 space-y-2 overflow-y-auto pr-1">
+                                {submissionPairs.map((pair) => (
+                                  <div
+                                    key={pair.id}
+                                    className="rounded-lg border border-slate-200 bg-white p-2.5"
+                                  >
+                                    <div className="flex items-center justify-between gap-2">
+                                      <span
+                                        className={
+                                          'inline-flex rounded-full border px-2 py-0.5 text-[11px] font-semibold ' +
+                                          toneForSimilarity(pair.similarityForSubmission)
+                                        }
+                                      >
+                                        {Math.round(pair.similarityForSubmission)}%
+                                      </span>
+                                      <span className="text-[11px] text-slate-500">{pair.language}</span>
+                                    </div>
+                                    <p className="mt-1 text-xs text-slate-700">
+                                      Match with {pair.counterpartEmail || pair.counterpartName}
+                                    </p>
+                                    <p className="mt-1 text-[11px] text-slate-500">
+                                      {pair.linesMatched} matched lines
+                                      {pair.isAiFlag ? ' • AI reference involved' : ''}
+                                    </p>
+                                    {pair.mossLink ? (
+                                      <a
+                                        href={pair.mossLink}
+                                        target="_blank"
+                                        rel="noreferrer"
+                                        className="mt-1 inline-flex text-[11px] font-semibold text-blue-700 hover:text-blue-900"
+                                      >
+                                        View MOSS diff
+                                      </a>
+                                    ) : null}
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        </>
+                      ) : null}
+
+                      {plagiarismReport.status === 'failed' ? (
+                        <div className="mt-4 rounded-xl border border-rose-200 bg-rose-50 p-3">
+                          <p className="text-sm font-semibold text-rose-700">Plagiarism check failed</p>
+                          <p className="mt-1 text-xs text-rose-600">
+                            {plagiarismReport.error_message || 'The report could not be generated.'}
+                          </p>
+                          <button
+                            type="button"
+                            onClick={handleRunPlagiarismCheck}
+                            disabled={runningPlagiarismCheck}
+                            className="mt-3 rounded-lg border border-rose-200 bg-white px-3 py-1.5 text-xs font-semibold text-rose-700 hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-60"
+                          >
+                            {runningPlagiarismCheck ? 'Starting...' : 'Retry check'}
+                          </button>
+                        </div>
+                      ) : null}
+
+                      <div className="mt-4 border-t border-slate-200 pt-3">
+                        <Link
+                          href={fullPlagiarismReportHref}
+                          className="text-xs font-semibold text-blue-700 hover:text-blue-900"
+                        >
+                          Open full plagiarism report →
+                        </Link>
+                      </div>
+                    </>
+                  ) : null}
+                </aside>
               ) : null}
-            </section>
+            </div>
           </section>
 
           <section className="mt-5 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
