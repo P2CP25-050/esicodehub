@@ -64,6 +64,7 @@ export interface SubmissionListParams {
   course?:   string;
   search?:   string;            // search by title or description
   page?:     number;            // which page to fetch
+  visibility?: string;
 }
 
 /**

@@ -35,6 +35,8 @@ interface FiltersProps {
   onCourseTagChange:      (v: string) => void;
   onClear:                () => void;
   hasActiveFilter:        boolean;
+  visibility: string;
+  onVisibilityChange: (v: string) => void;
   total:                  number;
   shown:                  number;
   isAuthenticated:        boolean;
@@ -84,6 +86,7 @@ function StyledSelect({
 
 export default function Filters({
   language, submissionType, courseTag,
+  visibility, onVisibilityChange,
   onLanguageChange, onSubmissionTypeChange, onCourseTagChange,
   onClear, hasActiveFilter,
   total, shown,
@@ -118,6 +121,28 @@ export default function Filters({
               <option key={t.value} value={t.value}>{t.label}</option>
             ))}
           </StyledSelect>
+        </div>
+
+	{/* Visibility dropdown */}
+	<div className="flex items-center gap-1 bg-slate-100 rounded-xl p-1 w-fit">
+          {[
+            { value: '',        label: 'All' },
+            { value: 'public',  label: 'Public' },
+            { value: 'private', label: 'My Private' },
+          ].map(({ value, label }) => (
+            <button
+              key={value}
+              onClick={() => onVisibilityChange(value)}
+              className={`
+                px-3 py-1.5 rounded-lg text-xs font-semibold transition-all
+                ${visibility === value
+                  ? 'bg-white text-blue-600 shadow-sm'
+                  : 'text-slate-500 hover:text-slate-700'}
+              `}
+            >
+              {label}
+            </button>
+          ))}
         </div>
 
         {/* Course tag */}

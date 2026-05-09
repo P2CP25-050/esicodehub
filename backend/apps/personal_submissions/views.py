@@ -45,6 +45,19 @@ class PersonalSubmissionListCreateView(APIView):
         if mine and mine.strip().lower() in {'1', 'true', 'yes'}:
             queryset = queryset.filter(owner=request.user)
 
+        visibility = request.query_params.get('visibility')
+        if visibility:
+            visibility = visibility.strip().lower()
+            if visibility == PersonalSubmission.Visibility.PRIVATE:
+                queryset = queryset.filter(
+                    owner=request.user,
+                    visibility=PersonalSubmission.Visibility.PRIVATE
+                )
+            elif visibility == PersonalSubmission.Visibility.PUBLIC:
+                queryset = queryset.filter(
+                    visibility=PersonalSubmission.Visibility.PUBLIC
+                )
+
         language = request.query_params.get('language')
         submission_type = request.query_params.get('type')
         course = request.query_params.get('course')
