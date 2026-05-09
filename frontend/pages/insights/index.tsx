@@ -1343,13 +1343,10 @@ function ProfessorInsightsContent() {
   const router = useRouter();
   const { user, isLoading, isAuthenticated } = useAuth();
   const [loadingPage, setLoadingPage] = useState(true);
-  const [leaderboardLoading, setLeaderboardLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [platformSummary, setPlatformSummary] = useState<AIDetectionSummary>({ checked: 0, flagged: 0 });
   const [mySummary, setMySummary] = useState<AIDetectionSummary>({ checked: 0, flagged: 0 });
   const [rows, setRows] = useState<ProfessorAssignmentRow[]>([]);
-  const [topQuestioners, setTopQuestioners] = useState<LeaderboardEntry[]>([]);
-  const [topAnswerers, setTopAnswerers] = useState<LeaderboardEntry[]>([]);
   const [sortColumn, setSortColumn] = useState<SortColumn>('deadline');
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
 
@@ -1368,13 +1365,10 @@ function ProfessorInsightsContent() {
   useEffect(() => {
     if (isLoading || !isAuthenticated || !user) return;
 
-    const authUser = user;
-
     let cancelled = false;
 
     async function loadProfessorData() {
       setLoadingPage(true);
-      setLeaderboardLoading(true);
       setError(null);
 
       let allAssignments: Assignment[] = [];
@@ -1383,7 +1377,6 @@ function ProfessorInsightsContent() {
       } catch {
         setError('Failed to load professor insights right now.');
         setLoadingPage(false);
-        setLeaderboardLoading(false);
         return;
       }
 
@@ -1487,24 +1480,7 @@ function ProfessorInsightsContent() {
       setPlatformSummary({ checked: platformChecked, flagged: platformFlagged });
       setMySummary({ checked: myChecked, flagged: myFlagged });
       setRows(performanceRows);
-
       setLoadingPage(false);
-
-      const [leaderboardRes] = await Promise.allSettled([
-        buildLeaderboard(authUser.email, fullName),
-      ]);
-
-      if (cancelled) return;
-
-      if (leaderboardRes.status === 'fulfilled') {
-        setTopQuestioners(leaderboardRes.value.topQuestioners);
-        setTopAnswerers(leaderboardRes.value.topAnswerers);
-      } else {
-        setTopQuestioners([]);
-        setTopAnswerers([]);
-      }
-
-      setLeaderboardLoading(false);
     }
 
     loadProfessorData();
@@ -1556,7 +1532,7 @@ function ProfessorInsightsContent() {
               <h1 className="ip-page-title">
                 Professor <span>Insights</span>
               </h1>
-              <p className="ip-page-subtitle">AI detection, assignment performance, and community engagement</p>
+              <p className="ip-page-subtitle">AI detection and assignment performance</p>
             </div>
           </div>
 
@@ -1666,30 +1642,6 @@ function ProfessorInsightsContent() {
             )}
           </section>
 
-          <section className="ip-section ip-section-3">
-            <div className="ip-section-head">
-              <div className="ip-section-mark" />
-              <h2 className="ip-section-title">Community Leaderboard</h2>
-              <div className="ip-section-line" />
-            </div>
-
-            {loadingPage || leaderboardLoading ? (
-              <p className="ip-loading">Loading leaderboard...</p>
-            ) : (
-              <div className="ip-board-grid">
-                <LeaderboardTable
-                  title="Top Questioners"
-                  rows={topQuestioners}
-                  countLabel="Questions"
-                />
-                <LeaderboardTable
-                  title="Top Answerers"
-                  rows={topAnswerers}
-                  countLabel="Answers"
-                />
-              </div>
-            )}
-          </section>
         </div>
       </div>
     </>
