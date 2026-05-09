@@ -1,3 +1,5 @@
+import io
+import zipfile
 from django.db import transaction
 from django.http import HttpResponse
 from django.db.models import Q
@@ -335,3 +337,56 @@ class FileContentView(APIView):
                 {'detail': 'File is binary and cannot be displayed as text'},
                 status=status.HTTP_400_BAD_REQUEST,
             )
+
+
+class SubmissionDownloadView(APIView):
+    """
+    Download the submission file or all files as a zip archive.
+    -Public submissions: no auth required
+    -Private submissions: owner only
+    """
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, pk):
+        submission = get_object_or_404(
+            PersonalSubmission.objects.select_related('owner').prefetch_related('files'),
+            pk=pk,
+        )
+
+        is_public = submission.visibility == PersonalSubmission.Visibility.PUBLIC
+        is_owner = submission.owner == request.user
+
+        if not is_public and not is_owner:
+            return Response(
+                {'detail': 'You do not have permission to perform this action.'},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        files = list(submission.files.all())
+
+        if not files:
+            return Response(
+                {'detail': 'This submission has no files to download.'},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        if len(files) == 1:
+            f = files[0]
+            content = get_file_content(f.gcs_path)
+            response = HttpResponse(
+                content.encode('utf-8'),
+                content_type='text/plain; charset=utf-8'
+            )
+            response['Content-Disposition'] = f'attachment; filename="{f.file_name}"'
+            return response
+
+        buffer = io.BytesIO()
+        with zipfile.ZipFile(buffer, mode='w', compression=zipfile.ZIP_DEFLATED) as zf:
+            for f in files:
+                content = get_file_content(f.gcs_path)
+                # file_path preserves folder structure
+                zf.writestr(f.file_path, content.encode('utf-8'))
+        buffer.seek(0)
+        response = HttpResponse(buffer.read(), content_type='application/zip')
+        response['Content-Disposition'] = f'attachment; filename="{submission.title}.zip"'
+        return response

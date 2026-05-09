@@ -6,6 +6,7 @@ from .views import (
     FileUploadView,
     FileDeleteView,
     FileContentView,
+    SubmissionDownloadView,
 )
 
 
@@ -17,6 +18,7 @@ urlpatterns = [
         PersonalSubmissionDetailView.as_view(),
         name='submission-detail',
     ),
+    path('<int:pk>/download/', SubmissionDownloadView.as_view()),
     # File operation routes
     path('<int:pk>/files/', FileUploadView.as_view(), name='upload-files'),
     path('<int:pk>/files/<int:file_id>/', FileDeleteView.as_view(), name='delete-file'),
