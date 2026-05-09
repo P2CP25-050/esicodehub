@@ -1,5 +1,6 @@
 from django.utils import timezone
 from rest_framework import serializers
+from apps.personal_submissions.gcs import get_signed_url
 
 from .models import (
     Assignment,
@@ -81,6 +82,9 @@ class AssignmentListSerializer(serializers.ModelSerializer):
     # Total number of submissions for this assignment
     submission_count = serializers.SerializerMethodField()
 
+    # Signed URL for assignment description PDF (if present)
+    description_pdf = serializers.SerializerMethodField()
+
     class Meta:
         model = Assignment
         fields = [
@@ -133,6 +137,20 @@ class AssignmentListSerializer(serializers.ModelSerializer):
         if hasattr(obj, 'submission_count'):
             return obj.submission_count
         return obj.submissions.count()
+
+    def get_description_pdf(self, obj):
+        """Return a temporary signed URL for the description PDF."""
+        if not obj.description_pdf:
+            return None
+
+        if isinstance(obj.description_pdf, str) and obj.description_pdf.startswith('http'):
+            return obj.description_pdf
+
+        try:
+            return get_signed_url(obj.description_pdf, expiration=7 * 24 * 60 * 60)
+        except Exception:
+            # Keep backward compatibility if URL signing fails at runtime.
+            return obj.description_pdf
 
 
 class AssignmentDetailSerializer(AssignmentListSerializer):
