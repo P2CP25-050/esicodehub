@@ -221,7 +221,7 @@ export default function UserSearchModal({ isOpen, onClose }: UserSearchModalProp
 
         {/* Header rule */}
         <div style={ms.panelHeader}>
-          <span style={ms.panelLabel}>// SEARCH USERS</span>
+          <span style={ms.panelLabel}></span>
           {searching && <Spinner />}
         </div>
 
