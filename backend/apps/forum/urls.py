@@ -42,4 +42,7 @@ urlpatterns = [
         views.AnswerVoteView.as_view(),
         name='answer-vote',
     ),
+    # Tag endpoints
+    path('tags/', views.TagListView.as_view()),
+    path('tags/subjects/', views.SubjectTagListView.as_view()),
 ]

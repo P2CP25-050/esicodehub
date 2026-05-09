@@ -17,6 +17,7 @@ from rest_framework.views import APIView
 from apps.esi_db.models import EsiStudent
 from apps.personal_submissions.gcs import (
     delete_directory,
+    get_file_bytes,
     get_file_content,
     get_signed_url,
     upload_file,
@@ -92,15 +93,13 @@ class AssignmentListCreateView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        queryset = Assignment.objects.select_related(
-            'subject',
-            'professor',
-        ).prefetch_related(
-            'submissions',
-        ).all()
-
         if request.user.role == 'professor':
-            queryset = queryset.filter(professor=request.user)
+            queryset = Assignment.objects.select_related(
+                'subject',
+                'professor',
+            ).prefetch_related(
+                'submissions',
+            ).filter(professor=request.user)
             group_filter = request.query_params.get('group')
 
             if group_filter:
@@ -121,7 +120,12 @@ class AssignmentListCreateView(APIView):
                 if not esi_student:
                     queryset = Assignment.objects.none()
                 else:
-                    queryset = queryset.filter(target_year=esi_student.study_year)
+                    queryset = Assignment.objects.select_related(
+                        'subject',
+                        'professor',
+                    ).prefetch_related(
+                        'submissions',
+                    ).filter(target_year=esi_student.study_year)
                     targeted_ids = [
                         assignment.id
                         for assignment in queryset
@@ -749,3 +753,55 @@ class AssignmentDescriptionPDFUploadView(APIView):
             {'url': signed_url},
             status=status.HTTP_200_OK,
         )
+
+
+class AssignmentDescriptionPDFView(APIView):
+    """Serve assignment description PDF bytes for authenticated users."""
+
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, pk):
+        assignment = get_object_or_404(
+            Assignment.objects.select_related('professor', 'subject'),
+            pk=pk,
+        )
+
+        if request.user.role == 'professor':
+            if assignment.professor != request.user:
+                return Response(
+                    {'detail': 'You do not have permission to perform this action.'},
+                    status=status.HTTP_403_FORBIDDEN,
+                )
+        elif request.user.role == 'student':
+            if not student_is_targeted(assignment, request.user):
+                return Response(
+                    {'detail': 'You do not have permission to perform this action.'},
+                    status=status.HTTP_403_FORBIDDEN,
+                )
+        else:
+            return Response(
+                {'detail': 'You do not have permission to perform this action.'},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        if not assignment.description_pdf:
+            return Response(
+                {'detail': 'No PDF description is available for this assignment.'},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        try:
+            content = get_file_bytes(assignment.description_pdf)
+        except Exception:
+            return Response(
+                {'detail': 'Unable to retrieve assignment PDF.'},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        filename = f'assignment-{assignment.id}-description.pdf'
+        download = request.query_params.get('download') == '1'
+        disposition = 'attachment' if download else 'inline'
+
+        response = HttpResponse(content, content_type='application/pdf')
+        response['Content-Disposition'] = f'{disposition}; filename="{filename}"'
+        return response

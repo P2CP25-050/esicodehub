@@ -44,11 +44,16 @@ urlpatterns = [
         'api/personal-submissions/',
         include('apps.personal_submissions.urls'),
     ),
+    path(
+        'api/submissions/',
+        include('apps.personal_submissions.urls'),
+    ),
     path('api/forum/', include('apps.forum.urls')),
     path('api/notifications/', include('apps.notifications.urls')),
     path('api/reports/', include('apps.reports.urls')),
     path('api/auth/token/', TokenObtainPairView.as_view()),
     path('api/auth/token/refresh/', TokenRefreshView.as_view()),
+    path('api/insights/', include('apps.insights.urls')),
 ]
 
 
