@@ -369,7 +369,7 @@ function HomePageContent() {
 
         {/* Greeting / action bar */}
         <div className="hp-greeting-wrap hp-animate hp-animate-2">
-          <GreetingBar firstName={firstName} role={role} />
+          <GreetingBar role={role} />
         </div>
 
         {/* Two-column grid */}
