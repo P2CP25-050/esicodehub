@@ -16,45 +16,120 @@ export default function ProfessorAssignmentCard({ assignment: a }: Props) {
       tabIndex={0}
       onClick={() => router.push(`/assignments/${a.id}`)}
       onKeyDown={(e) => e.key === "Enter" && router.push(`/assignments/${a.id}`)}
-      className="
-        group relative bg-white rounded-2xl border border-slate-200
-        p-6 flex flex-col gap-2 cursor-pointer
-        transition-all duration-200
-        hover:shadow-[0_8px_32px_rgba(30,60,120,0.13)] hover:-translate-y-0.5
-        focus:outline-none focus:ring-2 focus:ring-blue-500/40
-      "
+      style={{
+        position: "relative",
+        background: "var(--paper)",
+        border: "1px solid #d0d0d0",
+        borderTop: "4px solid var(--navy)",
+        padding: "20px",
+        display: "flex",
+        flexDirection: "column",
+        gap: "10px",
+        cursor: "pointer",
+        transition: "box-shadow 0.15s, transform 0.1s",
+        outline: "none",
+      }}
+      onMouseEnter={(e) => {
+        const el = e.currentTarget as HTMLElement;
+        el.style.boxShadow = "5px 5px 0 var(--navy)";
+        el.style.transform = "translate(-2px, -2px)";
+      }}
+      onMouseLeave={(e) => {
+        const el = e.currentTarget as HTMLElement;
+        el.style.boxShadow = "none";
+        el.style.transform = "translate(0, 0)";
+      }}
+      onFocus={(e) => {
+        (e.currentTarget as HTMLElement).style.boxShadow = "0 0 0 3px rgba(5,22,80,0.2)";
+      }}
+      onBlur={(e) => {
+        (e.currentTarget as HTMLElement).style.boxShadow = "none";
+      }}
     >
-      {/* Subject badge + targeting chip */}
-      <div className="flex items-center gap-2 flex-wrap">
-        <span className="
-          bg-gradient-to-r from-[#0d1b2a] to-[#1a2e4a]
-          text-white text-xs font-bold px-2.5 py-0.5 rounded-md tracking-wide
-        ">
+      {/* Badges */}
+      <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
+        <span style={{
+          display: "inline-block",
+          padding: "2px 10px",
+          fontSize: "9px",
+          fontFamily: "var(--font-mono)",
+          fontWeight: 700,
+          letterSpacing: "0.14em",
+          textTransform: "uppercase",
+          background: "var(--navy)",
+          color: "#ffffff",
+        }}>
           {a.subject.code}
         </span>
-        <span className="bg-[#f0f4ff] border border-slate-200 text-slate-600 text-xs font-semibold px-2.5 py-0.5 rounded-md">
+
+        <span style={{
+          display: "inline-block",
+          padding: "2px 10px",
+          fontSize: "9px",
+          fontFamily: "var(--font-mono)",
+          fontWeight: 700,
+          letterSpacing: "0.1em",
+          textTransform: "uppercase",
+          background: "transparent",
+          color: "var(--ink)",
+          border: "1.5px solid var(--ink)",
+        }}>
           {getTargetSummary(a)}
         </span>
+
         {!a.is_open && (
-          <span className="bg-slate-100 text-slate-500 text-xs font-semibold px-2.5 py-0.5 rounded-md">
+          <span style={{
+            display: "inline-block",
+            padding: "2px 10px",
+            fontSize: "9px",
+            fontFamily: "var(--font-mono)",
+            fontWeight: 700,
+            letterSpacing: "0.1em",
+            textTransform: "uppercase",
+            background: "#fff0f0",
+            color: "var(--red)",
+            border: "1.5px solid var(--red)",
+          }}>
             Closed
           </span>
         )}
       </div>
 
       {/* Title */}
-      <h3 className="text-base font-extrabold text-[#0d1b2a] leading-snug mt-1 pr-8">
+      <h3 style={{
+        fontFamily: "var(--font-display)",
+        fontSize: "15px",
+        fontWeight: 700,
+        color: "var(--ink)",
+        margin: "4px 0 0",
+        lineHeight: 1.4,
+        paddingRight: "24px",
+        letterSpacing: "-0.01em",
+      }}>
         {a.title}
       </h3>
 
       {/* Subject name */}
-      <p className="text-xs text-slate-500 font-medium">{a.subject.name}</p>
+      <p style={{
+        fontFamily: "var(--font-body)",
+        fontSize: "12px",
+        color: "var(--text-muted)",
+        margin: 0,
+        fontWeight: 300,
+      }}>
+        {a.subject.name}
+      </p>
 
-      {/* Bottom row: deadline + submission count */}
-      <div className="flex items-center gap-4 flex-wrap mt-1">
-        <div className={`flex items-center gap-1.5 text-xs font-semibold ${past ? "text-red-500" : "text-green-600"}`}>
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="shrink-0">
-            <rect x="3" y="4" width="18" height="18" rx="2" />
+      {/* Bottom row */}
+      <div style={{ display: "flex", alignItems: "center", gap: "16px", flexWrap: "wrap", marginTop: "4px" }}>
+        <div style={{
+          display: "flex", alignItems: "center", gap: "5px",
+          fontSize: "10px", fontFamily: "var(--font-mono)", fontWeight: 700,
+          color: past ? "var(--red)" : "var(--green)",
+          letterSpacing: "0.06em",
+        }}>
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ flexShrink: 0 }}>
+            <rect x="3" y="4" width="18" height="18" rx="0" />
             <line x1="16" y1="2" x2="16" y2="6" />
             <line x1="8" y1="2" x2="8" y2="6" />
             <line x1="3" y1="10" x2="21" y2="10" />
@@ -62,8 +137,13 @@ export default function ProfessorAssignmentCard({ assignment: a }: Props) {
           {past ? "Overdue · " : "Due · "}{formatDeadline(a.deadline)}
         </div>
 
-        <div className="flex items-center gap-1.5 text-xs text-slate-500">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="shrink-0">
+        <div style={{
+          display: "flex", alignItems: "center", gap: "5px",
+          fontSize: "10px", fontFamily: "var(--font-mono)",
+          color: "var(--text-muted)",
+          letterSpacing: "0.06em",
+        }}>
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ flexShrink: 0 }}>
             <polyline points="9 11 12 14 22 4" />
             <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" />
           </svg>
@@ -72,10 +152,16 @@ export default function ProfessorAssignmentCard({ assignment: a }: Props) {
       </div>
 
       {/* Arrow */}
-      <span className="
-        absolute right-5 top-1/2 -translate-y-1/2 text-slate-300 text-lg
-        transition-colors duration-150 group-hover:text-blue-500
-      ">→</span>
+      <span style={{
+        position: "absolute",
+        right: "14px",
+        top: "50%",
+        transform: "translateY(-50%)",
+        color: "var(--navy)",
+        fontSize: "16px",
+        pointerEvents: "none",
+        fontFamily: "var(--font-mono)",
+      }}>→</span>
     </div>
   );
 }
