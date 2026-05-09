@@ -14,7 +14,21 @@ import type {
 
 export interface AssignmentDescriptionPdfUploadResponse {
   url: string;
+  description_pdf?: string;
 }
+
+const getPdfUrlFromUploadResponse = (
+  data: AssignmentDescriptionPdfUploadResponse | Record<string, unknown>
+): string => {
+  if (typeof data.url === 'string' && data.url.trim()) return data.url;
+
+  const descriptionPdf = (data as { description_pdf?: unknown }).description_pdf;
+  if (typeof descriptionPdf === 'string' && descriptionPdf.trim()) {
+    return descriptionPdf;
+  }
+
+  throw new Error('Upload succeeded but no PDF URL was returned by the server.');
+};
 
 export const listAssignments = async (
   params?: AssignmentListParams
@@ -159,5 +173,9 @@ export const uploadAssignmentDescriptionPdf = async (
     `/assignments/${id}/upload-description/`,
     formData
   );
-  return res.data;
+
+  return {
+    ...res.data,
+    url: getPdfUrlFromUploadResponse(res.data),
+  };
 };

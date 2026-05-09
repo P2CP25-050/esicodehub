@@ -80,6 +80,32 @@ const isPdfFile = (file: File): boolean => {
   return file.name.toLowerCase().endsWith('.pdf');
 };
 
+const resolveAssignmentPdfUrl = (value?: string | null): string | null => {
+  if (!value) return null;
+  if (/^https?:\/\//i.test(value)) return value;
+
+  try {
+    const apiBase = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
+    const base = new URL(apiBase.endsWith('/') ? apiBase : `${apiBase}/`);
+
+    if (value.startsWith('/api/')) {
+      return `${base.protocol}//${base.host}${value}`;
+    }
+
+    if (value.startsWith('/assignments/')) {
+      return new URL(value.slice(1), base).toString();
+    }
+
+    if (value.startsWith('/')) {
+      return new URL(value, `${base.protocol}//${base.host}`).toString();
+    }
+
+    return new URL(value, base).toString();
+  } catch {
+    return null;
+  }
+};
+
 function LoadingSkeleton() {
   return (
     <div
@@ -154,10 +180,7 @@ function AssignmentEditPageContent() {
           assignment.professor_name.trim())
   );
   const hasExistingPdf = Boolean(assignment?.description_pdf);
-  const existingPdfUrl =
-    assignment?.description_pdf && /^https?:\/\//i.test(assignment.description_pdf)
-      ? assignment.description_pdf
-      : null;
+  const existingPdfUrl = resolveAssignmentPdfUrl(assignment?.description_pdf);
 
   const openFileDialog = () => {
     fileInputRef.current?.click();
@@ -202,7 +225,7 @@ function AssignmentEditPageContent() {
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (!assignmentId) return;
+    if (!assignmentId || !assignment) return;
 
     const nextErrors: FieldErrors = {};
     if (!title.trim()) nextErrors.title = 'Title is required.';
@@ -218,12 +241,34 @@ function AssignmentEditPageContent() {
     setSubmitError(null);
 
     try {
-      const updateData: Parameters<typeof updateAssignment>[1] = {
-        title: title.trim(),
-        description: description.trim(),
-        deadline: new Date(deadline).toISOString(),
-      };
-      const updatedAssignment = await updateAssignment(assignmentId, updateData);
+      const updateData: Parameters<typeof updateAssignment>[1] = {};
+      if (titleOverride !== null) {
+        const normalizedTitle = title.trim();
+        if (normalizedTitle !== assignment.title) {
+          updateData.title = normalizedTitle;
+        }
+      }
+
+      if (descriptionOverride !== null) {
+        const normalizedDescription = description.trim();
+        if (normalizedDescription !== (assignment.description ?? '')) {
+          updateData.description = normalizedDescription;
+        }
+      }
+
+      if (deadlineOverride !== null) {
+        const nextDeadlineIso = new Date(deadline).toISOString();
+        const currentDeadlineIso = new Date(assignment.deadline).toISOString();
+        if (nextDeadlineIso !== currentDeadlineIso) {
+          updateData.deadline = nextDeadlineIso;
+        }
+      }
+
+      const updatedAssignment: Assignment =
+        Object.keys(updateData).length > 0
+          ? await updateAssignment(assignmentId, updateData)
+          : assignment;
+
       let descriptionPdf = updatedAssignment.description_pdf;
 
       if (selectedPdf) {
@@ -467,13 +512,23 @@ function AssignmentEditPageContent() {
                       Replace PDF
                     </button>
                     {existingPdfUrl ? (
-                      <a
-                        href={existingPdfUrl}
-                        download
-                        className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50"
-                      >
-                        Download current PDF
-                      </a>
+                      <>
+                        <a
+                          href={existingPdfUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50"
+                        >
+                          View current PDF
+                        </a>
+                        <a
+                          href={existingPdfUrl}
+                          download
+                          className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50"
+                        >
+                          Download current PDF
+                        </a>
+                      </>
                     ) : (
                       <p className="text-xs text-slate-500">
                         Download link unavailable in current API response.

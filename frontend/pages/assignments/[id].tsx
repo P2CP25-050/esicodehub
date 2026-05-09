@@ -71,6 +71,32 @@ const getErrorMessage = (error: unknown, fallback: string): string => {
   return fallback;
 };
 
+const resolveAssignmentPdfUrl = (value?: string | null): string | null => {
+  if (!value) return null;
+  if (/^https?:\/\//i.test(value)) return value;
+
+  try {
+    const apiBase = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
+    const base = new URL(apiBase.endsWith('/') ? apiBase : `${apiBase}/`);
+
+    if (value.startsWith('/api/')) {
+      return `${base.protocol}//${base.host}${value}`;
+    }
+
+    if (value.startsWith('/assignments/')) {
+      return new URL(value.slice(1), base).toString();
+    }
+
+    if (value.startsWith('/')) {
+      return new URL(value, `${base.protocol}//${base.host}`).toString();
+    }
+
+    return new URL(value, base).toString();
+  } catch {
+    return null;
+  }
+};
+
 const getCountdown = (deadlineValue: string): string => {
   const diff = new Date(deadlineValue).getTime() - Date.now();
 
@@ -210,10 +236,7 @@ function AssignmentDetailPageContent() {
           assignment.professor_name.trim())
   );
   const canEditAssignment = isCreator;
-  const descriptionPdfUrl =
-    assignment?.description_pdf && /^https?:\/\//i.test(assignment.description_pdf)
-      ? assignment.description_pdf
-      : null;
+  const descriptionPdfUrl = resolveAssignmentPdfUrl(assignment?.description_pdf);
   const deadlineBadge = assignment ? getDeadlineBadge(assignment) : null;
   const canSubmit = Boolean(assignment?.is_open);
   const hasSubmission = Boolean(mySubmission);
@@ -746,17 +769,17 @@ function AssignmentDetailPageContent() {
                         <a
                           href={descriptionPdfUrl}
                           target="_blank"
-                          rel="noopener noreferrer"
+                          rel="noreferrer"
                           className="rounded-lg border border-blue-300 bg-white px-3 py-1 text-xs font-semibold text-blue-700 transition-colors hover:bg-blue-100"
                         >
-                          View PDF
+                          PDF Viewer
                         </a>
                         <a
                           href={descriptionPdfUrl}
                           download
                           className="rounded-lg border border-blue-300 bg-white px-3 py-1 text-xs font-semibold text-blue-700 transition-colors hover:bg-blue-100"
                         >
-                          Download
+                          Download PDF
                         </a>
                       </div>
                     ) : (
@@ -1189,6 +1212,7 @@ function AssignmentDetailPageContent() {
           )}
         </div>
       </main>
+
     </div>
   );
 }

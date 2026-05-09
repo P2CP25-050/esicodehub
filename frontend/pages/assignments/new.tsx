@@ -1,10 +1,10 @@
 "use client";
-import { useState, useEffect, ChangeEvent } from "react";
+import { useState, useEffect, ChangeEvent, DragEvent, useRef } from "react";
 import { useRouter } from "next/router";
 import Header from "@/components/submissions/Header";
 import Field from "@/components/submissions/Field";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
-import { listSubjects, createAssignment } from "@/services/assignments";
+import { listSubjects, createAssignment, uploadAssignmentDescriptionPdf } from "@/services/assignments";
 import type { Subject } from "@/services/assignments";
 
 // Types & constants 
@@ -87,6 +87,21 @@ function validate(
     errors.deadline = "Deadline must be in the future.";
   return errors;
 }
+
+// PDF helpers
+
+const formatFileSize = (value: number): string => {
+  if (!Number.isFinite(value) || value < 0) return '-';
+  if (value < 1024) return `${value} B`;
+  const kb = value / 1024;
+  if (kb < 1024) return `${kb.toFixed(1)} KB`;
+  return `${(kb / 1024).toFixed(1)} MB`;
+};
+
+const isPdfFile = (file: File): boolean => {
+  if (file.type === 'application/pdf') return true;
+  return file.name.toLowerCase().endsWith('.pdf');
+};
 
 // Preview 
 
@@ -267,6 +282,7 @@ const RESPONSIVE_CSS = `
 
 function NewAssignmentForm() {
   const router = useRouter();
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
     if (typeof document !== "undefined") {
@@ -291,6 +307,8 @@ function NewAssignmentForm() {
   const [targetGroups, setTargetGroups] = useState<number[]>([]);
   const [deadline, setDeadline] = useState("");
   const [allowLate, setAllowLate] = useState(false);
+  const [selectedPdf, setSelectedPdf] = useState<File | null>(null);
+  const [dragOver, setDragOver] = useState(false);
 
   
   const [subjects, setSubjects] = useState<Subject[]>([]);
@@ -306,6 +324,40 @@ function NewAssignmentForm() {
       .catch(() => setSubjects([]))
       .finally(() => setLoadingSubjects(false));
   }, []);
+
+  const openFileDialog = () => {
+    fileInputRef.current?.click();
+  };
+
+  const setPdfFile = (file: File) => {
+    if (!isPdfFile(file)) {
+      setSubmitError('Please upload a PDF file.');
+      return;
+    }
+    setSubmitError(null);
+    setSelectedPdf(file);
+  };
+
+  const handleFileInput = (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    setPdfFile(file);
+    event.target.value = '';
+  };
+
+  const handleDrop = (event: DragEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    setDragOver(false);
+    const file = event.dataTransfer.files?.[0];
+    if (file) setPdfFile(file);
+  };
+
+  const clearSelectedPdf = () => {
+    setSelectedPdf(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
 
   
 
@@ -412,6 +464,12 @@ function NewAssignmentForm() {
         deadline: new Date(deadline).toISOString(),
         allow_late: allowLate,                                         
       });
+
+      // Upload PDF if selected
+      if (selectedPdf) {
+        await uploadAssignmentDescriptionPdf(assignment.id, selectedPdf);
+      }
+
       router.push(`/assignments/${assignment.id}`);
     } catch (err: unknown) {
       const message =
@@ -665,6 +723,82 @@ function NewAssignmentForm() {
                   Allow students to submit after the deadline
                 </label>
               </div>
+            </Field>
+
+            <Field label="PDF Description" hint="Optional — upload PDF instructions for students">
+              {selectedPdf ? (
+                <div style={{
+                  ...styles.input,
+                  display: 'flex',
+                  flexWrap: 'wrap',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  gap: '12px',
+                  padding: '12px',
+                }}>
+                  <div>
+                    <p style={{ margin: '0 0 4px 0', fontWeight: 600 }}>{selectedPdf.name}</p>
+                    <p style={{ margin: 0, fontSize: '12px', color: '#666' }}>
+                      {formatFileSize(selectedPdf.size)}
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={clearSelectedPdf}
+                    disabled={submitting}
+                    style={{
+                      ...styles.input,
+                      padding: '6px 12px',
+                      fontSize: '12px',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    Remove
+                  </button>
+                </div>
+              ) : (
+                <div
+                  onDragOver={(event) => {
+                    event.preventDefault();
+                    setDragOver(true);
+                  }}
+                  onDragLeave={() => setDragOver(false)}
+                  onDrop={handleDrop}
+                  onClick={openFileDialog}
+                  style={{
+                    ...styles.input,
+                    border: '2px dashed',
+                    borderColor: dragOver ? '#1d6ef5' : '#cbd5e1',
+                    backgroundColor: dragOver ? '#f0f8ff' : '#f8fafc',
+                    cursor: 'pointer',
+                    textAlign: 'center',
+                    padding: '32px 24px',
+                    color: dragOver ? '#1d6ef5' : '#64748b',
+                  }}
+                  role="button"
+                  tabIndex={0}
+                  onKeyDown={(event) => {
+                    if (event.key === 'Enter' || event.key === ' ') {
+                      event.preventDefault();
+                      openFileDialog();
+                    }
+                  }}
+                >
+                  <p style={{ margin: '0 0 8px 0', fontWeight: 600 }}>
+                    Drag and drop PDF or click to browse
+                  </p>
+                  <p style={{ margin: 0, fontSize: '12px' }}>
+                    Optional PDF with assignment details
+                  </p>
+                </div>
+              )}
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".pdf"
+                onChange={handleFileInput}
+                style={{ display: 'none' }}
+              />
             </Field>
 
             {/* Progress */}
