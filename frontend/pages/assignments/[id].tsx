@@ -11,7 +11,6 @@ import { useRouter } from 'next/router';
 import axios from 'axios';
 
 import Header from '@/components/submissions/Header';
-import Head from 'next/head';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
 import { useAuth } from '@/context/AuthContext';
 import {
@@ -21,20 +20,482 @@ import {
   submitToAssignment,
   deleteAssignment,
 } from '@/services/assignments';
-import type {
-  Assignment,
-  AssignmentSubmission,
-} from '@/services/assignments';
+import type { Assignment, AssignmentSubmission } from '@/services/assignments';
 import { timeAgo } from '@/utils/time';
+
+// ── Ink & Paper CSS (consistent with index.tsx) ─────────────────────────────
+
+const PAGE_CSS = `
+  @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500;600&display=swap');
+
+  :root {
+    --ink:          #000000;
+    --paper:        #ffffff;
+    --navy:         #051650;
+    --rule:         1.5px solid #000;
+    --surface:      #f7f7f5;
+    --surface-2:    #f0efec;
+    --border-soft:  #e0e0e0;
+    --text-sub:     #444444;
+    --text-muted:   #666666;
+    --red:          #cc0000;
+    --green:        #1a7a3c;
+    --orange:       #b85c00;
+    --blue:         #1a4fa8;
+    --font-display: 'Playfair Display', Georgia, serif;
+    --font-mono:    'Space Mono', monospace;
+    --font-body:    'DM Sans', sans-serif;
+    --radius:       0px;
+    --radius-lg:    0px;
+    --shadow:       none;
+    --shadow-hover: none;
+  }
+
+  .ap-page {
+    min-height: 100vh;
+    background: var(--paper);
+    font-family: var(--font-body);
+    color: var(--ink);
+    position: relative;
+  }
+  .ap-page::before {
+    content: '';
+    position: fixed;
+    top: 0; right: 0;
+    width: 280px;
+    height: 100vh;
+    background: var(--navy);
+    clip-path: polygon(80px 0, 100% 0, 100% 100%, 0 100%);
+    z-index: 0;
+    pointer-events: none;
+  }
+
+  .ap-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 40px 28px 80px;
+    position: relative;
+    z-index: 1;
+  }
+
+  .ap-breadcrumb {
+    display: flex; align-items: center; gap: 10px;
+    margin-bottom: 36px;
+    font-family: var(--font-mono); font-size: 10px;
+    letter-spacing: 0.14em; text-transform: uppercase; color: var(--text-muted);
+  }
+  .ap-breadcrumb-link {
+    color: var(--navy); font-weight: 700; text-decoration: none;
+    border-bottom: 1.5px solid var(--navy); padding-bottom: 1px;
+    transition: opacity 0.15s;
+  }
+  .ap-breadcrumb-link:hover { opacity: 0.65; }
+  .ap-breadcrumb-sep { color: #aaa; }
+
+  .ap-page-header {
+    display: flex; flex-wrap: wrap;
+    align-items: flex-end; justify-content: space-between;
+    gap: 16px; padding-bottom: 28px;
+    border-bottom: var(--rule); margin-bottom: 28px;
+  }
+  .ap-page-title {
+    font-family: var(--font-display); font-size: 40px;
+    font-weight: 900; color: var(--ink);
+    margin: 0 0 6px; line-height: 1.05; letter-spacing: -0.02em;
+  }
+  .ap-page-title span { color: var(--navy); }
+  .ap-page-subtitle {
+    font-family: var(--font-mono); font-size: 9.5px;
+    letter-spacing: 0.18em; text-transform: uppercase;
+    color: var(--text-muted); font-weight: 700; margin: 0;
+  }
+
+  .ap-card {
+    background: var(--surface);
+    border: var(--rule);
+    padding: 24px;
+    margin-bottom: 24px;
+  }
+  .ap-card:last-child { margin-bottom: 0; }
+
+  .ap-section-label {
+    display: flex; align-items: center; gap: 12px;
+    margin-bottom: 16px;
+  }
+  .ap-section-bar {
+    width: 3px; height: 20px;
+    background: var(--navy);
+  }
+  .ap-section-text {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    font-weight: 700;
+    color: var(--text-sub);
+  }
+
+  .ap-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 4px 12px;
+    border: var(--rule);
+    font-family: var(--font-mono);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    background: var(--paper);
+  }
+  .ap-badge-green {
+    border-color: var(--green);
+    color: var(--green);
+  }
+  .ap-badge-orange {
+    border-color: var(--orange);
+    color: var(--orange);
+  }
+  .ap-badge-red {
+    border-color: var(--red);
+    color: var(--red);
+  }
+  .ap-badge-blue {
+    border-color: var(--blue);
+    color: var(--blue);
+  }
+  .ap-badge-accent {
+    border-color: var(--navy);
+    color: var(--navy);
+  }
+
+  .ap-meta-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+    margin-top: 24px;
+  }
+  .ap-meta-tile {
+    background: var(--paper);
+    border: var(--rule);
+    padding: 16px;
+  }
+  .ap-meta-label {
+    font-family: var(--font-mono);
+    font-size: 9px;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    margin-bottom: 8px;
+  }
+  .ap-meta-value {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--ink);
+    line-height: 1.4;
+  }
+  .ap-meta-sub {
+    font-size: 11px;
+    color: var(--text-muted);
+    margin-top: 4px;
+    font-family: var(--font-mono);
+  }
+
+  .ap-description {
+    background: var(--paper);
+    border: var(--rule);
+    padding: 16px;
+    margin-top: 20px;
+    font-size: 13px;
+    line-height: 1.7;
+    color: var(--text-sub);
+  }
+
+  .ap-file-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    background: var(--paper);
+    border: var(--rule);
+    padding: 12px 16px;
+  }
+  .ap-file-name {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--ink);
+  }
+  .ap-file-size {
+    font-size: 11px;
+    color: var(--text-muted);
+    font-family: var(--font-mono);
+  }
+
+  .ap-upload-zone {
+    border: 2px dashed var(--border-soft);
+    padding: 40px 24px;
+    text-align: center;
+    transition: border-color 0.15s, background 0.15s;
+  }
+  .ap-upload-zone.dragover {
+    border-color: var(--blue);
+    background: rgba(26, 79, 168, 0.05);
+  }
+  .ap-upload-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 48px;
+    height: 48px;
+    background: var(--surface-2);
+    border: var(--rule);
+    color: var(--blue);
+    margin-bottom: 12px;
+  }
+
+  .ap-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 18px;
+    border: var(--rule);
+    background: var(--paper);
+    font-family: var(--font-mono);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: box-shadow 0.12s, transform 0.1s;
+  }
+  .ap-btn:hover:not(:disabled) {
+    box-shadow: 4px 4px 0 var(--ink);
+    transform: translate(-2px, -2px);
+  }
+  .ap-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+  .ap-btn-primary {
+    background: var(--navy);
+    border-color: var(--navy);
+    color: var(--paper);
+  }
+  .ap-btn-primary:hover:not(:disabled) {
+    box-shadow: 4px 4px 0 var(--navy);
+    background: var(--ink);
+  }
+  .ap-btn-danger {
+    border-color: var(--red);
+    color: var(--red);
+    background: transparent;
+  }
+  .ap-btn-sm {
+    padding: 4px 12px;
+    font-size: 10px;
+  }
+
+  .ap-alert {
+    padding: 12px 16px;
+    border: var(--rule);
+    font-size: 13px;
+    margin-bottom: 16px;
+  }
+  .ap-alert-red {
+    background: rgba(204, 0, 0, 0.05);
+    border-color: var(--red);
+    color: var(--red);
+  }
+  .ap-alert-green {
+    background: rgba(26, 122, 60, 0.05);
+    border-color: var(--green);
+    color: var(--green);
+  }
+  .ap-alert-orange {
+    background: rgba(184, 92, 0, 0.05);
+    border-color: var(--orange);
+    color: var(--orange);
+  }
+
+  .ap-table-wrapper {
+    overflow-x: auto;
+    border: var(--rule);
+    margin-top: 16px;
+  }
+  .ap-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+  }
+  .ap-table th {
+    padding: 12px 16px;
+    text-align: left;
+    background: var(--surface-2);
+    font-family: var(--font-mono);
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    font-weight: 700;
+    color: var(--text-muted);
+    border-bottom: var(--rule);
+  }
+  .ap-table td {
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border-soft);
+    vertical-align: middle;
+  }
+  .ap-table tr:last-child td {
+    border-bottom: none;
+  }
+
+  .ap-select {
+    width: 100%;
+    padding: 9px 36px 9px 14px;
+    background: var(--paper);
+    border: var(--rule);
+    font-family: var(--font-body);
+    font-size: 13px;
+    color: var(--ink);
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%23000' stroke-width='1.5' fill='none'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+    cursor: pointer;
+  }
+  .ap-select:focus {
+    box-shadow: 3px 3px 0 var(--navy);
+    border-color: var(--navy);
+    outline: none;
+  }
+
+  .ap-review-card {
+    background: var(--paper);
+    border: var(--rule);
+    padding: 20px;
+    margin-top: 16px;
+  }
+  .ap-comment-item {
+    background: var(--surface);
+    border: var(--rule);
+    padding: 12px;
+    margin-top: 12px;
+  }
+  .ap-comment-meta {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--text-muted);
+    margin-bottom: 6px;
+  }
+  .ap-comment-text {
+    font-size: 13px;
+    color: var(--text-sub);
+    line-height: 1.6;
+  }
+
+  .ap-summary-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 0;
+    border-bottom: 1px solid var(--border-soft);
+  }
+  .ap-summary-item:last-child {
+    border-bottom: none;
+  }
+  .ap-summary-label {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+  }
+  .ap-summary-value {
+    font-weight: 600;
+    text-align: right;
+    max-width: 55%;
+  }
+
+  .ap-toast {
+    position: fixed;
+    right: 20px;
+    top: 20px;
+    z-index: 50;
+    padding: 14px 20px;
+    background: var(--paper);
+    border: var(--rule);
+    box-shadow: 4px 4px 0 var(--ink);
+    animation: ap-toast-in 0.2s ease;
+    max-width: 320px;
+  }
+  .ap-toast-success {
+    border-left: 4px solid var(--green);
+  }
+  .ap-toast-error {
+    border-left: 4px solid var(--red);
+  }
+  .ap-toast-info {
+    border-left: 4px solid var(--blue);
+  }
+  .ap-toast-type {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    margin-bottom: 4px;
+  }
+  .ap-toast-msg {
+    font-size: 13px;
+  }
+  @keyframes ap-toast-in {
+    from { opacity: 0; transform: translateY(-8px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  .ap-skeleton {
+    background: var(--surface-2);
+    border: var(--rule);
+    animation: ap-pulse 1.6s ease-in-out infinite;
+  }
+  @keyframes ap-pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+  }
+
+  .ap-file-input {
+    width: 100%;
+    margin-top: 16px;
+    padding: 10px;
+    border: var(--rule);
+    background: var(--paper);
+    font-size: 13px;
+    cursor: pointer;
+  }
+
+  .ap-layout-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 340px;
+    gap: 24px;
+  }
+
+  @media (max-width: 960px) {
+    .ap-layout-grid { grid-template-columns: 1fr; }
+    .ap-meta-grid { grid-template-columns: 1fr 1fr; }
+    .ap-page-title { font-size: 30px; }
+    .ap-page::before { display: none; }
+    .ap-container { padding: 24px 16px 60px; }
+  }
+  @media (max-width: 620px) {
+    .ap-meta-grid { grid-template-columns: 1fr; }
+    .ap-page-title { font-size: 24px; }
+  }
+`;
+
+// ── Helpers (unchanged logic) ───────────────────────────────────────────────
 
 const formatDateTime = (value: string): string => {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return value;
-
-  return new Intl.DateTimeFormat('en-US', {
-    dateStyle: 'medium',
-    timeStyle: 'short',
-  }).format(date);
+  return new Intl.DateTimeFormat('en-US', { dateStyle: 'medium', timeStyle: 'short' }).format(date);
 };
 
 const formatFileSize = (value: number): string => {
@@ -45,17 +506,15 @@ const formatFileSize = (value: number): string => {
   return `${(kb / 1024).toFixed(1)} MB`;
 };
 
-const formatPlural = (count: number, word: string): string =>
-  `${count} ${word}${count === 1 ? '' : 's'}`;
+const formatPlural = (count: number, word: string): string => `${count} ${word}${count === 1 ? '' : 's'}`;
 
 const getDeadlineBadge = (assignment: Assignment) => {
   const now = new Date();
   const deadline = new Date(assignment.deadline);
   const isPast = now > deadline;
-
-  if (!isPast) return { label: 'Open', color: 'green' };
-  if (isPast && assignment.allow_late) return { label: 'Open (Late)', color: 'orange' };
-  return { label: 'Closed', color: 'red' };
+  if (!isPast) return { label: 'Open', cls: 'ap-badge-green' };
+  if (isPast && assignment.allow_late) return { label: 'Open (Late)', cls: 'ap-badge-orange' };
+  return { label: 'Closed', cls: 'ap-badge-red' };
 };
 
 const getErrorMessage = (error: unknown, fallback: string): string => {
@@ -64,158 +523,132 @@ const getErrorMessage = (error: unknown, fallback: string): string => {
     if (typeof detail === 'string' && detail.trim()) return detail;
     if (typeof error.message === 'string' && error.message.trim()) return error.message;
   }
-
-  if (error instanceof Error && error.message.trim()) {
-    return error.message;
-  }
-
+  if (error instanceof Error && error.message.trim()) return error.message;
   return fallback;
 };
 
 const getCountdown = (deadlineValue: string): string => {
   const diff = new Date(deadlineValue).getTime() - Date.now();
-
   if (Number.isNaN(diff)) return 'Unavailable';
-  if (diff <= 0) {
-    return `Deadline passed ${timeAgo(deadlineValue)}`;
-  }
-
-  const days = Math.floor(diff / 86_400_000);
-  const hours = Math.floor((diff % 86_400_000) / 3_600_000);
+  if (diff <= 0) return `Deadline passed ${timeAgo(deadlineValue)}`;
+  const days    = Math.floor(diff / 86_400_000);
+  const hours   = Math.floor((diff % 86_400_000) / 3_600_000);
   const minutes = Math.floor((diff % 3_600_000) / 60_000);
   const seconds = Math.floor((diff % 60_000) / 1000);
-
   const parts: string[] = [];
   if (days > 0) parts.push(`${days}d`);
   if (hours > 0 || parts.length > 0) parts.push(`${hours}h`);
   if (minutes > 0 || parts.length > 0) parts.push(`${minutes}m`);
   parts.push(`${seconds}s`);
-
   return `${parts.join(' ')} remaining`;
 };
 
 const getSubmissionLineCommentsCount = (submission?: AssignmentSubmission | null): number => {
   if (!submission?.reviews?.length) return 0;
-  return submission.reviews.reduce(
-    (total, review) => total + (review.comments?.length ?? 0),
-    0
-  );
+  return submission.reviews.reduce((total, review) => total + (review.comments?.length ?? 0), 0);
 };
 
 const getTargetingSummary = (assignment: Assignment): string[] => {
   const parts = [`For ${assignment.target_year} students`];
-
-  if (assignment.target_sections.length > 0) {
-    parts.push(`Sections: ${assignment.target_sections.join(', ')}`);
-  }
-
-  if (assignment.target_groups.length > 0) {
-    parts.push(`Groups: ${assignment.target_groups.join(', ')}`);
-  }
-
+  if (assignment.target_sections.length > 0) parts.push(`Sections: ${assignment.target_sections.join(', ')}`);
+  if (assignment.target_groups.length > 0)   parts.push(`Groups: ${assignment.target_groups.join(', ')}`);
   return parts;
 };
 
-const getReviewNotificationStorageKey = (submissionId: number): string =>
-  `assignment-review:last-seen:${submissionId}`;
+const getReviewNotificationStorageKey = (submissionId: number): string => `assignment-review:last-seen:${submissionId}`;
 
 const buildReviewSignature = (submission?: AssignmentSubmission | null): string => {
   if (!submission || !submission.has_reviews) return 'none';
-
   const reviews = (submission.reviews ?? []).slice().sort((a, b) => a.id - b.id);
-  if (reviews.length === 0) {
-    return `count:${submission.reviews_count}`;
-  }
-
-  return reviews
-    .map((review) => {
-      const commentCount = review.comments?.length ?? 0;
-      const gradeLabel = review.grade == null ? 'null' : String(review.grade);
-      return `${review.id}:${review.updated_at}:${gradeLabel}:${commentCount}`;
-    })
-    .join('|');
+  if (reviews.length === 0) return `count:${submission.reviews_count}`;
+  return reviews.map((review) => {
+    const commentCount = review.comments?.length ?? 0;
+    const gradeLabel   = review.grade == null ? 'null' : String(review.grade);
+    return `${review.id}:${review.updated_at}:${gradeLabel}:${commentCount}`;
+  }).join('|');
 };
+
+// ── Loading skeleton (adapted) ───────────────────────────────────────────────
 
 function LoadingSkeleton() {
   return (
-    <div className="min-h-screen bg-[#f0f4ff] text-[#1a2340]">
-      <Head>
-        <title>Loading Assignment... — ESICodeHub</title>
-      </Head>
+    <div className="ap-page">
       <Header activePage="Assignments" />
-      <main className="mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:px-8">
-        <div className="h-7 w-28 animate-pulse rounded-full bg-white/90" />
-        <div className="mt-5 grid gap-6 lg:grid-cols-[minmax(0,1fr)_340px]">
-          <div className="space-y-6">
-            <div className="h-56 animate-pulse rounded-2xl border border-slate-200 bg-white" />
-            <div className="h-72 animate-pulse rounded-2xl border border-slate-200 bg-white" />
+      <div className="ap-container">
+        <div className="ap-skeleton" style={{ height: 20, width: 180, marginBottom: 28 }} />
+        <div className="ap-layout-grid">
+          <div>
+            <div className="ap-skeleton" style={{ height: 220, marginBottom: 24 }} />
+            <div className="ap-skeleton" style={{ height: 300 }} />
           </div>
-          <div className="space-y-6">
-            <div className="h-64 animate-pulse rounded-2xl border border-slate-200 bg-white" />
-            <div className="h-40 animate-pulse rounded-2xl border border-slate-200 bg-white" />
+          <div>
+            <div className="ap-skeleton" style={{ height: 240, marginBottom: 24 }} />
+            <div className="ap-skeleton" style={{ height: 160 }} />
           </div>
         </div>
-      </main>
+      </div>
     </div>
   );
 }
+
+// ── Main component ──────────────────────────────────────────────────────────
 
 function AssignmentDetailPageContent() {
   const router = useRouter();
   const { user } = useAuth();
 
-  const [assignmentId, setAssignmentId] = useState<number | null>(null);
-  const [assignment, setAssignment] = useState<Assignment | null>(null);
-  const [mySubmission, setMySubmission] = useState<AssignmentSubmission | null>(null);
-  const [submissions, setSubmissions] = useState<AssignmentSubmission[]>([]);
-  const [selectedGroup, setSelectedGroup] = useState<number | undefined>(undefined);
-
-  const [loadingAssignment, setLoadingAssignment] = useState(true);
-  const [loadingRoleData, setLoadingRoleData] = useState(false);
+  const [assignmentId,       setAssignmentId]       = useState<number | null>(null);
+  const [assignment,         setAssignment]         = useState<Assignment | null>(null);
+  const [mySubmission,       setMySubmission]       = useState<AssignmentSubmission | null>(null);
+  const [submissions,        setSubmissions]        = useState<AssignmentSubmission[]>([]);
+  const [selectedGroup,      setSelectedGroup]      = useState<number | undefined>(undefined);
+  const [loadingAssignment,  setLoadingAssignment]  = useState(true);
+  const [loadingRoleData,    setLoadingRoleData]    = useState(false);
   const [loadingSubmissions, setLoadingSubmissions] = useState(false);
-  const [initialDataLoaded, setInitialDataLoaded] = useState(false);
-  const [pageError, setPageError] = useState<string | null>(null);
-  const [sectionError, setSectionError] = useState<string | null>(null);
+  const [initialDataLoaded,  setInitialDataLoaded]  = useState(false);
+  const [pageError,          setPageError]          = useState<string | null>(null);
+  const [sectionError,       setSectionError]       = useState<string | null>(null);
+  const [countdown,          setCountdown]          = useState('');
+  const [dragOver,           setDragOver]           = useState(false);
+  const [selectedFiles,      setSelectedFiles]      = useState<File[]>([]);
+  const [showUploadZone,     setShowUploadZone]     = useState(false);
+  const [uploading,          setUploading]          = useState(false);
+  const [deleteLoading,      setDeleteLoading]      = useState(false);
+  const [toast,              setToast]              = useState<{ type: 'success' | 'error' | 'info'; message: string } | null>(null);
+  const [fileInputKey,       setFileInputKey]       = useState(0);
 
-  const [countdown, setCountdown] = useState('');
-  const [dragOver, setDragOver] = useState(false);
-  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
-  const [showUploadZone, setShowUploadZone] = useState(false);
-  const [uploading, setUploading] = useState(false);
-  const [deleteLoading, setDeleteLoading] = useState(false);
-  const [toast, setToast] = useState<{ type: 'success' | 'error' | 'info'; message: string } | null>(null);
-  const [fileInputKey, setFileInputKey] = useState(0);
-  const hasLoadedRoleDataRef = useRef(false);
-  const reviewNotificationReadyRef = useRef(false);
-  const latestReviewSignatureRef = useRef('none');
+  const hasLoadedRoleDataRef          = useRef(false);
+  const reviewNotificationReadyRef    = useRef(false);
+  const latestReviewSignatureRef      = useRef('none');
+
+  // Inject CSS
+  useEffect(() => {
+    if (typeof document === 'undefined') return;
+    const id = 'ap-assignment-detail-styles';
+    if (!document.getElementById(id)) {
+      const tag = document.createElement('style');
+      tag.id = id;
+      tag.textContent = PAGE_CSS;
+      document.head.appendChild(tag);
+    }
+  }, []);
 
   const persistReviewSignature = (submissionId: number, signature: string) => {
     if (typeof window === 'undefined') return;
-
     try {
-      window.localStorage.setItem(
-        getReviewNotificationStorageKey(submissionId),
-        signature
-      );
+      window.localStorage.setItem(getReviewNotificationStorageKey(submissionId), signature);
       window.dispatchEvent(new Event('assignment-review-signature-updated'));
-    } catch {
-    }
+    } catch {}
   };
 
-  const isStudent = user?.role === 'student';
+  const isStudent   = user?.role === 'student';
   const isProfessor = user?.role === 'professor';
-  const isCreator = Boolean(
-    assignment &&
-      user &&
-      `${user.first_name} ${user.last_name}`.trim() === assignment.professor_name.trim()
-  );
-  const deadlineBadge = assignment ? getDeadlineBadge(assignment) : null;
-  const canSubmit = Boolean(assignment?.is_open);
-  const hasSubmission = Boolean(mySubmission);
+  const isCreator   = Boolean(assignment && user && `${user.first_name} ${user.last_name}`.trim() === assignment.professor_name.trim());
+  const deadlineBadge   = assignment ? getDeadlineBadge(assignment) : null;
+  const canSubmit       = Boolean(assignment?.is_open);
+  const hasSubmission   = Boolean(mySubmission);
   const showSubmissionClosed = Boolean(assignment && !assignment.is_open);
-  const deadlinePassed = assignment
-    ? new Date(assignment.deadline).getTime() <= Date.now()
-    : false;
+  const deadlinePassed  = assignment ? new Date(assignment.deadline).getTime() <= Date.now() : false;
 
   useEffect(() => {
     if (!toast) return;
@@ -225,80 +658,45 @@ function AssignmentDetailPageContent() {
 
   useEffect(() => {
     if (!router.isReady) return;
-
     const raw = router.query.id;
     const value = Array.isArray(raw) ? raw[0] : raw;
     const parsed = Number(value);
-
     if (!Number.isInteger(parsed) || parsed <= 0) {
-      setAssignmentId(null);
-      setPageError('Invalid assignment id.');
-      setLoadingAssignment(false);
-      setInitialDataLoaded(true);
-      return;
+      setAssignmentId(null); setPageError('Invalid assignment id.');
+      setLoadingAssignment(false); setInitialDataLoaded(true); return;
     }
-
     setAssignmentId(parsed);
   }, [router.isReady, router.query.id]);
 
   useEffect(() => {
     if (!router.isReady || assignmentId == null || !user) return;
-
     let cancelled = false;
-
     const loadAssignment = async () => {
-      setLoadingAssignment(true);
-      setPageError(null);
-      setSectionError(null);
-      setAssignment(null);
-      setMySubmission(null);
-      setSubmissions([]);
-      setSelectedGroup(undefined);
-      setShowUploadZone(false);
-      setSelectedFiles([]);
-      setFileInputKey((prev) => prev + 1);
-      setCountdown('');
-      setInitialDataLoaded(false);
+      setLoadingAssignment(true); setPageError(null); setSectionError(null);
+      setAssignment(null); setMySubmission(null); setSubmissions([]);
+      setSelectedGroup(undefined); setShowUploadZone(false); setSelectedFiles([]);
+      setFileInputKey((prev) => prev + 1); setCountdown(''); setInitialDataLoaded(false);
       hasLoadedRoleDataRef.current = false;
-
       try {
         const assignmentData = await getAssignment(assignmentId);
         if (cancelled) return;
-
         setAssignment(assignmentData);
       } catch (error: unknown) {
         if (cancelled) return;
-
         const status = axios.isAxiosError(error) ? error.response?.status : undefined;
-        setPageError(
-          status === 403
-            ? "You don't have access to this assignment"
-            : getErrorMessage(error, 'Failed to load assignment.')
-        );
+        setPageError(status === 403 ? "You don't have access to this assignment" : getErrorMessage(error, 'Failed to load assignment.'));
         setInitialDataLoaded(true);
-      } finally {
-        if (!cancelled) {
-          setLoadingAssignment(false);
-        }
-      }
+      } finally { if (!cancelled) setLoadingAssignment(false); }
     };
-
     void loadAssignment();
-
-    return () => {
-      cancelled = true;
-    };
+    return () => { cancelled = true; };
   }, [assignmentId, router.isReady, user]);
 
   useEffect(() => {
     if (!assignment || !user || assignmentId == null) return;
-
     let cancelled = false;
-
     const loadRoleData = async () => {
-      setLoadingRoleData(true);
-      setSectionError(null);
-
+      setLoadingRoleData(true); setSectionError(null);
       try {
         if (isStudent) {
           try {
@@ -308,9 +706,7 @@ function AssignmentDetailPageContent() {
           } catch (error: unknown) {
             if (axios.isAxiosError(error) && error.response?.status === 404) {
               if (!cancelled) setMySubmission(null);
-            } else {
-              throw error;
-            }
+            } else { throw error; }
           }
         } else {
           setLoadingSubmissions(true);
@@ -320,33 +716,19 @@ function AssignmentDetailPageContent() {
         }
       } catch (error: unknown) {
         if (cancelled) return;
-
-        const status = axios.isAxiosError(error) ? error.response?.status : undefined;
-        const message =
-          status === 403
-            ? "You don't have access to this assignment"
-            : getErrorMessage(error, 'Failed to load assignment data.');
-
-        if (!hasLoadedRoleDataRef.current) {
-          setPageError(message);
-        } else {
-          setSectionError(message);
-        }
+        const status  = axios.isAxiosError(error) ? error.response?.status : undefined;
+        const message = status === 403 ? "You don't have access to this assignment" : getErrorMessage(error, 'Failed to load assignment data.');
+        if (!hasLoadedRoleDataRef.current) setPageError(message);
+        else setSectionError(message);
       } finally {
         if (!cancelled) {
-          setLoadingRoleData(false);
-          setLoadingSubmissions(false);
-          setInitialDataLoaded(true);
-          hasLoadedRoleDataRef.current = true;
+          setLoadingRoleData(false); setLoadingSubmissions(false);
+          setInitialDataLoaded(true); hasLoadedRoleDataRef.current = true;
         }
       }
     };
-
     void loadRoleData();
-
-    return () => {
-      cancelled = true;
-    };
+    return () => { cancelled = true; };
   }, [assignment, assignmentId, isStudent, selectedGroup, user]);
 
   useEffect(() => {
@@ -356,211 +738,113 @@ function AssignmentDetailPageContent() {
 
   useEffect(() => {
     if (!isStudent || !mySubmission) return;
-
     const signature = buildReviewSignature(mySubmission);
     latestReviewSignatureRef.current = signature;
-
-    if (typeof window === 'undefined') {
-      reviewNotificationReadyRef.current = true;
-      return;
-    }
-
+    if (typeof window === 'undefined') { reviewNotificationReadyRef.current = true; return; }
     const storageKey = getReviewNotificationStorageKey(mySubmission.id);
     let previousSignature: string | null = null;
-
-    try {
-      previousSignature = window.localStorage.getItem(storageKey);
-    } catch {
-      previousSignature = null;
-    }
-
+    try { previousSignature = window.localStorage.getItem(storageKey); } catch { previousSignature = null; }
     const hasSignatureChange = previousSignature !== signature;
     if (!reviewNotificationReadyRef.current) {
       if (hasSignatureChange) {
-        if (previousSignature === null && signature !== 'none') {
-          setToast({
-            type: 'info',
-            message: 'Your professor sent a new review on this assignment.',
-          });
-        } else if (previousSignature === 'none' && signature !== 'none') {
-          setToast({
-            type: 'info',
-            message: 'Your professor sent a new review on this assignment.',
-          });
-        } else if (previousSignature && previousSignature !== 'none' && signature !== 'none') {
-          setToast({
-            type: 'info',
-            message: 'Your professor updated a previous review on this assignment.',
-          });
-        }
+        if ((previousSignature === null || previousSignature === 'none') && signature !== 'none')
+          setToast({ type: 'info', message: 'Your professor sent a new review on this assignment.' });
+        else if (previousSignature && previousSignature !== 'none' && signature !== 'none')
+          setToast({ type: 'info', message: 'Your professor updated a previous review on this assignment.' });
       }
-
       persistReviewSignature(mySubmission.id, signature);
-
       reviewNotificationReadyRef.current = true;
       return;
     }
-
     if (!hasSignatureChange) return;
-
-    if (previousSignature === 'none' && signature !== 'none') {
-      setToast({
-        type: 'info',
-        message: 'Your professor sent a new review on this assignment.',
-      });
-    } else if (previousSignature && previousSignature !== 'none' && signature !== 'none') {
-      setToast({
-        type: 'info',
-        message: 'Your professor updated a previous review on this assignment.',
-      });
-    }
-
+    if (previousSignature === 'none' && signature !== 'none')
+      setToast({ type: 'info', message: 'Your professor sent a new review on this assignment.' });
+    else if (previousSignature && previousSignature !== 'none' && signature !== 'none')
+      setToast({ type: 'info', message: 'Your professor updated a previous review on this assignment.' });
     persistReviewSignature(mySubmission.id, signature);
   }, [isStudent, mySubmission]);
 
   useEffect(() => {
     if (!isStudent || assignmentId == null || !mySubmission) return;
-
     let cancelled = false;
-
     const syncStudentSubmission = async () => {
       try {
         const latestSubmission = await getMySubmission(assignmentId);
         if (cancelled) return;
-
         const latestSignature = buildReviewSignature(latestSubmission);
-        if (
-          latestSignature !== latestReviewSignatureRef.current ||
-          latestSubmission.reviews_count !== mySubmission.reviews_count
-        ) {
+        if (latestSignature !== latestReviewSignatureRef.current || latestSubmission.reviews_count !== mySubmission.reviews_count) {
           latestReviewSignatureRef.current = latestSignature;
           setMySubmission(latestSubmission);
         }
       } catch (error: unknown) {
         if (cancelled) return;
-        if (axios.isAxiosError(error) && error.response?.status === 404) {
-          setMySubmission(null);
-        }
+        if (axios.isAxiosError(error) && error.response?.status === 404) setMySubmission(null);
       }
     };
-
-    const interval = window.setInterval(() => {
-      if (!uploading) {
-        void syncStudentSubmission();
-      }
-    }, 20000);
-
-    const onVisibilityChange = () => {
-      if (document.visibilityState === 'visible' && !uploading) {
-        void syncStudentSubmission();
-      }
-    };
-
+    const interval = window.setInterval(() => { if (!uploading) void syncStudentSubmission(); }, 20000);
+    const onVisibilityChange = () => { if (document.visibilityState === 'visible' && !uploading) void syncStudentSubmission(); };
     document.addEventListener('visibilitychange', onVisibilityChange);
-
-    return () => {
-      cancelled = true;
-      window.clearInterval(interval);
-      document.removeEventListener('visibilitychange', onVisibilityChange);
-    };
+    return () => { cancelled = true; window.clearInterval(interval); document.removeEventListener('visibilitychange', onVisibilityChange); };
   }, [assignmentId, isStudent, mySubmission, uploading]);
 
   useEffect(() => {
     if (!assignment) return;
-
-    const updateCountdown = () => {
-      setCountdown(getCountdown(assignment.deadline));
-    };
-
-    updateCountdown();
-    const interval = window.setInterval(updateCountdown, 1000);
-
+    const update = () => setCountdown(getCountdown(assignment.deadline));
+    update();
+    const interval = window.setInterval(update, 1000);
     return () => window.clearInterval(interval);
   }, [assignment]);
 
   const reloadStudentSubmission = async () => {
     if (assignmentId == null) return;
-
     try {
       const submission = await getMySubmission(assignmentId);
-      setMySubmission(submission);
-      setShowUploadZone(false);
+      setMySubmission(submission); setShowUploadZone(false);
     } catch (error: unknown) {
-      if (axios.isAxiosError(error) && error.response?.status === 404) {
-        setMySubmission(null);
-        return;
-      }
+      if (axios.isAxiosError(error) && error.response?.status === 404) { setMySubmission(null); return; }
       throw error;
     }
   };
 
   const handleFileInput = (event: ChangeEvent<HTMLInputElement>) => {
     if (!event.target.files) return;
-    const picked = Array.from(event.target.files);
-    setSelectedFiles((previous) => [...previous, ...picked]);
+    setSelectedFiles((prev) => [...prev, ...Array.from(event.target.files!)]);
   };
 
   const handleDrop = (event: DragEvent<HTMLDivElement>) => {
-    event.preventDefault();
-    setDragOver(false);
-    const dropped = Array.from(event.dataTransfer.files);
-    setSelectedFiles((previous) => [...previous, ...dropped]);
+    event.preventDefault(); setDragOver(false);
+    setSelectedFiles((prev) => [...prev, ...Array.from(event.dataTransfer.files)]);
   };
 
-  const removeFile = (index: number) => {
-    setSelectedFiles((previous) => previous.filter((_, fileIndex) => fileIndex !== index));
-  };
+  const removeFile = (index: number) => setSelectedFiles((prev) => prev.filter((_, i) => i !== index));
 
   const handleUpload = async (event: FormEvent) => {
     event.preventDefault();
     if (!assignmentId || selectedFiles.length === 0) return;
-
-    setUploading(true);
-    setSectionError(null);
-
+    setUploading(true); setSectionError(null);
     try {
-      await submitToAssignment(
-        assignmentId,
-        selectedFiles,
-        selectedFiles.map((file) => file.name)
-      );
+      await submitToAssignment(assignmentId, selectedFiles, selectedFiles.map((f) => f.name));
       await reloadStudentSubmission();
-      setSelectedFiles([]);
-      setFileInputKey((previous) => previous + 1);
+      setSelectedFiles([]); setFileInputKey((prev) => prev + 1);
       setToast({ type: 'success', message: 'Submission uploaded successfully.' });
     } catch (error: unknown) {
-      setToast({
-        type: 'error',
-        message: getErrorMessage(error, 'Failed to upload submission.'),
-      });
-    } finally {
-      setUploading(false);
-    }
+      setToast({ type: 'error', message: getErrorMessage(error, 'Failed to upload submission.') });
+    } finally { setUploading(false); }
   };
 
   const handleDeleteAssignment = async () => {
     if (!assignmentId) return;
-    const confirmed = window.confirm('Delete this assignment? This cannot be undone.');
-    if (!confirmed) return;
-
+    if (!window.confirm('Delete this assignment? This cannot be undone.')) return;
     setDeleteLoading(true);
-    try {
-      await deleteAssignment(assignmentId);
-      await router.push('/assignments');
-    } catch (error: unknown) {
-      setToast({
-        type: 'error',
-        message: getErrorMessage(error, 'Failed to delete assignment.'),
-      });
+    try { await deleteAssignment(assignmentId); await router.push('/assignments'); }
+    catch (error: unknown) {
+      setToast({ type: 'error', message: getErrorMessage(error, 'Failed to delete assignment.') });
       setDeleteLoading(false);
     }
   };
 
   const handleBack = () => {
-    if (typeof window !== 'undefined' && window.history.length > 1) {
-      router.back();
-      return;
-    }
+    if (typeof window !== 'undefined' && window.history.length > 1) { router.back(); return; }
     void router.push('/assignments');
   };
 
@@ -575,154 +859,99 @@ function AssignmentDetailPageContent() {
 
   if (pageError || !assignment || assignmentId == null) {
     return (
-      <div className="min-h-screen bg-[#f0f4ff] text-[#1a2340]">
+      <div className="ap-page">
         <Header activePage="Assignments" />
-        <main className="mx-auto max-w-4xl px-4 py-10 sm:px-6 lg:px-8">
-          <div className="rounded-2xl border border-rose-200 bg-white p-8 shadow-sm">
-            <button
-              type="button"
-              onClick={handleBack}
-              className="inline-flex items-center gap-2 rounded-full border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50"
-            >
-              <span aria-hidden="true">←</span>
-              Back
-            </button>
-            <h1 className="mt-6 text-2xl font-bold text-slate-900">Unable to load assignment</h1>
-            <p className="mt-2 text-sm text-slate-600">
-              {pageError ?? 'Unknown error.'}
-            </p>
+        <div className="ap-container">
+          <button
+            type="button"
+            onClick={handleBack}
+            className="ap-btn ap-btn-primary"
+            style={{ marginBottom: '24px' }}
+          >
+            ← Back
+          </button>
+          <div className="ap-card">
+            <h1 className="ap-page-title" style={{ fontSize: '24px', marginBottom: '8px' }}>Unable to load assignment</h1>
+            <p style={{ fontSize: '13px', color: 'var(--text-muted)' }}>{pageError ?? 'Unknown error.'}</p>
           </div>
-        </main>
+        </div>
       </div>
     );
   }
 
-  const submittedFiles = mySubmission?.files ?? [];
-  const submittedFileLabelById = new Map<number, string>(
-    submittedFiles.map((file) => [file.id, file.file_path || file.file_name])
-  );
-  const lineCommentsCount = getSubmissionLineCommentsCount(mySubmission);
-  const targetSummary = getTargetingSummary(assignment);
-  const groupOptions = assignment.target_groups.slice().sort((a, b) => a - b);
-  const groupLabel = selectedGroup == null ? 'All groups' : `Group ${selectedGroup}`;
-  const showStudentUploadZone = isStudent && canSubmit && (!hasSubmission || showUploadZone);
-  const showSubmittedFiles = Boolean(mySubmission && submittedFiles.length > 0);
-  const showStudentClosedBanner = isStudent && showSubmissionClosed;
-  const showProfessorTable = isProfessor;
+  const submittedFiles           = mySubmission?.files ?? [];
+  const submittedFileLabelById   = new Map<number, string>(submittedFiles.map((f) => [f.id, f.file_path || f.file_name]));
+  const lineCommentsCount        = getSubmissionLineCommentsCount(mySubmission);
+  const targetSummary            = getTargetingSummary(assignment);
+  const groupOptions             = assignment.target_groups.slice().sort((a, b) => a - b);
+  const groupLabel               = selectedGroup == null ? 'All groups' : `Group ${selectedGroup}`;
+  const showStudentUploadZone    = isStudent && canSubmit && (!hasSubmission || showUploadZone);
+  const showSubmittedFiles       = Boolean(mySubmission && submittedFiles.length > 0);
+  const showStudentClosedBanner  = isStudent && showSubmissionClosed;
+  const showProfessorTable       = isProfessor;
 
   return (
-    <div className="min-h-screen bg-[#f0f4ff] text-[#1a2340]">
-      <Head>
-        <title>{assignment?.title} — ESICodeHub</title>
-      </Head>
+    <div className="ap-page">
       <Header activePage="Assignments" />
 
       {toast && (
-        <div
-          className={
-            'fixed right-4 top-4 z-50 rounded-2xl border px-4 py-3 shadow-lg backdrop-blur ' +
-            (toast.type === 'success'
-              ? 'border-emerald-200 bg-emerald-50 text-emerald-900'
-              : toast.type === 'error'
-                ? 'border-rose-200 bg-rose-50 text-rose-900'
-                : 'border-blue-200 bg-blue-50 text-blue-900')
-          }
-        >
-          <p className="text-sm font-semibold">
-            {toast.type === 'success'
-              ? 'Success'
-              : toast.type === 'error'
-                ? 'Error'
-                : 'Notification'}
-          </p>
-          <p className="mt-1 text-sm">{toast.message}</p>
+        <div className={`ap-toast ap-toast-${toast.type}`}>
+          <div className="ap-toast-type">{toast.type === 'success' ? 'Success' : toast.type === 'error' ? 'Error' : 'Notice'}</div>
+          <div className="ap-toast-msg">{toast.message}</div>
         </div>
       )}
 
-      <main className="mx-auto max-w-6xl px-4 py-8 pb-20 sm:px-6 lg:px-8">
-        <nav className="mb-7 flex items-center gap-2 text-sm">
-          <Link href="/assignments" className="font-medium text-blue-600 hover:underline">
-            Assignments
-          </Link>
-          <span className="text-slate-400">/</span>
-          <span className="text-slate-500">Assignment detail</span>
+      <div className="ap-container">
+        <nav className="ap-breadcrumb">
+          <Link href="/" className="ap-breadcrumb-link">~/home</Link>
+          <span className="ap-breadcrumb-sep">/</span>
+          <Link href="/assignments" className="ap-breadcrumb-link">assignments</Link>
+          <span className="ap-breadcrumb-sep">/</span>
+          <span>detail</span>
         </nav>
 
-        <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_340px]">
-          <div className="space-y-6">
-            <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm sm:p-7">
-              <div className="flex flex-wrap items-start justify-between gap-4">
-                <div className="space-y-4">
-                  <div className="flex items-center gap-3">
-                    <span className="rounded-full bg-blue-50 px-3 py-1 text-xs font-bold uppercase tracking-[0.2em] text-blue-700">
-                      {assignment.subject.code}
-                    </span>
-                    {deadlineBadge && (
-                      <span
-                        className={
-                          'rounded-full px-3 py-1 text-xs font-bold ' +
-                          (deadlineBadge.color === 'green'
-                            ? 'bg-emerald-50 text-emerald-700'
-                            : deadlineBadge.color === 'orange'
-                              ? 'bg-amber-50 text-amber-700'
-                              : 'bg-rose-50 text-rose-700')
-                        }
-                      >
-                        {deadlineBadge.label}
-                      </span>
-                    )}
+        <div className="ap-layout-grid">
+          {/* ── Left column ── */}
+          <div>
+            {/* Header card */}
+            <div className="ap-card" style={{ borderTop: `2px solid var(--navy)` }}>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px', justifyContent: 'space-between' }}>
+                <div style={{ flex: 1 }}>
+                  <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '16px' }}>
+                    <span className="ap-badge ap-badge-accent">{assignment.subject.code}</span>
+                    {deadlineBadge && <span className={`ap-badge ${deadlineBadge.cls}`}>{deadlineBadge.label}</span>}
                   </div>
-                  <div>
-                    <h1 className="text-3xl font-black leading-tight text-[#0d1b2a] sm:text-4xl">
-                      {assignment.title}
-                    </h1>
-                    <p className="mt-2 text-sm font-medium text-slate-500">
-                      Professor: {assignment.professor_name}
-                    </p>
-                    <p className="mt-1 text-xs text-slate-400">
-                      Posted {timeAgo(assignment.created_at)}
-                    </p>
-                  </div>
+                  <h1 className="ap-page-title" style={{ marginBottom: '8px', fontSize: '28px' }}>{assignment.title}</h1>
+                  <p style={{ fontSize: '13px', color: 'var(--text-sub)', marginBottom: '4px' }}>
+                    Professor: <span style={{ fontWeight: 600, color: 'var(--ink)' }}>{assignment.professor_name}</span>
+                  </p>
+                  <p style={{ fontSize: '11px', fontFamily: 'var(--font-mono)', color: 'var(--text-muted)' }}>
+                    Posted {timeAgo(assignment.created_at)}
+                  </p>
                 </div>
 
                 {(isProfessor || isCreator) && (
-                  <div className="flex flex-wrap items-center gap-2">
+                  <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
                     {isProfessor && (
                       <button
                         type="button"
                         onClick={handleRunPlagiarism}
                         disabled={!deadlinePassed}
-                        title={
-                          deadlinePassed
-                            ? 'Run plagiarism check'
-                            : 'Available after the deadline passes.'
-                        }
-                        className={
-                          'rounded-xl px-4 py-2 text-sm font-semibold transition-colors ' +
-                          (deadlinePassed
-                            ? 'bg-slate-900 text-white hover:bg-slate-800'
-                            : 'cursor-not-allowed bg-slate-200 text-slate-500')
-                        }
+                        title={deadlinePassed ? 'Run plagiarism check' : 'Available after the deadline passes.'}
+                        className="ap-btn"
+                        style={!deadlinePassed ? { opacity: 0.4, cursor: 'not-allowed' } : {}}
                       >
-                        Run Plagiarism Check
+                        Plagiarism Check
                       </button>
                     )}
                     {isCreator && (
-                      <Link
-                        href={`/assignments/${assignment.id}/edit`}
-                        className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50"
-                      >
+                      <Link href={`/assignments/${assignment.id}/edit`} className="ap-btn">
                         Edit
                       </Link>
                     )}
                     {isCreator && (
-                      <button
-                        type="button"
-                        onClick={handleDeleteAssignment}
-                        disabled={deleteLoading}
-                        className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-2 text-sm font-semibold text-rose-700 transition-colors hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-60"
-                      >
-                        {deleteLoading ? 'Deleting...' : 'Delete'}
+                      <button type="button" onClick={handleDeleteAssignment} disabled={deleteLoading} className="ap-btn ap-btn-danger">
+                        {deleteLoading ? 'Deleting…' : 'Delete'}
                       </button>
                     )}
                   </div>
@@ -730,207 +959,124 @@ function AssignmentDetailPageContent() {
               </div>
 
               {assignment.description && (
-                <div className="mt-6 rounded-2xl bg-slate-50 p-4 text-sm leading-6 text-slate-700">
-                  {assignment.description}
-                </div>
+                <div className="ap-description">{assignment.description}</div>
               )}
 
-              <div className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-                <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
-                    Targeting
-                  </p>
-                  <div className="mt-2 space-y-1 text-sm text-slate-700">
-                    {targetSummary.map((item) => (
-                      <p key={item}>{item}</p>
-                    ))}
-                  </div>
+              <div className="ap-meta-grid">
+                <div className="ap-meta-tile">
+                  <div className="ap-meta-label">Targeting</div>
+                  {targetSummary.map((item) => (
+                    <div key={item} className="ap-meta-value" style={{ marginBottom: 2 }}>{item}</div>
+                  ))}
                 </div>
-                <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
-                    Deadline
-                  </p>
-                  <p className="mt-2 text-sm font-semibold text-slate-900">
-                    {formatDateTime(assignment.deadline)}
-                  </p>
-                  <p className="mt-1 text-xs text-slate-500">{countdown}</p>
+                <div className="ap-meta-tile">
+                  <div className="ap-meta-label">Deadline</div>
+                  <div className="ap-meta-value">{formatDateTime(assignment.deadline)}</div>
+                  <div className="ap-meta-sub">{countdown}</div>
                 </div>
-                <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
-                    Status
-                  </p>
-                  <p className="mt-2 text-sm font-semibold text-slate-900">
-                    {assignment.is_open ? 'Assignment is open' : 'Assignment is closed'}
-                  </p>
-                  <p className="mt-1 text-xs text-slate-500">
-                    {assignment.allow_late ? 'Late submissions are allowed.' : 'Late submissions are not allowed.'}
-                  </p>
+                <div className="ap-meta-tile">
+                  <div className="ap-meta-label">Status</div>
+                  <div className="ap-meta-value">{assignment.is_open ? 'Open' : 'Closed'}</div>
+                  <div className="ap-meta-sub">{assignment.allow_late ? 'Late subs allowed' : 'No late submissions'}</div>
                 </div>
               </div>
-            </section>
+            </div>
 
-            {isStudent ? (
-              <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm sm:p-7">
-                <div className="flex flex-wrap items-center justify-between gap-3">
-                  <div>
-                    <h2 className="text-xl font-bold text-[#0d1b2a]">Your Submission</h2>
-                    <p className="mt-1 text-sm text-slate-500">
-                      Submit your code files for this assignment.
-                    </p>
-                  </div>
-                  {hasSubmission && (
-                    <span className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-bold text-emerald-700">
-                      Submitted
-                    </span>
-                  )}
+            {/* Student submission section */}
+            {isStudent && (
+              <div className="ap-card" style={{ borderTop: `2px solid var(--blue)` }}>
+                <div className="ap-section-label">
+                  <div className="ap-section-bar" style={{ background: 'var(--blue)' }} />
+                  <span className="ap-section-text" style={{ color: 'var(--blue)' }}>Your Submission</span>
                 </div>
+                <p style={{ fontSize: '13px', color: 'var(--text-sub)', marginBottom: hasSubmission ? '12px' : '20px' }}>
+                  Submit your code files for this assignment.
+                </p>
 
-                {mySubmission && !assignment.is_open && (
-                  <div className="mt-5 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-medium text-rose-700">
-                    Submission closed
-                  </div>
-                )}
+                {mySubmission && !assignment.is_open && <div className="ap-alert ap-alert-red">Submission closed</div>}
+                {mySubmission && assignment.is_open  && <div className="ap-alert ap-alert-green">Submitted successfully</div>}
+                {showStudentClosedBanner && !mySubmission && <div className="ap-alert ap-alert-red">Submission closed. You did not submit before the deadline.</div>}
 
-                {mySubmission && assignment.is_open && (
-                  <div className="mt-5 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-700">
-                    Submitted successfully
-                  </div>
-                )}
-
-                {showStudentClosedBanner && !mySubmission && (
-                  <div className="mt-5 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-medium text-rose-700">
-                    Submission closed. You did not submit before the deadline.
-                  </div>
-                )}
-
-                {mySubmission ? (
-                  <div className="mt-6 space-y-5">
+                {mySubmission && (
+                  <div>
                     {showSubmittedFiles ? (
-                      <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                        <div className="flex flex-wrap items-center justify-between gap-2">
-                          <p className="text-sm font-semibold text-slate-900">Submitted files</p>
-                          {mySubmission?.is_late && (
-                            <span className="rounded-full bg-amber-50 px-3 py-1 text-xs font-bold text-amber-700">
-                              Late submission
-                            </span>
-                          )}
+                      <>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
+                          <span style={{ fontWeight: 600 }}>Submitted files</span>
+                          {mySubmission?.is_late && <span className="ap-badge ap-badge-orange">Late submission</span>}
                         </div>
-                        <ul className="mt-3 space-y-2">
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                           {submittedFiles.map((file) => (
-                            <li
-                              key={file.id}
-                              className="flex flex-wrap items-center justify-between gap-3 rounded-xl bg-white px-4 py-3 text-sm shadow-sm"
-                            >
+                            <div key={file.id} className="ap-file-row">
                               <div>
-                                <p className="font-semibold text-slate-900">{file.file_name}</p>
-                                <p className="text-xs text-slate-500">{formatFileSize(file.file_size)}</p>
+                                <div className="ap-file-name">{file.file_name}</div>
+                                <div className="ap-file-size">{formatFileSize(file.file_size)}</div>
                               </div>
-                            </li>
+                            </div>
                           ))}
-                        </ul>
-                      </div>
+                        </div>
+                      </>
                     ) : (
-                      <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-600">
+                      <div className="ap-alert" style={{ background: 'var(--surface-2)', border: 'var(--rule)', color: 'var(--text-muted)' }}>
                         Your submission was received, but the file list is not available.
                       </div>
                     )}
 
                     {assignment.is_open && !showUploadZone && (
-                      <div className="flex flex-wrap items-center gap-3">
-                        <button
-                          type="button"
-                          onClick={() => setShowUploadZone(true)}
-                          className="rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-blue-700"
-                          title="This will replace your previous submission"
-                        >
+                      <div style={{ marginTop: '20px' }}>
+                        <button type="button" onClick={() => setShowUploadZone(true)} className="ap-btn ap-btn-primary">
                           Resubmit
                         </button>
-                        <p className="text-xs text-slate-500">This will replace your previous submission.</p>
+                        <span style={{ fontSize: '11px', marginLeft: '10px', color: 'var(--text-muted)' }}>This will replace your previous submission.</span>
                       </div>
                     )}
                   </div>
-                ) : null}
+                )}
 
                 {showStudentUploadZone && (
-                  <div className="mt-6 space-y-4">
-                    {mySubmission && (
-                      <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-medium text-amber-800">
-                        Resubmitting will replace all previous files.
-                      </div>
-                    )}
-
-                    <form onSubmit={handleUpload} className="space-y-4">
+                  <div style={{ marginTop: '20px' }}>
+                    {mySubmission && <div className="ap-alert ap-alert-orange">Resubmitting will replace all previous files.</div>}
+                    <form onSubmit={handleUpload}>
                       <div
-                        onDragOver={(event) => {
-                          event.preventDefault();
-                          setDragOver(true);
-                        }}
+                        className={`ap-upload-zone${dragOver ? ' dragover' : ''}`}
+                        onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
                         onDragLeave={() => setDragOver(false)}
                         onDrop={handleDrop}
-                        className={
-                          'rounded-2xl border-2 border-dashed p-8 text-center transition-colors ' +
-                          (dragOver
-                            ? 'border-blue-500 bg-blue-50'
-                            : 'border-slate-300 bg-slate-50')
-                        }
                       >
-                        <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-white text-blue-600 shadow-sm">
-                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" className="h-6 w-6">
-                            <path
-                              d="M12 16V4m0 0 4 4m-4-4-4 4M4 16.5A4.5 4.5 0 0 0 8.5 21h7a4.5 4.5 0 0 0 0-9H15"
-                              strokeWidth="1.8"
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                            />
+                        <div className="ap-upload-icon">
+                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" width="22" height="22">
+                            <path d="M12 16V4m0 0 4 4m-4-4-4 4M4 16.5A4.5 4.5 0 0 0 8.5 21h7a4.5 4.5 0 0 0 0-9H15" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
                           </svg>
                         </div>
-                        <p className="mt-4 text-sm font-semibold text-slate-900">
-                          Drop files here or click to browse
-                        </p>
-                        <p className="mt-1 text-xs text-slate-500">Any file type is accepted.</p>
-                        <input
-                          key={fileInputKey}
-                          type="file"
-                          multiple
-                          onChange={handleFileInput}
-                          className="mt-4 w-full cursor-pointer rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700"
-                        />
+                        <p style={{ fontWeight: 600, marginBottom: '4px' }}>Drop files here or click to browse</p>
+                        <p style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Any file type is accepted.</p>
+                        <input key={fileInputKey} type="file" multiple onChange={handleFileInput} className="ap-file-input" />
                       </div>
 
                       {selectedFiles.length > 0 && (
-                        <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-                          <p className="text-sm font-semibold text-slate-900">Selected files</p>
-                          <ul className="mt-3 space-y-2">
+                        <div style={{ marginTop: '16px' }}>
+                          <div style={{ fontWeight: 600, marginBottom: '8px' }}>Selected files</div>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                             {selectedFiles.map((file, index) => (
-                              <li
-                                key={`${file.name}-${file.lastModified}-${index}`}
-                                className="flex items-center justify-between gap-3 rounded-xl bg-slate-50 px-4 py-3 text-sm"
-                              >
+                              <div key={`${file.name}-${file.lastModified}-${index}`} className="ap-file-row">
                                 <div>
-                                  <p className="font-semibold text-slate-900">{file.name}</p>
-                                  <p className="text-xs text-slate-500">{formatFileSize(file.size)}</p>
+                                  <div className="ap-file-name">{file.name}</div>
+                                  <div className="ap-file-size">{formatFileSize(file.size)}</div>
                                 </div>
-                                <button
-                                  type="button"
-                                  onClick={() => removeFile(index)}
-                                  className="rounded-lg border border-slate-200 px-3 py-1 text-xs font-semibold text-slate-600 transition-colors hover:bg-white"
-                                >
+                                <button type="button" onClick={() => removeFile(index)} className="ap-btn ap-btn-sm">
                                   Remove
                                 </button>
-                              </li>
+                              </div>
                             ))}
-                          </ul>
+                          </div>
                         </div>
                       )}
 
-                      <div className="flex flex-wrap items-center justify-end gap-3">
+                      <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '16px' }}>
                         <button
                           type="button"
-                          onClick={() => {
-                            setSelectedFiles([]);
-                            setFileInputKey((previous) => previous + 1);
-                          }}
-                          className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50"
+                          onClick={() => { setSelectedFiles([]); setFileInputKey((prev) => prev + 1); }}
+                          className="ap-btn"
                           disabled={uploading}
                         >
                           Clear
@@ -938,9 +1084,9 @@ function AssignmentDetailPageContent() {
                         <button
                           type="submit"
                           disabled={uploading || selectedFiles.length === 0}
-                          className="rounded-xl bg-blue-600 px-5 py-2 text-sm font-semibold text-white transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
+                          className="ap-btn ap-btn-primary"
                         >
-                          {uploading ? 'Uploading...' : 'Submit Assignment'}
+                          {uploading ? 'Uploading…' : 'Submit Assignment'}
                         </button>
                       </div>
                     </form>
@@ -948,155 +1094,129 @@ function AssignmentDetailPageContent() {
                 )}
 
                 {!mySubmission && !assignment.is_open && (
-                  <div className="mt-6 rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700">
-                    You did not submit before the deadline.
-                  </div>
+                  <div className="ap-alert ap-alert-red" style={{ marginTop: '16px' }}>You did not submit before the deadline.</div>
                 )}
 
+                {/* Reviews */}
                 {mySubmission?.has_reviews && (
-                  <div className="mt-8 rounded-2xl border border-slate-200 bg-slate-50 p-5">
-                    <h3 className="text-lg font-bold text-[#0d1b2a]">Your Reviews</h3>
-                    <div className="mt-4 space-y-4">
-                      {mySubmission.reviews?.map((review) => {
-                        const gradeLabel = review.grade == null ? 'No grade' : `${review.grade}/20`;
-                        const commentsCount = review.comments?.length ?? 0;
-
-                        return (
-                          <article
-                            key={review.id}
-                            className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm"
-                          >
-                            <div className="flex flex-wrap items-start justify-between gap-3">
-                              <div>
-                                <p className="font-semibold text-slate-900">{review.professor_name}</p>
-                                <p className="mt-1 text-xs text-slate-500">{commentsCount} line comments</p>
-                              </div>
-                              <span className="rounded-full bg-blue-50 px-3 py-1 text-xs font-bold text-blue-700">
-                                {gradeLabel}
-                              </span>
-                            </div>
-                            <p className="mt-3 text-sm leading-6 text-slate-700">
-                              {review.general_comment || 'No general comment provided.'}
-                            </p>
-
-                            {commentsCount > 0 ? (
-                              <div className="mt-4 space-y-2">
-                                <p className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">
-                                  Line comments
-                                </p>
-
-                                {review.comments?.map((comment) => (
-                                  <div
-                                    key={comment.id}
-                                    className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2"
-                                  >
-                                    <p className="text-xs font-semibold text-slate-500">
-                                      {submittedFileLabelById.get(comment.file) ?? `File #${comment.file}`} · Line {comment.line_number}
-                                    </p>
-                                    <p className="mt-1 text-sm leading-6 text-slate-700">
-                                      {comment.content}
-                                    </p>
-                                  </div>
-                                ))}
-                              </div>
-                            ) : (
-                              <p className="mt-4 text-xs text-slate-500">No line comments on this review.</p>
-                            )}
-                          </article>
-                        );
-                      })}
+                  <div style={{ marginTop: '24px' }}>
+                    <div className="ap-section-label">
+                      <div className="ap-section-bar" style={{ background: 'var(--accent)' }} />
+                      <span className="ap-section-text" style={{ color: 'var(--accent)' }}>Your Reviews</span>
                     </div>
+                    {mySubmission.reviews?.map((review) => {
+                      const gradeLabel    = review.grade == null ? 'No grade' : `${review.grade}/20`;
+                      const commentsCount = review.comments?.length ?? 0;
+                      return (
+                        <div key={review.id} className="ap-review-card">
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '12px', marginBottom: '12px' }}>
+                            <div>
+                              <div style={{ fontWeight: 600 }}>{review.professor_name}</div>
+                              <div style={{ fontSize: '11px', fontFamily: 'var(--font-mono)', color: 'var(--text-muted)', marginTop: '2px' }}>
+                                {commentsCount} line comments
+                              </div>
+                            </div>
+                            <span className="ap-badge ap-badge-accent">{gradeLabel}</span>
+                          </div>
+                          <p style={{ fontSize: '13px', color: 'var(--text-sub)', marginBottom: '12px' }}>
+                            {review.general_comment || 'No general comment provided.'}
+                          </p>
+                          {commentsCount > 0 && (
+                            <>
+                              <div style={{ fontSize: '10px', fontFamily: 'var(--font-mono)', letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '8px' }}>
+                                Line Comments
+                              </div>
+                              {review.comments?.map((comment) => (
+                                <div key={comment.id} className="ap-comment-item">
+                                  <div className="ap-comment-meta">
+                                    {submittedFileLabelById.get(comment.file) ?? `File #${comment.file}`} · Line {comment.line_number}
+                                  </div>
+                                  <div className="ap-comment-text">{comment.content}</div>
+                                </div>
+                              ))}
+                            </>
+                          )}
+                        </div>
+                      );
+                    })}
                   </div>
                 )}
-              </section>
-            ) : null}
+              </div>
+            )}
           </div>
 
-          {showProfessorTable ? (
-            <aside className="space-y-6">
-              <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-                <div className="flex items-center justify-between gap-3">
-                  <div>
-                    <h2 className="text-xl font-bold text-[#0d1b2a]">Submissions ({assignment.submission_count})</h2>
-                    <p className="mt-1 text-sm text-slate-500">Review student submissions for this assignment.</p>
+          {/* ── Right column ── */}
+          <aside>
+            {showProfessorTable ? (
+              <>
+                <div className="ap-card" style={{ borderTop: `2px solid var(--blue)` }}>
+                  <div className="ap-section-label">
+                    <div className="ap-section-bar" style={{ background: 'var(--blue)' }} />
+                    <span className="ap-section-text" style={{ color: 'var(--blue)' }}>
+                      Submissions ({assignment.submission_count})
+                    </span>
                   </div>
-                </div>
+                  <p style={{ fontSize: '13px', color: 'var(--text-sub)', marginBottom: '16px' }}>
+                    Review student submissions for this assignment.
+                  </p>
 
-                <div className="mt-5">
-                  <label className="mb-2 block text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
-                    Group filter
-                  </label>
-                  <select
-                    value={selectedGroup ?? ''}
-                    onChange={(event) => {
-                      const value = event.target.value;
-                      setSelectedGroup(value ? Number(value) : undefined);
-                    }}
-                    className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-[#1a2340] outline-none transition-colors focus:border-blue-400 focus:ring-2 focus:ring-blue-500/30"
-                  >
-                    <option value="">All groups</option>
-                    {groupOptions.map((group) => (
-                      <option key={group} value={group}>
-                        Group {group}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+                  <div style={{ marginBottom: '16px' }}>
+                    <div style={{ fontSize: '10px', fontFamily: 'var(--font-mono)', letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '8px' }}>
+                      Group Filter
+                    </div>
+                    <select
+                      className="ap-select"
+                      value={selectedGroup ?? ''}
+                      onChange={(e) => setSelectedGroup(e.target.value ? Number(e.target.value) : undefined)}
+                    >
+                      <option value="">All groups</option>
+                      {groupOptions.map((g) => <option key={g} value={g}>Group {g}</option>)}
+                    </select>
+                  </div>
 
-                {sectionError && (
-                  <div className="mt-4 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
-                    {sectionError}
-                  </div>
-                )}
+                  {sectionError && <div className="ap-alert ap-alert-red">{sectionError}</div>}
 
-                {loadingSubmissions || loadingRoleData ? (
-                  <div className="mt-5 space-y-3">
-                    <div className="h-12 animate-pulse rounded-xl bg-slate-100" />
-                    <div className="h-12 animate-pulse rounded-xl bg-slate-100" />
-                    <div className="h-12 animate-pulse rounded-xl bg-slate-100" />
-                  </div>
-                ) : submissions.length === 0 ? (
-                  <div className="mt-5 rounded-2xl border border-slate-200 bg-slate-50 p-5 text-sm text-slate-600">
-                    No submissions yet
-                  </div>
-                ) : (
-                  <div className="mt-5 overflow-hidden rounded-2xl border border-slate-200">
-                    <div className="overflow-x-auto">
-                      <table className="min-w-[190px] w-full divide-y divide-slate-200 text-sm">
-                        <thead className="bg-slate-50 text-xs uppercase tracking-[0.16em] text-slate-500">
+                  {loadingSubmissions || loadingRoleData ? (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                      {[1,2,3].map((i) => <div key={i} className="ap-skeleton" style={{ height: 44 }} />)}
+                    </div>
+                  ) : submissions.length === 0 ? (
+                    <div className="ap-alert" style={{ textAlign: 'center', background: 'var(--surface-2)' }}>
+                      No submissions yet
+                    </div>
+                  ) : (
+                    <div className="ap-table-wrapper">
+                      <table className="ap-table">
+                        <thead>
                           <tr>
-                            <th className="px-4 py-3 text-left font-semibold">Student name</th>
-                            <th className="px-4 py-3 text-left font-semibold">Submitted at</th>
-                            <th className="px-4 py-3 text-left font-semibold">Late</th>
-                            <th className="px-4 py-3 text-left font-semibold">Files</th>
-                            <th className="px-4 py-3 text-left font-semibold">Reviews count</th>
-                            <th className="sticky right-0 z-10 bg-slate-50 px-4 py-3 text-left font-semibold shadow-[-1px_0_0_0_#e2e8f0]">
-                              Action
-                            </th>
+                            <th>Student</th>
+                            <th>Submitted</th>
+                            <th>Files</th>
+                            <th>Reviews</th>
+                            <th></th>
                           </tr>
                         </thead>
-                        <tbody className="divide-y divide-slate-200 bg-white">
-                          {submissions.map((submission) => (
-                            <tr key={submission.id} className="group hover:bg-slate-50/80">
-                              <td className="px-4 py-3 font-semibold text-slate-900">{submission.student_name}</td>
-                              <td className="px-4 py-3 text-slate-600">{formatDateTime(submission.submitted_at)}</td>
-                              <td className="px-4 py-3">
-                                {submission.is_late ? (
-                                  <span className="rounded-full bg-amber-50 px-3 py-1 text-xs font-bold text-amber-700">
-                                    Late
-                                  </span>
-                                ) : (
-                                  <span className="text-slate-400">—</span>
-                                )}
+                        <tbody>
+                          {submissions.map((sub) => (
+                            <tr key={sub.id}>
+                              <td>
+                                <span style={{ fontWeight: 600 }}>{sub.student_name}</span>
+                                {sub.is_late && <span className="ap-badge ap-badge-orange" style={{ marginLeft: '8px', fontSize: '9px' }}>Late</span>}
                               </td>
-                              <td className="px-4 py-3 text-slate-600">{formatPlural(submission.file_count, 'file')}</td>
-                              <td className="px-4 py-3 text-slate-600">
-                                {submission.reviews_count}
+                              <td style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', color: 'var(--text-muted)' }}>
+                                {formatDateTime(sub.submitted_at)}
                               </td>
-                              <td className="sticky right-0 bg-white px-4 py-3 shadow-[-1px_0_0_0_#e2e8f0] group-hover:bg-slate-50/80">
+                              <td style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', color: 'var(--text-muted)' }}>
+                                {formatPlural(sub.file_count, 'file')}
+                              </td>
+                              <td style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', color: 'var(--text-muted)' }}>
+                                {sub.reviews_count}
+                              </td>
+                              <td>
                                 <Link
-                                  href={`/assignments/${assignment.id}/submissions/${submission.id}`}
-                                  className="inline-block whitespace-nowrap rounded-lg bg-blue-600 px-3 py-2 text-xs font-bold text-white transition-colors hover:bg-blue-700"
+                                  href={`/assignments/${assignment.id}/submissions/${sub.id}`}
+                                  className="ap-btn ap-btn-primary ap-btn-sm"
+                                  style={{ textDecoration: 'none' }}
                                 >
                                   Review
                                 </Link>
@@ -1106,56 +1226,55 @@ function AssignmentDetailPageContent() {
                         </tbody>
                       </table>
                     </div>
+                  )}
+                </div>
+
+                <div className="ap-card" style={{ borderTop: `2px solid var(--navy)` }}>
+                  <div className="ap-section-label">
+                    <div className="ap-section-bar" style={{ background: 'var(--navy)' }} />
+                    <span className="ap-section-text">Summary</span>
+                  </div>
+                  {[
+                    { label: 'Subject',    value: assignment.subject.name },
+                    { label: 'Deadline',   value: formatDateTime(assignment.deadline) },
+                    { label: 'Visibility', value: assignment.is_open ? 'Open' : 'Closed' },
+                    { label: 'Filter',     value: groupLabel },
+                  ].map(({ label, value }) => (
+                    <div key={label} className="ap-summary-item">
+                      <span className="ap-summary-label">{label}</span>
+                      <span className="ap-summary-value">{value}</span>
+                    </div>
+                  ))}
+                </div>
+              </>
+            ) : (
+              <>
+                {sectionError && (
+                  <div className="ap-card">
+                    <div className="ap-alert ap-alert-red">{sectionError}</div>
                   </div>
                 )}
-              </section>
-
-              <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-                <h3 className="text-lg font-bold text-[#0d1b2a]">Assignment summary</h3>
-                <div className="mt-4 space-y-3 text-sm text-slate-600">
-                  <p>
-                    Subject: <span className="font-semibold text-slate-900">{assignment.subject.name}</span>
-                  </p>
-                  <p>
-                    Deadline: <span className="font-semibold text-slate-900">{formatDateTime(assignment.deadline)}</span>
-                  </p>
-                  <p>
-                    Visibility: <span className="font-semibold text-slate-900">{assignment.is_open ? 'Open' : 'Closed'}</span>
-                  </p>
-                  <p>
-                    Filter: <span className="font-semibold text-slate-900">{groupLabel}</span>
-                  </p>
-                </div>
-              </section>
-            </aside>
-          ) : (
-            <aside className="space-y-6">
-              {sectionError && (
-                <section className="rounded-2xl border border-rose-200 bg-white p-6 shadow-sm">
-                  <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
-                    {sectionError}
+                <div className="ap-card" style={{ borderTop: `2px solid var(--navy)` }}>
+                  <div className="ap-section-label">
+                    <div className="ap-section-bar" style={{ background: 'var(--navy)' }} />
+                    <span className="ap-section-text">Quick Facts</span>
                   </div>
-                </section>
-              )}
-
-              <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-                <h3 className="text-lg font-bold text-[#0d1b2a]">Quick facts</h3>
-                <div className="mt-4 space-y-3 text-sm text-slate-600">
-                  <p>
-                    Submitted files: <span className="font-semibold text-slate-900">{submittedFiles.length}</span>
-                  </p>
-                  <p>
-                    Line comments: <span className="font-semibold text-slate-900">{lineCommentsCount}</span>
-                  </p>
-                  <p>
-                    Status: <span className="font-semibold text-slate-900">{assignment.is_open ? 'Open' : 'Closed'}</span>
-                  </p>
+                  {[
+                    { label: 'Submitted Files', value: String(submittedFiles.length) },
+                    { label: 'Line Comments',   value: String(lineCommentsCount) },
+                    { label: 'Status',          value: assignment.is_open ? 'Open' : 'Closed' },
+                  ].map(({ label, value }) => (
+                    <div key={label} className="ap-summary-item">
+                      <span className="ap-summary-label">{label}</span>
+                      <span className="ap-summary-value">{value}</span>
+                    </div>
+                  ))}
                 </div>
-              </section>
-            </aside>
-          )}
+              </>
+            )}
+          </aside>
         </div>
-      </main>
+      </div>
     </div>
   );
 }
