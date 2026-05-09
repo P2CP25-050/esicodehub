@@ -140,4 +140,48 @@ describe('submissions.api', () => {
     expect(content).toBe('def bubble_sort(): ...');
   });
 
+  // ── comments API ─────────────────────────────────────────────────────────
+
+  it('calls GET /submissions/5/comments/', async () => {
+    (apiClient.get as jest.Mock).mockResolvedValue({ data: [] });
+
+    const result = await submissionsApi.listSubmissionComments(5);
+
+    expect(apiClient.get).toHaveBeenCalledWith('/submissions/5/comments/');
+    expect(result).toEqual([]);
+  });
+
+  it('calls POST /submissions/5/comments/', async () => {
+    (apiClient.post as jest.Mock).mockResolvedValue({
+      data: {
+        id: 9,
+        line_number: 12,
+        body: 'Consider using a list comprehension here.',
+        created_at: '2026-05-09T00:00:00Z',
+      },
+    });
+
+    const result = await submissionsApi.createSubmissionComment(5, {
+      line_number: 12,
+      body: 'Consider using a list comprehension here.',
+    });
+
+    expect(apiClient.post).toHaveBeenCalledWith(
+      '/submissions/5/comments/',
+      {
+        line_number: 12,
+        body: 'Consider using a list comprehension here.',
+      }
+    );
+    expect(result.id).toBe(9);
+  });
+
+  it('calls DELETE /submissions/5/comments/9/', async () => {
+    (apiClient.delete as jest.Mock).mockResolvedValue({});
+
+    await submissionsApi.deleteSubmissionComment(5, 9);
+
+    expect(apiClient.delete).toHaveBeenCalledWith('/submissions/5/comments/9/');
+  });
+
 });

@@ -186,27 +186,27 @@ export const getFileContent = async (
 
 /**
  * Lists all inline comments for a submission.
- * Backend: GET /submissions/{id}/comments/
+ * Backend: GET /api/submissions/{id}/comments/
  */
 export const listSubmissionComments = async (
   submissionId: number
 ): Promise<SubmissionComment[]> => {
   const res = await apiClient.get<SubmissionComment[]>(
-    `/personal-submissions/${submissionId}/comments/`
+    `/submissions/${submissionId}/comments/`
   );
   return res.data;
 };
 
 /**
  * Creates a new inline comment on a submission.
- * Backend: POST /submissions/{id}/comments/
+ * Backend: POST /api/submissions/{id}/comments/
  */
 export const createSubmissionComment = async (
   submissionId: number,
   payload: SubmissionCommentCreatePayload
 ): Promise<SubmissionComment> => {
   const res = await apiClient.post<SubmissionComment>(
-    `/personal-submissions/${submissionId}/comments/`,
+    `/submissions/${submissionId}/comments/`,
     payload
   );
   return res.data;
@@ -214,11 +214,11 @@ export const createSubmissionComment = async (
 
 /**
  * Deletes a comment authored by the current user.
- * Backend: DELETE /submissions/{id}/comments/{cid}/
+ * Backend: DELETE /api/submissions/{id}/comments/{cid}/
  */
 export const deleteSubmissionComment = async (
   submissionId: number,
   commentId: number
 ): Promise<void> => {
-  await apiClient.delete(`/personal-submissions/${submissionId}/comments/${commentId}/`);
+  await apiClient.delete(`/submissions/${submissionId}/comments/${commentId}/`);
 };

@@ -473,6 +473,9 @@ function SubmissionDetailPage() {
   const [commentsLoading, setCommentsLoading] = useState<boolean>(false);
   const [commentsError, setCommentsError] = useState<string | null>(null);
   const [activeThreadLine, setActiveThreadLine] = useState<number | null>(null);
+  const [hoverCommentLine, setHoverCommentLine] = useState<number | null>(null);
+  const [activeThreadDraft, setActiveThreadDraft] = useState<string>('');
+  const [activeThreadTop, setActiveThreadTop] = useState<number | null>(null);
   const [postingComment, setPostingComment] = useState<boolean>(false);
   const [deletingCommentIds, setDeletingCommentIds] = useState<Set<number>>(new Set());
   const [threadZoneVersion, setThreadZoneVersion] = useState(0);
@@ -554,6 +557,22 @@ function SubmissionDetailPage() {
     commentZoneIdRef.current = null;
   }, []);
 
+  const updateThreadOverlayPosition = useCallback((lineNumber: number) => {
+    const editor = editorRef.current;
+    if (!editor) {
+      setActiveThreadTop(null);
+      return;
+    }
+
+    const visiblePosition = editor.getScrolledVisiblePosition({ lineNumber, column: 1 });
+    if (!visiblePosition) {
+      setActiveThreadTop(null);
+      return;
+    }
+
+    setActiveThreadTop(visiblePosition.top + visiblePosition.height + 12);
+  }, []);
+
   const refreshCommentDecorations = useCallback(() => {
     const editor = editorRef.current;
     const monaco = monacoRef.current;
@@ -568,26 +587,42 @@ function SubmissionDetailPage() {
       return;
     }
 
-    const decorations = commentLines.map((lineNumber) => ({
-      range: new monaco.Range(lineNumber, 1, lineNumber, 1),
-      options: {
-        isWholeLine: true,
-        className:
-          activeThreadLine === lineNumber
-            ? 'submission-comment-line submission-comment-line-active'
-            : 'submission-comment-line',
-        glyphMarginClassName: 'submission-comment-glyph',
-        glyphMarginHoverMessage: {
-          value: 'Open comment thread',
-        },
-      },
-    }));
+    const decorationLines = new Set<number>(commentLines);
+    if (hoverCommentLine != null && !decorationLines.has(hoverCommentLine)) {
+      decorationLines.add(hoverCommentLine);
+    }
+
+    const decorations = Array.from(decorationLines)
+      .sort((a, b) => a - b)
+      .map((lineNumber) => {
+        const hasComment = commentsByLine.has(lineNumber);
+        const isHoverLine = hoverCommentLine === lineNumber && !hasComment;
+
+        return {
+          range: new monaco.Range(lineNumber, 1, lineNumber, 1),
+          options: {
+            isWholeLine: true,
+            className:
+              activeThreadLine === lineNumber
+                ? 'submission-comment-line submission-comment-line-active'
+                : isHoverLine
+                  ? 'submission-comment-line submission-comment-line-hover'
+                  : 'submission-comment-line',
+            glyphMarginClassName: isHoverLine
+              ? 'submission-comment-hover-glyph'
+              : 'submission-comment-glyph',
+            glyphMarginHoverMessage: {
+              value: isHoverLine ? 'Add comment' : 'Open comment thread',
+            },
+          },
+        };
+      });
 
     commentDecorationIdsRef.current = editor.deltaDecorations(
       commentDecorationIdsRef.current,
       decorations
     );
-  }, [activeThreadLine, commentLines, selectedFileId]);
+  }, [activeThreadLine, commentsByLine, commentLines, hoverCommentLine, selectedFileId]);
 
   const openThreadAtLine = useCallback(
     (lineNumber: number) => {
@@ -601,16 +636,18 @@ function SubmissionDetailPage() {
       editor.setPosition({ lineNumber: safeLine, column: 1 });
       editor.revealLineInCenter(safeLine);
 
+      setActiveThreadDraft(commentDraftByLineRef.current[safeLine] ?? '');
       setActiveThreadLine(safeLine);
       setThreadZoneVersion((prev) => prev + 1);
+      updateThreadOverlayPosition(safeLine);
     },
-    [selectedFileId]
+    [selectedFileId, updateThreadOverlayPosition]
   );
 
   const addCommentAtActiveLine = useCallback(async () => {
     if (!submissionId || activeThreadLine == null || !canView) return;
 
-    const body = (commentDraftByLineRef.current[activeThreadLine] ?? '').trim();
+    const body = activeThreadDraft.trim();
     if (!body) {
       setCommentsError('Comment body cannot be empty.');
       return;
@@ -626,6 +663,7 @@ function SubmissionDetailPage() {
       });
 
       commentDraftByLineRef.current[activeThreadLine] = '';
+      setActiveThreadDraft('');
       setComments((prev) => normalizeComments([...prev, created]));
       setThreadZoneVersion((prev) => prev + 1);
     } catch (error) {
@@ -637,7 +675,7 @@ function SubmissionDetailPage() {
     } finally {
       setPostingComment(false);
     }
-  }, [activeThreadLine, submissionId, canView]);
+  }, [activeThreadDraft, activeThreadLine, submissionId, canView]);
 
   const handleDeleteComment = useCallback(
     async (commentId: number) => {
@@ -933,6 +971,9 @@ function SubmissionDetailPage() {
     setLoadingFile(false);
     setComments([]);
     setActiveThreadLine(null);
+    setHoverCommentLine(null);
+    setActiveThreadDraft('');
+    setActiveThreadTop(null);
     setCommentsError(null);
     fileContentCacheRef.current = {};
 
@@ -960,9 +1001,11 @@ function SubmissionDetailPage() {
 
   useEffect(() => {
     setActiveThreadLine(null);
+    setHoverCommentLine(null);
+    setActiveThreadDraft('');
+    setActiveThreadTop(null);
     clearThreadZone();
-    refreshCommentDecorations();
-  }, [clearThreadZone, refreshCommentDecorations, selectedFileId]);
+  }, [clearThreadZone, selectedFileId]);
 
   useEffect(() => {
     if (visibleTreeItems.length === 0) {
@@ -992,282 +1035,52 @@ function SubmissionDetailPage() {
   }, [refreshCommentDecorations]);
 
   useEffect(() => {
-    if (!editorRef.current || selectedFileId == null || activeThreadLine == null) {
+    if (activeThreadLine == null) {
+      setActiveThreadTop(null);
       clearThreadZone();
       return;
     }
 
     const editor = editorRef.current;
+    if (!editor || selectedFileId == null) {
+      setActiveThreadTop(null);
+      clearThreadZone();
+      return;
+    }
+
     const lineComments = commentsByLine.get(activeThreadLine) ?? [];
+    const heightInPx = Math.min(460, Math.max(170, 126 + lineComments.length * 84));
 
     clearThreadZone();
-
-    const zoneNode = document.createElement('div');
-    zoneNode.style.padding = '10px 14px 12px';
-    zoneNode.style.background = '#f8fafc';
-    zoneNode.style.borderTop = '1px solid #e2e8f0';
-    zoneNode.style.borderBottom = '1px solid #e2e8f0';
-    zoneNode.addEventListener('mousedown', (event) => {
-      event.stopPropagation();
-    });
-    zoneNode.addEventListener('mouseup', (event) => {
-      event.stopPropagation();
-    });
-    zoneNode.addEventListener('click', (event) => {
-      event.stopPropagation();
-    });
-
-    const header = document.createElement('div');
-    header.style.display = 'flex';
-    header.style.justifyContent = 'space-between';
-    header.style.alignItems = 'center';
-    header.style.marginBottom = '10px';
-
-    const title = document.createElement('p');
-    title.textContent = `Line ${activeThreadLine}`;
-    title.style.margin = '0';
-    title.style.fontSize = '12px';
-    title.style.fontWeight = '700';
-    title.style.letterSpacing = '0.08em';
-    title.style.textTransform = 'uppercase';
-    title.style.color = '#334155';
-
-    const closeButton = document.createElement('button');
-    closeButton.type = 'button';
-    closeButton.textContent = 'Close';
-    closeButton.style.fontSize = '12px';
-    closeButton.style.fontWeight = '600';
-    closeButton.style.color = '#475569';
-    closeButton.style.border = '1px solid #cbd5e1';
-    closeButton.style.borderRadius = '999px';
-    closeButton.style.padding = '4px 10px';
-    closeButton.style.background = '#ffffff';
-    closeButton.style.cursor = 'pointer';
-    closeButton.onclick = () => {
-      setActiveThreadLine(null);
-      clearThreadZone();
-    };
-
-    header.append(title, closeButton);
-    zoneNode.appendChild(header);
-
-    const listWrap = document.createElement('div');
-    listWrap.style.display = 'grid';
-    listWrap.style.rowGap = '8px';
-
-    if (lineComments.length === 0) {
-      const empty = document.createElement('p');
-      empty.textContent = 'No comments on this line yet.';
-      empty.style.margin = '0 0 6px';
-      empty.style.fontSize = '12px';
-      empty.style.color = '#64748b';
-      listWrap.appendChild(empty);
-    } else {
-      lineComments.forEach((comment) => {
-        const card = document.createElement('div');
-        card.style.background = '#ffffff';
-        card.style.border = '1px solid #e2e8f0';
-        card.style.borderRadius = '8px';
-        card.style.padding = '10px 12px';
-
-        const meta = document.createElement('div');
-        meta.style.display = 'flex';
-        meta.style.justifyContent = 'space-between';
-        meta.style.alignItems = 'center';
-        meta.style.gap = '8px';
-
-        const leftMeta = document.createElement('div');
-        leftMeta.style.display = 'flex';
-        leftMeta.style.alignItems = 'center';
-        leftMeta.style.gap = '8px';
-
-        const avatarUrl = getCommentAuthorAvatar(comment);
-        if (avatarUrl) {
-          const avatar = document.createElement('img');
-          avatar.src = avatarUrl;
-          avatar.alt = getCommentAuthorName(comment);
-          avatar.width = 22;
-          avatar.height = 22;
-          avatar.style.width = '22px';
-          avatar.style.height = '22px';
-          avatar.style.borderRadius = '999px';
-          avatar.style.objectFit = 'cover';
-          leftMeta.appendChild(avatar);
-        } else {
-          const initials = document.createElement('span');
-          initials.textContent = getInitials(getCommentAuthorName(comment));
-          initials.style.width = '22px';
-          initials.style.height = '22px';
-          initials.style.borderRadius = '999px';
-          initials.style.display = 'inline-flex';
-          initials.style.alignItems = 'center';
-          initials.style.justifyContent = 'center';
-          initials.style.fontSize = '11px';
-          initials.style.fontWeight = '700';
-          initials.style.color = '#0f172a';
-          initials.style.background = '#dbeafe';
-          leftMeta.appendChild(initials);
-        }
-
-        const authorAndTime = document.createElement('div');
-        const name = document.createElement('p');
-        name.textContent = getCommentAuthorName(comment);
-        name.style.margin = '0';
-        name.style.fontSize = '12px';
-        name.style.fontWeight = '600';
-        name.style.color = '#0f172a';
-
-        const timestamp = document.createElement('p');
-        timestamp.textContent = timeAgo(comment.created_at);
-        timestamp.style.margin = '0';
-        timestamp.style.fontSize = '11px';
-        timestamp.style.color = '#64748b';
-
-        authorAndTime.append(name, timestamp);
-        leftMeta.appendChild(authorAndTime);
-
-        meta.appendChild(leftMeta);
-
-        if (isOwnComment(comment)) {
-          const deleting = deletingCommentIds.has(comment.id);
-          const deleteButton = document.createElement('button');
-          deleteButton.type = 'button';
-          deleteButton.textContent = deleting ? 'Deleting...' : 'Delete';
-          deleteButton.disabled = deleting;
-          deleteButton.style.fontSize = '12px';
-          deleteButton.style.fontWeight = '600';
-          deleteButton.style.color = '#be123c';
-          deleteButton.style.border = '1px solid #fecdd3';
-          deleteButton.style.borderRadius = '999px';
-          deleteButton.style.padding = '3px 8px';
-          deleteButton.style.background = '#fff1f2';
-          deleteButton.style.cursor = deleting ? 'not-allowed' : 'pointer';
-          deleteButton.onclick = () => {
-            void handleDeleteComment(comment.id);
-          };
-          meta.appendChild(deleteButton);
-        }
-
-        const body = document.createElement('p');
-        body.textContent = comment.body;
-        body.style.margin = '8px 0 0';
-        body.style.fontSize = '13px';
-        body.style.color = '#334155';
-        body.style.whiteSpace = 'pre-wrap';
-        body.style.wordBreak = 'break-word';
-
-        card.append(meta, body);
-        listWrap.appendChild(card);
-      });
-    }
-
-    zoneNode.appendChild(listWrap);
-
-    if (canView) {
-      const composerWrap = document.createElement('div');
-      composerWrap.style.marginTop = '10px';
-
-      const textarea = document.createElement('textarea');
-      textarea.placeholder = 'Write a comment…';
-      textarea.rows = 3;
-      textarea.value = commentDraftByLineRef.current[activeThreadLine] ?? '';
-      textarea.style.width = '100%';
-      textarea.style.border = '1px solid #cbd5e1';
-      textarea.style.borderRadius = '8px';
-      textarea.style.padding = '8px 10px';
-      textarea.style.fontSize = '13px';
-      textarea.style.color = '#0f172a';
-      textarea.style.background = '#ffffff';
-      textarea.style.resize = 'vertical';
-      textarea.setAttribute('tabindex', '0');
-      
-      textarea.addEventListener('input', (e) => {
-        if (e.target instanceof HTMLTextAreaElement) {
-          commentDraftByLineRef.current[activeThreadLine] = e.target.value;
-        }
-      }, { capture: false });
-      
-      textarea.addEventListener('keydown', (e) => {
-        e.stopPropagation();
-      }, { capture: true });
-      
-      textarea.addEventListener('keyup', (e) => {
-        e.stopPropagation();
-      }, { capture: true });
-      textarea.addEventListener('mousedown', (e) => {
-        e.stopPropagation();
-      }, { capture: true });
-      textarea.addEventListener('click', (e) => {
-        e.stopPropagation();
-      }, { capture: true });
-
-      const composerActions = document.createElement('div');
-      composerActions.style.display = 'flex';
-      composerActions.style.justifyContent = 'flex-end';
-      composerActions.style.marginTop = '8px';
-
-      const submitButton = document.createElement('button');
-      submitButton.type = 'button';
-      submitButton.textContent = postingComment ? 'Posting...' : 'Comment';
-      submitButton.disabled = postingComment;
-      submitButton.style.border = '1px solid #1d4ed8';
-      submitButton.style.background = '#2563eb';
-      submitButton.style.color = '#ffffff';
-      submitButton.style.fontSize = '12px';
-      submitButton.style.fontWeight = '700';
-      submitButton.style.borderRadius = '999px';
-      submitButton.style.padding = '6px 12px';
-      submitButton.style.cursor = postingComment ? 'not-allowed' : 'pointer';
-      submitButton.onclick = () => {
-        void addCommentAtActiveLine();
-      };
-
-      composerActions.appendChild(submitButton);
-      composerWrap.append(textarea, composerActions);
-      zoneNode.appendChild(composerWrap);
-
-      // Focus textarea after zone is rendered
-      requestAnimationFrame(() => {
-        textarea.focus();
-      });
-    } else {
-      const noPermissionMsg = document.createElement('p');
-      noPermissionMsg.textContent = 'You do not have permission to comment on this submission.';
-      noPermissionMsg.style.margin = '10px 0 0';
-      noPermissionMsg.style.fontSize = '12px';
-      noPermissionMsg.style.color = '#7c3aed';
-      noPermissionMsg.style.fontStyle = 'italic';
-      zoneNode.appendChild(noPermissionMsg);
-    }
-
-    const heightInPx = Math.min(
-      460,
-      Math.max(170, 126 + lineComments.length * 84)
-    );
-
     editor.changeViewZones((accessor) => {
       commentZoneIdRef.current = accessor.addZone({
         afterLineNumber: activeThreadLine,
         heightInPx,
-        domNode: zoneNode,
+        domNode: document.createElement('div'),
       });
     });
 
+    updateThreadOverlayPosition(activeThreadLine);
+
+    const updatePosition = () => {
+      updateThreadOverlayPosition(activeThreadLine);
+    };
+
+    const scrollDisposable = editor.onDidScrollChange(updatePosition);
+    const layoutDisposable = editor.onDidLayoutChange(updatePosition);
+
     return () => {
+      scrollDisposable.dispose();
+      layoutDisposable.dispose();
       clearThreadZone();
     };
   }, [
     activeThreadLine,
-    addCommentAtActiveLine,
-    canView,
     clearThreadZone,
     commentsByLine,
-    deletingCommentIds,
-    handleDeleteComment,
-    isOwnComment,
-    postingComment,
     selectedFileId,
     threadZoneVersion,
+    updateThreadOverlayPosition,
   ]);
 
   useEffect(() => {
@@ -1308,10 +1121,31 @@ function SubmissionDetailPage() {
         }
       });
 
+
+      const onMouseMove = editor.onMouseMove((event: MonacoEditorNS.IEditorMouseEvent) => {
+        if (selectedFileId == null) return;
+
+        const lineNumber = event.target.position?.lineNumber;
+        if (!lineNumber) {
+          setHoverCommentLine(null);
+          return;
+        }
+
+        setHoverCommentLine(lineNumber);
+      });
+
+      const onMouseLeave = editor.onMouseLeave(() => {
+        setHoverCommentLine(null);
+      });
       editorDisposablesRef.current.push(onMouseDown);
       refreshCommentDecorations();
+      editorDisposablesRef.current.push(onMouseMove);
+      editorDisposablesRef.current.push(onMouseLeave);
+      if (activeThreadLine != null) {
+        updateThreadOverlayPosition(activeThreadLine);
+      }
     },
-    [openThreadAtLine, refreshCommentDecorations, selectedFileId]
+    [activeThreadLine, openThreadAtLine, refreshCommentDecorations, selectedFileId, updateThreadOverlayPosition]
   );
 
   const navigateBack = useCallback(() => {
@@ -1388,6 +1222,12 @@ function SubmissionDetailPage() {
 
   const selectedFileMeta =
     submission.files?.find((file) => file.id === selectedFileId) ?? null;
+  const activeThreadComments =
+    activeThreadLine != null ? commentsByLine.get(activeThreadLine) ?? [] : [];
+  const activeThreadHeight =
+    activeThreadLine != null
+      ? Math.min(320, Math.max(220, 120 + activeThreadComments.length * 56))
+      : 0;
 
   return (
     <>
@@ -1412,13 +1252,76 @@ function SubmissionDetailPage() {
           );
         }
 
+        .submission-comment-line-hover {
+          background: linear-gradient(
+            90deg,
+            rgba(37, 99, 235, 0.08),
+            rgba(37, 99, 235, 0.02)
+          );
+        }
+
         .submission-comment-glyph {
           margin-left: 3px;
-          width: 14px !important;
-          height: 14px !important;
+          width: 16px !important;
+          height: 16px !important;
           border-radius: 999px;
           border: 1px solid rgba(30, 64, 175, 0.9);
-          background: radial-gradient(circle at 35% 35%, #dbeafe 0%, #60a5fa 70%, #1d4ed8 100%);
+          background: linear-gradient(180deg, #eff6ff 0%, #60a5fa 55%, #1d4ed8 100%);
+          position: relative;
+          box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.45) inset;
+        }
+
+        .submission-comment-glyph::before,
+        .submission-comment-glyph::after {
+          content: '';
+          position: absolute;
+          left: 50%;
+          top: 50%;
+          background: #ffffff;
+          border-radius: 999px;
+          transform: translate(-50%, -50%);
+        }
+
+        .submission-comment-glyph::before {
+          width: 8px;
+          height: 1.75px;
+        }
+
+        .submission-comment-glyph::after {
+          width: 1.75px;
+          height: 8px;
+        }
+
+        .submission-comment-hover-glyph {
+          margin-left: 3px;
+          width: 12px !important;
+          height: 12px !important;
+          position: relative;
+          border-radius: 999px;
+          border: 1px solid rgba(37, 99, 235, 0.55);
+          background: rgba(219, 234, 254, 0.9);
+          box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.7) inset;
+        }
+
+        .submission-comment-hover-glyph::before,
+        .submission-comment-hover-glyph::after {
+          content: '';
+          position: absolute;
+          left: 50%;
+          top: 50%;
+          background: #2563eb;
+          border-radius: 999px;
+          transform: translate(-50%, -50%);
+        }
+
+        .submission-comment-hover-glyph::before {
+          width: 6px;
+          height: 1.8px;
+        }
+
+        .submission-comment-hover-glyph::after {
+          width: 1.8px;
+          height: 6px;
         }
       `}</style>
 
@@ -1503,7 +1406,7 @@ function SubmissionDetailPage() {
               </div>
             </aside>
 
-            <section className="h-[52vh] min-h-90 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition-shadow duration-300 hover:shadow-md lg:h-[72vh]">
+            <section className="h-[52vh] min-h-90 overflow-visible rounded-2xl border border-slate-200 bg-white shadow-sm transition-shadow duration-300 hover:shadow-md lg:h-[72vh]">
               <div className="flex items-center justify-between gap-3 border-b border-slate-200 px-4 py-3">
                 <div className="min-w-0">
                   <p className="truncate text-sm font-semibold text-slate-800">
@@ -1529,7 +1432,7 @@ function SubmissionDetailPage() {
                 </div>
               </div>
 
-              <div className="relative h-[calc(52vh-57px)] lg:h-[calc(72vh-57px)]">
+              <div className="relative h-[calc(52vh-57px)] overflow-visible lg:h-[calc(72vh-57px)]">
                 {loadingFile ? (
                   <div className="absolute inset-0 z-10 flex items-center justify-center bg-white/75 backdrop-blur-[1px]">
                     <div className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm">
@@ -1549,25 +1452,185 @@ function SubmissionDetailPage() {
                     </div>
                   </div>
                 ) : (
-                  <MonacoEditor
-                    height="100%"
-                    theme="vs-dark"
-                    onMount={handleEditorMount}
-                    language={editorLanguage}
-                    value={editorValue}
-                    options={{
-                      readOnly: true,
-                      glyphMargin: true,
-                      minimap: { enabled: false },
-                      scrollBeyondLastLine: false,
-                      wordWrap: 'on',
-                      fontSize: 13,
-                      lineNumbersMinChars: 3,
-                      renderLineHighlight: 'all',
-                      automaticLayout: true,
-                    }}
-                  />
+                  <div className="h-full overflow-hidden rounded-b-2xl">
+                    <MonacoEditor
+                      height="100%"
+                      theme="vs-dark"
+                      onMount={handleEditorMount}
+                      language={editorLanguage}
+                      value={editorValue}
+                      options={{
+                        readOnly: true,
+                        glyphMargin: true,
+                        lineNumbers: 'on',
+                        minimap: { enabled: false },
+                        scrollBeyondLastLine: false,
+                        wordWrap: 'on',
+                        fontSize: 13,
+                        lineNumbersMinChars: 3,
+                        renderLineHighlight: 'all',
+                        automaticLayout: true,
+                      }}
+                    />
+                  </div>
                 )}
+
+                {activeThreadLine != null && activeThreadTop != null ? (
+                  <div
+                    className="absolute inset-x-3 z-20"
+                    style={{ top: activeThreadTop }}
+                  >
+                    <div
+                      className="flex flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl ring-1 ring-slate-200"
+                      style={{ height: `${activeThreadHeight}px` }}
+                    >
+                      <div className="flex shrink-0 items-center justify-between gap-3 border-b border-slate-200 bg-slate-50 px-3 py-2.5">
+                        <div>
+                          <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-500">
+                            Comment thread
+                          </p>
+                          <p className="mt-0.5 text-sm font-semibold text-slate-800">
+                            Line {activeThreadLine}
+                          </p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (activeThreadLine != null) {
+                              commentDraftByLineRef.current[activeThreadLine] = activeThreadDraft;
+                            }
+                            setActiveThreadLine(null);
+                            setActiveThreadDraft('');
+                            setActiveThreadTop(null);
+                            clearThreadZone();
+                          }}
+                          className="rounded-full border border-slate-300 bg-white px-2.5 py-1 text-xs font-semibold text-slate-600 transition-colors hover:border-slate-400 hover:text-slate-900"
+                        >
+                          Close
+                        </button>
+                      </div>
+
+                      <div className="min-h-0 flex-1 overflow-y-auto px-3 py-3">
+                        {commentsError ? (
+                          <p className="mb-2 text-sm text-rose-600">{commentsError}</p>
+                        ) : null}
+
+                        {activeThreadComments.length === 0 ? (
+                          <p className="mb-2 text-sm text-slate-500">
+                            No comments on this line yet.
+                          </p>
+                        ) : (
+                          <div className="space-y-2.5">
+                            {activeThreadComments.map((comment) => {
+                              const avatarUrl = getCommentAuthorAvatar(comment);
+                              const deleting = deletingCommentIds.has(comment.id);
+
+                              return (
+                                <article
+                                  key={comment.id}
+                                  className="rounded-xl border border-slate-200 bg-slate-50 px-2.5 py-2.5"
+                                >
+                                  <div className="flex items-start justify-between gap-2.5">
+                                    <div className="flex min-w-0 items-start gap-2.5">
+                                      {avatarUrl ? (
+                                        // eslint-disable-next-line @next/next/no-img-element
+                                        <img
+                                          src={avatarUrl}
+                                          alt={getCommentAuthorName(comment)}
+                                          className="h-7 w-7 rounded-full object-cover"
+                                        />
+                                      ) : (
+                                        <span className="flex h-7 w-7 items-center justify-center rounded-full bg-blue-100 text-[10px] font-bold text-blue-800">
+                                          {getInitials(getCommentAuthorName(comment))}
+                                        </span>
+                                      )}
+
+                                      <div className="min-w-0">
+                                        <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
+                                          <p className="text-sm font-semibold text-slate-900">
+                                            {getCommentAuthorName(comment)}
+                                          </p>
+                                          <p className="text-xs text-slate-500">
+                                            {timeAgo(comment.created_at)}
+                                          </p>
+                                        </div>
+                                        <p className="mt-1.5 whitespace-pre-wrap break-words text-sm leading-5 text-slate-700">
+                                          {comment.body}
+                                        </p>
+                                      </div>
+                                    </div>
+
+                                    {isOwnComment(comment) ? (
+                                      <button
+                                        type="button"
+                                        disabled={deleting}
+                                        onClick={() => {
+                                          void handleDeleteComment(comment.id);
+                                        }}
+                                        className="shrink-0 rounded-full border border-rose-200 bg-rose-50 px-2.5 py-1 text-[11px] font-semibold text-rose-600 transition-colors hover:border-rose-300 hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-60"
+                                      >
+                                        {deleting ? 'Deleting...' : 'Delete'}
+                                      </button>
+                                    ) : null}
+                                  </div>
+                                </article>
+                              );
+                            })}
+                          </div>
+                        )}
+
+                        {canView ? (
+                          <div className="mt-3 shrink-0 border-t border-slate-200 pt-3">
+                            <textarea
+                              value={activeThreadDraft}
+                              onChange={(event) => {
+                                const value = event.target.value;
+                                setActiveThreadDraft(value);
+                                if (activeThreadLine != null) {
+                                  commentDraftByLineRef.current[activeThreadLine] = value;
+                                }
+                              }}
+                              placeholder="Write a comment…"
+                              rows={2}
+                              className="h-16 w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 outline-none transition-colors placeholder:text-slate-400 focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
+                            />
+                            <div className="mt-2.5 flex items-center justify-end gap-2">
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  if (activeThreadLine != null) {
+                                    commentDraftByLineRef.current[activeThreadLine] = activeThreadDraft;
+                                  }
+                                  setActiveThreadLine(null);
+                                  setActiveThreadDraft('');
+                                  setActiveThreadTop(null);
+                                  clearThreadZone();
+                                }}
+                                className="rounded-full border border-slate-300 bg-white px-2.5 py-1 text-xs font-semibold text-slate-600 transition-colors hover:border-slate-400 hover:text-slate-900"
+                              >
+                                Cancel
+                              </button>
+                              <button
+                                type="button"
+                                disabled={postingComment}
+                                onClick={() => {
+                                  void addCommentAtActiveLine();
+                                }}
+                                className="rounded-full border border-blue-700 bg-blue-600 px-3.5 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
+                              >
+                                {postingComment ? 'Posting...' : 'Comment'}
+                              </button>
+                            </div>
+                          </div>
+                        ) : (
+                          <p className="mt-4 border-t border-slate-200 pt-4 text-sm italic text-slate-500">
+                            You do not have permission to comment on this submission.
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ) : null}
               </div>
             </section>
           </div>
