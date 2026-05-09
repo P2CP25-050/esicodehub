@@ -29,6 +29,8 @@ class AnswerSerializer(serializers.ModelSerializer):
     # Email of the answer author
     author_email = serializers.SerializerMethodField()
 
+    author_school_id = serializers.SerializerMethodField()
+
     # Total vote score (upvotes - downvotes)
     vote_score = serializers.SerializerMethodField()
 
@@ -52,6 +54,7 @@ class AnswerSerializer(serializers.ModelSerializer):
             'parent',
             'author_name',
             'author_email',
+            'author_school_id',
             'body',
             'code_snippet',
             'code_language',
@@ -71,6 +74,9 @@ class AnswerSerializer(serializers.ModelSerializer):
     def get_author_email(self, obj):
         """Return the email of the answer author."""
         return obj.author.email
+
+    def get_author_school_id(self, obj):
+        return obj.author.school_id
 
     def get_vote_score(self, obj):
         """
@@ -194,6 +200,8 @@ class QuestionListSerializer(serializers.ModelSerializer):
     # Total number of answers for this question
     answer_count = serializers.SerializerMethodField()
 
+    author_school_id = serializers.SerializerMethodField()
+
     # Total vote score (upvotes - downvotes)
     vote_score = serializers.SerializerMethodField()
 
@@ -210,6 +218,7 @@ class QuestionListSerializer(serializers.ModelSerializer):
             'title',
             'tags',
             'author_name',
+            'author_school_id',
             'answer_count',
             'vote_score',
             'has_accepted_answer',
@@ -226,6 +235,9 @@ class QuestionListSerializer(serializers.ModelSerializer):
         if hasattr(obj, 'answer_count'):
             return obj.answer_count
         return obj.answers.count()
+
+    def get_author_school_id(self, obj):
+        return obj.author.school_id
 
     def get_vote_score(self, obj):
         """

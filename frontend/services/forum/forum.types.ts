@@ -6,6 +6,7 @@ export interface Answer {
   parent: number | null;
   author_name: string;
   author_email: string;
+  author_school_id: string;
   body: string;
   code_snippet: string;
   code_language: string;
@@ -23,6 +24,7 @@ export interface QuestionListItem {
   title: string;
   tags: string[];
   author_name: string;
+  author_school_id: string;
   author_avatar?: string | null;
   author_username?: string;
   author_id?: number;
