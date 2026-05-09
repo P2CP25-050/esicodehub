@@ -6,8 +6,19 @@ interface Props {
   assignment: Assignment;
 }
 
+function getDeadlineColor(deadline: string): string {
+  const now = new Date();
+  const due = new Date(deadline);
+  const diffMs = due.getTime() - now.getTime();
+  const diffDays = diffMs / (1000 * 60 * 60 * 24);
+  if (diffMs < 0) return "var(--red)";
+  if (diffDays <= 3) return "var(--orange)";
+  return "var(--green)";
+}
+
 export default function ProfessorAssignmentCard({ assignment: a }: Props) {
   const router = useRouter();
+  const deadlineColor = getDeadlineColor(a.deadline);
   const past = isPastDeadline(a.deadline);
 
   return (
@@ -17,70 +28,84 @@ export default function ProfessorAssignmentCard({ assignment: a }: Props) {
       onClick={() => router.push(`/assignments/${a.id}`)}
       onKeyDown={(e) => e.key === "Enter" && router.push(`/assignments/${a.id}`)}
       style={{
-        position: "relative",
+        display: "grid",
+        gridTemplateColumns: "1fr auto",
+        alignItems: "center",
+        gap: "16px",
+        padding: "14px 20px",
         background: "var(--paper)",
-        border: "1px solid #d0d0d0",
-        borderTop: "4px solid var(--navy)",
-        padding: "20px",
-        display: "flex",
-        flexDirection: "column",
-        gap: "10px",
+        borderBottom: "1px solid var(--border-soft)",
         cursor: "pointer",
-        transition: "box-shadow 0.15s, transform 0.1s",
+        transition: "background 0.12s",
         outline: "none",
+        borderLeft: "3px solid transparent",
       }}
       onMouseEnter={(e) => {
         const el = e.currentTarget as HTMLElement;
-        el.style.boxShadow = "5px 5px 0 var(--navy)";
-        el.style.transform = "translate(-2px, -2px)";
+        el.style.background = "var(--surface)";
+        el.style.borderLeftColor = "var(--navy)";
       }}
       onMouseLeave={(e) => {
         const el = e.currentTarget as HTMLElement;
-        el.style.boxShadow = "none";
-        el.style.transform = "translate(0, 0)";
+        el.style.background = "var(--paper)";
+        el.style.borderLeftColor = "transparent";
       }}
       onFocus={(e) => {
-        (e.currentTarget as HTMLElement).style.boxShadow = "0 0 0 3px rgba(5,22,80,0.2)";
+        (e.currentTarget as HTMLElement).style.boxShadow = "inset 0 0 0 2px rgba(5,22,80,0.25)";
       }}
       onBlur={(e) => {
         (e.currentTarget as HTMLElement).style.boxShadow = "none";
       }}
     >
-      {/* Badges */}
-      <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
+      {/* Left: title + meta */}
+      <div style={{ display: "flex", alignItems: "center", gap: "14px", minWidth: 0, flexWrap: "wrap" }}>
+        {/* Subject badge */}
         <span style={{
-          display: "inline-block",
-          padding: "2px 10px",
+          flexShrink: 0,
+          padding: "2px 9px",
           fontSize: "9px",
           fontFamily: "var(--font-mono)",
           fontWeight: 700,
-          letterSpacing: "0.14em",
+          letterSpacing: "0.13em",
           textTransform: "uppercase",
           background: "var(--navy)",
-          color: "#ffffff",
+          color: "#fff",
         }}>
           {a.subject.code}
         </span>
 
+        {/* Title */}
         <span style={{
-          display: "inline-block",
-          padding: "2px 10px",
-          fontSize: "9px",
-          fontFamily: "var(--font-mono)",
+          fontFamily: "var(--font-display)",
+          fontSize: "14px",
           fontWeight: 700,
-          letterSpacing: "0.1em",
-          textTransform: "uppercase",
-          background: "transparent",
           color: "var(--ink)",
-          border: "1.5px solid var(--ink)",
+          letterSpacing: "-0.01em",
+          lineHeight: 1.3,
+          overflow: "hidden",
+          textOverflow: "ellipsis",
+          whiteSpace: "nowrap",
+        }}>
+          {a.title}
+        </span>
+
+        {/* Target audience */}
+        <span style={{
+          flexShrink: 0,
+          fontSize: "10px",
+          fontFamily: "var(--font-mono)",
+          color: "var(--text-muted)",
+          letterSpacing: "0.06em",
+          whiteSpace: "nowrap",
         }}>
           {getTargetSummary(a)}
         </span>
 
+        {/* Closed pill */}
         {!a.is_open && (
           <span style={{
-            display: "inline-block",
-            padding: "2px 10px",
+            flexShrink: 0,
+            padding: "2px 8px",
             fontSize: "9px",
             fontFamily: "var(--font-mono)",
             fontWeight: 700,
@@ -95,38 +120,26 @@ export default function ProfessorAssignmentCard({ assignment: a }: Props) {
         )}
       </div>
 
-      {/* Title */}
-      <h3 style={{
-        fontFamily: "var(--font-display)",
-        fontSize: "15px",
-        fontWeight: 700,
-        color: "var(--ink)",
-        margin: "4px 0 0",
-        lineHeight: 1.4,
-        paddingRight: "24px",
-        letterSpacing: "-0.01em",
-      }}>
-        {a.title}
-      </h3>
+      {/* Right: deadline + submissions + arrow */}
+      <div style={{ display: "flex", alignItems: "center", gap: "20px", flexShrink: 0 }}>
+        {/* Submission count */}
+        <div style={{
+          display: "flex", alignItems: "center", gap: "5px",
+          fontSize: "10px", fontFamily: "var(--font-mono)",
+          color: "var(--text-muted)", letterSpacing: "0.06em", whiteSpace: "nowrap",
+        }}>
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ flexShrink: 0 }}>
+            <polyline points="9 11 12 14 22 4" />
+            <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" />
+          </svg>
+          {a.submission_count} submitted
+        </div>
 
-      {/* Subject name */}
-      <p style={{
-        fontFamily: "var(--font-body)",
-        fontSize: "12px",
-        color: "var(--text-muted)",
-        margin: 0,
-        fontWeight: 300,
-      }}>
-        {a.subject.name}
-      </p>
-
-      {/* Bottom row */}
-      <div style={{ display: "flex", alignItems: "center", gap: "16px", flexWrap: "wrap", marginTop: "4px" }}>
+        {/* Deadline */}
         <div style={{
           display: "flex", alignItems: "center", gap: "5px",
           fontSize: "10px", fontFamily: "var(--font-mono)", fontWeight: 700,
-          color: past ? "var(--red)" : "var(--green)",
-          letterSpacing: "0.06em",
+          color: deadlineColor, letterSpacing: "0.06em", whiteSpace: "nowrap",
         }}>
           <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ flexShrink: 0 }}>
             <rect x="3" y="4" width="18" height="18" rx="0" />
@@ -137,31 +150,14 @@ export default function ProfessorAssignmentCard({ assignment: a }: Props) {
           {past ? "Overdue · " : "Due · "}{formatDeadline(a.deadline)}
         </div>
 
-        <div style={{
-          display: "flex", alignItems: "center", gap: "5px",
-          fontSize: "10px", fontFamily: "var(--font-mono)",
-          color: "var(--text-muted)",
-          letterSpacing: "0.06em",
-        }}>
-          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ flexShrink: 0 }}>
-            <polyline points="9 11 12 14 22 4" />
-            <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" />
-          </svg>
-          {a.submission_count} submission{a.submission_count !== 1 ? "s" : ""}
-        </div>
+        {/* Arrow */}
+        <span style={{
+          color: "var(--navy)",
+          fontSize: "14px",
+          fontFamily: "var(--font-mono)",
+          pointerEvents: "none",
+        }}>→</span>
       </div>
-
-      {/* Arrow */}
-      <span style={{
-        position: "absolute",
-        right: "14px",
-        top: "50%",
-        transform: "translateY(-50%)",
-        color: "var(--navy)",
-        fontSize: "16px",
-        pointerEvents: "none",
-        fontFamily: "var(--font-mono)",
-      }}>→</span>
     </div>
   );
 }

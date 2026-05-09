@@ -1,34 +1,37 @@
 export default function AssignmentsSkeleton() {
   return (
     <>
-      {Array.from({ length: 6 }).map((_, i) => (
+      <style>{`
+        @keyframes ap-skeleton-pulse {
+          0%, 100% { opacity: 1; }
+          50% { opacity: 0.4; }
+        }
+      `}</style>
+      {Array.from({ length: 8 }).map((_, i) => (
         <div
           key={i}
           style={{
-            background: "var(--surface)",
-            border: "var(--rule)",
-            borderTop: "4px solid #e0e0e0",
-            padding: "20px",
-            display: "flex",
-            flexDirection: "column",
-            gap: "12px",
+            display: "grid",
+            gridTemplateColumns: "1fr auto",
+            alignItems: "center",
+            gap: "16px",
+            padding: "14px 20px",
+            borderBottom: "1px solid var(--border-soft)",
             animation: "ap-skeleton-pulse 1.6s ease-in-out infinite",
-            animationDelay: `${i * 0.08}s`,
+            animationDelay: `${i * 0.07}s`,
           }}
         >
-          <style>{`
-            @keyframes ap-skeleton-pulse {
-              0%, 100% { opacity: 1; }
-              50% { opacity: 0.4; }
-            }
-          `}</style>
-          <div style={{ display: "flex", gap: "8px" }}>
-            <div style={{ height: "20px", width: "60px", background: "#d0d0d0" }} />
-            <div style={{ height: "20px", width: "80px", background: "#d0d0d0", opacity: 0.6 }} />
+          {/* Left side */}
+          <div style={{ display: "flex", alignItems: "center", gap: "14px" }}>
+            <div style={{ height: "18px", width: "52px", background: "#d0d0d0", flexShrink: 0 }} />
+            <div style={{ height: "14px", width: "220px", background: "#d0d0d0" }} />
+            <div style={{ height: "12px", width: "80px", background: "#e0e0e0", opacity: 0.7 }} />
           </div>
-          <div style={{ height: "14px", width: "75%", background: "#d0d0d0" }} />
-          <div style={{ height: "12px", width: "50%", background: "#d0d0d0", opacity: 0.7 }} />
-          <div style={{ height: "11px", width: "40%", background: "#d0d0d0", opacity: 0.5 }} />
+          {/* Right side */}
+          <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
+            <div style={{ height: "12px", width: "90px", background: "#d0d0d0" }} />
+            <div style={{ height: "18px", width: "64px", background: "#e0e0e0" }} />
+          </div>
         </div>
       ))}
     </>
