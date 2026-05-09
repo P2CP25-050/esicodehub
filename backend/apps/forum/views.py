@@ -152,7 +152,7 @@ class QuestionListCreateView(APIView):
 
     def get(self, request):
         queryset = _annotate_questions(
-            Question.objects.select_related('author')
+            Question.objects.select_related('author').prefetch_related('tags')
         )
 
         tag = request.query_params.get('tag')
