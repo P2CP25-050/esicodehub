@@ -24,9 +24,20 @@ import type {
 export const listSubmissions = async (
   params?: SubmissionListParams
 ): Promise<PaginatedResponse<PersonalSubmission>> => {
+  const requestParams = params
+    ? {
+        language: params.language,
+        type: params.type,
+        course: params.course,
+        search: params.search,
+        page: params.page,
+        visibility: params.visibility,
+        mine: params.mine,
+      }
+    : undefined;
   const res = await apiClient.get<PaginatedResponse<PersonalSubmission>>(
-    '/personal-submissions/',
-    { params }
+    '/submissions/',
+    { params: requestParams }
   );
   return res.data;
 };

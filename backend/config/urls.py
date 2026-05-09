@@ -44,6 +44,10 @@ urlpatterns = [
         'api/personal-submissions/',
         include('apps.personal_submissions.urls'),
     ),
+    path(
+        'api/submissions/',
+        include('apps.personal_submissions.urls'),
+    ),
     path('api/forum/', include('apps.forum.urls')),
     path('api/notifications/', include('apps.notifications.urls')),
     path('api/reports/', include('apps.reports.urls')),

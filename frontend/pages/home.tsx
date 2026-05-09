@@ -306,7 +306,7 @@ function HomePageContent() {
     if (isLoading || !isAuthenticated) return;
     async function fetchData() {
       const [subsResult, assignResult] = await Promise.allSettled([
-        import("../services/submissions").then((m) => m.listSubmissions({ page: 1 })),
+        import("../services/submissions").then((m) => m.listSubmissions({ page: 1, mine: true })),
         import("../services/assignments").then((m) => m.listAssignments()),
       ]);
 
