@@ -3,8 +3,6 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from 'next/router';
 import { useAuth } from "@/context/AuthContext";
-import { logout } from '@/services/auth';
-import { clearTokens } from '@/lib/tokens';
 import { getProfile } from '@/services/profile/api';
 import { useNotifications } from '@/hooks/useNotifications';
 import type { Notification } from '@/services/notifications/notifications';
@@ -55,11 +53,14 @@ function NotificationTypeIcon({ type }: { type: string }) {
 export default function Header({ activePage = "" }: HeaderProps) {
   const [hoveredNav, setHoveredNav]   = useState<string | null>(null);
   const [menuOpen, setMenuOpen]       = useState(false);
-  const [avatarUrl, setAvatarUrl]     = useState<string | null>(null);
+  const [avatarUrl, setAvatarUrl]     = useState<string | null>(() => {
+    if (typeof window === 'undefined') return null;
+    return normalizeAvatarUrl(window.localStorage.getItem(PROFILE_AVATAR_KEY));
+  });
   const [bellOpen, setBellOpen]       = useState(false);
   const bellRef                       = useRef<HTMLDivElement>(null);
   const router                        = useRouter();
-  const { user }                      = useAuth();
+  const { user, logout }              = useAuth();
   const { notifications, unreadCount, markAllRead, markOneRead } = useNotifications();
 
   const userName = user ? `${user.first_name} ${user.last_name}` : "—";
@@ -67,8 +68,6 @@ export default function Header({ activePage = "" }: HeaderProps) {
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
-    const fromStorage = normalizeAvatarUrl(window.localStorage.getItem(PROFILE_AVATAR_KEY));
-    setAvatarUrl(fromStorage);
     const onAvatarUpdated = (event: Event) => {
       const customEvent = event as CustomEvent<{ avatarUrl?: string | null }>;
       setAvatarUrl(normalizeAvatarUrl(customEvent.detail?.avatarUrl ?? null));
@@ -114,16 +113,17 @@ export default function Header({ activePage = "" }: HeaderProps) {
     return () => document.removeEventListener('mousedown', handler);
   }, [bellOpen]);
 
-  useEffect(() => { setMenuOpen(false); }, [router.pathname]);
+  useEffect(() => {
+    const handleRouteChange = () => setMenuOpen(false);
+    router.events.on('routeChangeStart', handleRouteChange);
+    return () => router.events.off('routeChangeStart', handleRouteChange);
+  }, [router.events]);
   useEffect(() => {
     document.body.style.overflow = menuOpen ? "hidden" : "";
     return () => { document.body.style.overflow = ""; };
   }, [menuOpen]);
 
-  const handleLogout = async () => {
-    try { await logout(); } catch { }
-    finally { clearTokens(); router.replace('/login'); }
-  };
+  const handleLogout = () => logout();
 
   const handleNotificationClick = async (n: Notification) => {
     if (!n.is_read) {
