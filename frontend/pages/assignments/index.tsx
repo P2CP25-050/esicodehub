@@ -106,7 +106,7 @@ const PAGE_CSS = `
   }
 
   /* Controls */
-  .ap-controls { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 28px; }
+  .ap-controls { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 0; }
   .ap-search-wrap { position: relative; flex: 1; min-width: 200px; }
   .ap-search-icon {
     position: absolute; left: 12px; top: 50%; transform: translateY(-50%);
@@ -162,16 +162,31 @@ const PAGE_CSS = `
   }
   .ap-error-retry:hover { background: rgba(204,0,0,0.08); }
 
-  /* Grid – horizontal scroll */
-  .ap-grid {
-    display: flex;
-    overflow-x: auto;
-    gap: 20px;
-    padding-bottom: 16px;
-    scrollbar-width: thin;
+  /* List container */
+  .ap-list {
+    border: var(--rule);
+    overflow: hidden;
   }
-  .ap-grid > * {
-    flex: 0 0 320px;
+
+  /* List header row */
+  .ap-list-header {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 16px;
+    padding: 8px 20px;
+    background: var(--surface);
+    border-bottom: var(--rule);
+    font-family: var(--font-mono);
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+  }
+  .ap-list-header-right {
+    display: flex;
+    gap: 16px;
+    align-items: center;
   }
 
   /* Animations */
@@ -184,7 +199,7 @@ const PAGE_CSS = `
   .ap-animate-2 { animation-delay: 0.10s; }
   .ap-animate-3 { animation-delay: 0.17s; }
 
-  @media (max-width: 960px)  { .ap-page-title { font-size: 30px; } .ap-page::before { display: none; } }
+  @media (max-width: 960px)  { .ap-page-title { font-size: 30px; } .ap-page::before { display: none; } .ap-list-header { display: none; } }
   @media (max-width: 620px)  { .ap-container { padding: 20px 16px 60px; } .ap-page-title { font-size: 24px; } }
 `;
 
@@ -270,7 +285,7 @@ function AssignmentsContent() {
         </div>
 
         {/* Controls */}
-        <div className="ap-controls ap-animate ap-animate-2">
+        <div className="ap-controls ap-animate ap-animate-2" style={{ marginBottom: "20px" }}>
           <div className="ap-search-wrap">
             <svg className="ap-search-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
@@ -306,8 +321,20 @@ function AssignmentsContent() {
           </div>
         )}
 
-        {/* Cards grid – horizontal scroll */}
-        <div className="ap-grid ap-animate ap-animate-3">
+        {/* List */}
+        <div className="ap-list ap-animate ap-animate-3">
+          {/* Column header */}
+          {!loading && filtered.length > 0 && (
+            <div className="ap-list-header">
+              <span>Assignment</span>
+              <div className="ap-list-header-right">
+                {isProfessor && <span style={{ width: "90px", textAlign: "right" }}>Submissions</span>}
+                <span style={{ width: "110px", textAlign: "right" }}>Deadline</span>
+                <span style={{ width: isProfessor ? "0" : "70px" }}>{isProfessor ? "" : "Status"}</span>
+              </div>
+            </div>
+          )}
+
           {loading ? (
             <AssignmentsSkeleton />
           ) : filtered.length === 0 ? (
