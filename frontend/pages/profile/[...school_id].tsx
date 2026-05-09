@@ -316,7 +316,7 @@ function ReportModal({ reportedUserEmail, displayName, onClose }: ReportModalPro
           {/* Header */}
           <div style={rm.header}>
             <div>
-              <p style={rm.headerLabel}>// Report user</p>
+              <p style={rm.headerLabel}>Report User</p>
               <p style={rm.headerName}>{displayName}</p>
             </div>
             <button style={rm.closeBtn} onClick={onClose} aria-label="Close">
