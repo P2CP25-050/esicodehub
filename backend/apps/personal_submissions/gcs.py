@@ -143,6 +143,14 @@ def get_file_content(gcs_path: str) -> str:
     return blob.download_as_text()
 
 
+def get_file_bytes(gcs_path: str) -> bytes:
+    """Download and return raw file bytes."""
+    client = get_gcs_client()
+    bucket = client.bucket(settings.GS_BUCKET_NAME)
+    blob = bucket.blob(gcs_path)
+    return blob.download_as_bytes()
+
+
 def upload_file_content(gcs_path: str, content: str) -> None:
     """Upload a plain text string to GCS at the given path."""
     client = get_gcs_client()

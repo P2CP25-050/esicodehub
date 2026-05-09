@@ -8,6 +8,7 @@ import {
 } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
+import dynamic from 'next/dynamic';
 import axios from 'axios';
 
 import Header from '@/components/submissions/Header';
@@ -25,6 +26,10 @@ import type {
   AssignmentSubmission,
 } from '@/services/assignments';
 import { timeAgo } from '@/utils/time';
+
+const PdfViewer = dynamic(() => import('@/components/pdf/PdfViewer'), {
+  ssr: false,
+});
 
 const formatDateTime = (value: string): string => {
   const date = new Date(value);
@@ -95,6 +100,13 @@ const resolveAssignmentPdfUrl = (value?: string | null): string | null => {
   } catch {
     return null;
   }
+};
+
+const getAssignmentPdfViewerUrl = (assignmentId?: number): string | null => {
+  if (!assignmentId) return null;
+  const apiBase = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
+  const normalizedBase = apiBase.endsWith('/') ? apiBase.slice(0, -1) : apiBase;
+  return `${normalizedBase}/assignments/${assignmentId}/description-pdf/`;
 };
 
 const getCountdown = (deadlineValue: string): string => {
@@ -204,6 +216,7 @@ function AssignmentDetailPageContent() {
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [showUploadZone, setShowUploadZone] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [showPdfViewer, setShowPdfViewer] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [toast, setToast] = useState<{ type: 'success' | 'error' | 'info'; message: string } | null>(null);
   const [fileInputKey, setFileInputKey] = useState(0);
@@ -237,6 +250,7 @@ function AssignmentDetailPageContent() {
   );
   const canEditAssignment = isCreator;
   const descriptionPdfUrl = resolveAssignmentPdfUrl(assignment?.description_pdf);
+  const descriptionPdfViewerUrl = getAssignmentPdfViewerUrl(assignment?.id);
   const deadlineBadge = assignment ? getDeadlineBadge(assignment) : null;
   const canSubmit = Boolean(assignment?.is_open);
   const hasSubmission = Boolean(mySubmission);
@@ -768,8 +782,10 @@ function AssignmentDetailPageContent() {
                       <div className="flex flex-wrap items-center gap-2">
                         <a
                           href={descriptionPdfUrl}
-                          target="_blank"
-                          rel="noreferrer"
+                          onClick={(event) => {
+                            event.preventDefault();
+                            setShowPdfViewer(true);
+                          }}
                           className="rounded-lg border border-blue-300 bg-white px-3 py-1 text-xs font-semibold text-blue-700 transition-colors hover:bg-blue-100"
                         >
                           PDF Viewer
@@ -1212,6 +1228,13 @@ function AssignmentDetailPageContent() {
           )}
         </div>
       </main>
+
+      <PdfViewer
+        open={showPdfViewer}
+        pdfUrl={descriptionPdfViewerUrl}
+        title="Assignment PDF Description"
+        onClose={() => setShowPdfViewer(false)}
+      />
 
     </div>
   );

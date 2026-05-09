@@ -7,6 +7,7 @@ import {
   type FormEvent,
 } from 'react';
 import Link from 'next/link';
+import dynamic from 'next/dynamic';
 import { useRouter } from 'next/router';
 import useSWR from 'swr';
 import axios from 'axios';
@@ -20,6 +21,10 @@ import {
   uploadAssignmentDescriptionPdf,
   type Assignment,
 } from '@/services/assignments';
+
+const PdfViewer = dynamic(() => import('@/components/pdf/PdfViewer'), {
+  ssr: false,
+});
 
 type FieldErrors = {
   title?: string;
@@ -106,6 +111,13 @@ const resolveAssignmentPdfUrl = (value?: string | null): string | null => {
   }
 };
 
+const getAssignmentPdfViewerUrl = (assignmentId?: number): string | null => {
+  if (!assignmentId) return null;
+  const apiBase = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
+  const normalizedBase = apiBase.endsWith('/') ? apiBase.slice(0, -1) : apiBase;
+  return `${normalizedBase}/assignments/${assignmentId}/description-pdf/`;
+};
+
 function LoadingSkeleton() {
   return (
     <div
@@ -161,6 +173,7 @@ function AssignmentEditPageContent() {
   const [deadlineOverride, setDeadlineOverride] = useState<string | null>(null);
   const [selectedPdf, setSelectedPdf] = useState<File | null>(null);
   const [dragOver, setDragOver] = useState(false);
+  const [showPdfViewer, setShowPdfViewer] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -181,6 +194,7 @@ function AssignmentEditPageContent() {
   );
   const hasExistingPdf = Boolean(assignment?.description_pdf);
   const existingPdfUrl = resolveAssignmentPdfUrl(assignment?.description_pdf);
+  const existingPdfViewerUrl = getAssignmentPdfViewerUrl(assignment?.id);
 
   const openFileDialog = () => {
     fileInputRef.current?.click();
@@ -515,8 +529,10 @@ function AssignmentEditPageContent() {
                       <>
                         <a
                           href={existingPdfUrl}
-                          target="_blank"
-                          rel="noreferrer"
+                          onClick={(event) => {
+                            event.preventDefault();
+                            setShowPdfViewer(true);
+                          }}
                           className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50"
                         >
                           View current PDF
@@ -607,6 +623,13 @@ function AssignmentEditPageContent() {
           </form>
         </section>
       </main>
+
+      <PdfViewer
+        open={showPdfViewer}
+        pdfUrl={existingPdfViewerUrl}
+        title="Current PDF Description"
+        onClose={() => setShowPdfViewer(false)}
+      />
     </div>
   );
 }
