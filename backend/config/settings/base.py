@@ -54,6 +54,7 @@ INSTALLED_APPS = [
     'apps.notifications',
     'apps.plagiarism',
     'apps.reports',
+    'apps.insights',
 ]
 
 AUTH_USER_MODEL = 'accounts.User'
