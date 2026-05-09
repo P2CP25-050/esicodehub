@@ -71,26 +71,6 @@ useEffect(() => {
   fetchSubmissions({ ...buildParams(searchRef.current), page: 1 });
 }, [isAuthenticated, isLoading, language, type, course, visibility, buildParams, fetchSubmissions]); 
 
-// Debounced search
-useEffect(() => {
-  if (isLoading || !isAuthenticated) return;
-
-  if (skipInitialSearchEffectRef.current) {
-    skipInitialSearchEffectRef.current = false;
-    return;
-  }
-
-  if (skipNextSearchDebounceRef.current) {
-    skipNextSearchDebounceRef.current = false;
-    return;
-  }
-
-  if (debounceRef.current) clearTimeout(debounceRef.current);
-  debounceRef.current = setTimeout(() => {
-    setPage(1);
-    fetchSubmissions({ ...buildParams(searchRef.current), page: 1 });
-  }, [isAuthenticated, isLoading, language, type, course, buildParams, fetchSubmissions]);
-
   // Debounced search
   useEffect(() => {
     if (isLoading || !isAuthenticated) return;
