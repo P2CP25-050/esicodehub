@@ -15,7 +15,7 @@ const LANGUAGES: Language[] = [
   "C#", "Visual Basic", "Fortran", "ML", "Haskell",
   "Lisp", "Scheme", "Pascal", "Modula2", "Ada",
   "Perl", "TCL", "MATLAB", "VHDL", "Verilog",
-  "Spice", "MIPS Assembly", "x86 Assembly", "HCL2",
+  "Spice", "MIPS Assembly", "x86 Assembly", "HCL2", "Other",
 ];
 
 const TYPE_OPTIONS: { value: SubmissionTypeValue; label: string }[] = [
@@ -29,7 +29,7 @@ type Language = "Python"| "C" | "C++"| "Java"| "JavaScript"| "TypeScript"|
   "C#"| "Visual Basic"| "Fortran"| "ML"| "Haskell"|
   "Lisp"| "Scheme"| "Pascal"| "Modula2"| "Ada"|
   "Perl"| "TCL"| "MATLAB"| "VHDL"| "Verilog"|
-  "Spice"| "MIPS Assembly"| "x86 Assembly"| "HCL2";
+  "Spice"| "MIPS Assembly"| "x86 Assembly"| "HCL2"| "Other";
 
 type UploadPhase =
   | { status: "idle" }
@@ -44,6 +44,23 @@ const getApiErrorMessage = (err: unknown, fallback: string): string => {
   }
   if (err instanceof Error && err.message.trim().length > 0) return err.message;
   return fallback;
+};
+
+const getUploadErrorMessage = (err: unknown, language: string): string => {
+  if (axios.isAxiosError(err)) {
+    const detail = err.response?.data?.detail;
+    if (err.response?.status === 400) {
+      if (language === "Other") {
+        return "Invalid file type. When 'Other' is selected, only .pdf, .txt, .docx, and .zip files are allowed.";
+      } else {
+        return `Invalid file type for ${language}. Only code files are allowed. If you want to upload a PDF, DOCX, or ZIP, select 'Other' as the language.`;
+      }
+    }
+    if (typeof detail === "string" && detail.trim().length > 0) return detail;
+    if (typeof err.message === "string" && err.message.trim().length > 0) return err.message;
+  }
+  if (err instanceof Error && err.message.trim().length > 0) return err.message;
+  return "File upload failed. Please try again.";
 };
 
 // ─────────────────────────────────────────────
@@ -432,7 +449,10 @@ function NewSubmissionForm() {
     let submission;
     try {
       submission = await createSubmission({
-        title, language, submission_type: type, visibility,
+        title,
+        language: language === "Other" ? "other" : language,
+        submission_type: type,
+        visibility,
         course_tag: courseTag,
         description: description !== "" ? description : undefined,
       });
@@ -449,7 +469,7 @@ function NewSubmissionForm() {
         setPhase({
           status: "upload_failed",
           submissionId: submission.id,
-          error: getApiErrorMessage(err, "File upload failed."),
+          error: getUploadErrorMessage(err, language),
         });
         return;
       }

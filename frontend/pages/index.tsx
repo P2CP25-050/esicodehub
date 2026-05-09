@@ -1,67 +1,10 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef } from 'react';
 import Head from 'next/head';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { useAuth } from '@/context/AuthContext';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
-
-// ─── Animated counter hook ───────────────────────────────────────────────────
-function useCounter(target: number, duration = 1800) {
-  const [count, setCount] = useState(0);
-  const [started, setStarted] = useState(false);
-
-  useEffect(() => {
-    if (!started) return;
-
-    let start: number | null = null;
-    let cancelled = false;
-    let frameId: number | null = null;
-
-    const step = (timestamp: number) => {
-      if (cancelled) return;
-      if (!start) start = timestamp;
-
-      const progress = Math.min((timestamp - start) / duration, 1);
-      const ease = 1 - Math.pow(1 - progress, 3);
-      setCount(Math.floor(ease * target));
-
-      if (progress < 1) {
-        frameId = requestAnimationFrame(step);
-      } else if (!cancelled) {
-        setCount(target);
-      }
-    };
-
-    frameId = requestAnimationFrame(step);
-
-    return () => {
-      cancelled = true;
-      if (frameId !== null) cancelAnimationFrame(frameId);
-    };
-  }, [started, target, duration]);
-
-  return { count, start: () => setStarted(true) };
-}
-
-// ─── Intersection observer hook ──────────────────────────────────────────────
-function useInView(threshold = 0.15) {
-  const ref = useRef<HTMLDivElement>(null);
-  const [inView, setInView] = useState(false);
-
-  useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-    const observer = new IntersectionObserver(
-      ([entry]) => { if (entry.isIntersecting) { setInView(true); observer.disconnect(); } },
-      { threshold }
-    );
-    observer.observe(el);
-    return () => observer.disconnect();
-  }, [threshold]);
-
-  return { ref, inView };
-}
 
 // ─── Static code snippet for hero mockup ─────────────────────────────────────
 const CODE_LINES = [
@@ -98,21 +41,6 @@ export default function LandingPage() {
     featuresRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
 
-  // Stats counters
-  const students  = useCounter(1000);
-  const snippets  = useCounter(20000);
-  const professors = useCounter(50);
-
-  const statsRef = useInView();
-  useEffect(() => {
-    if (statsRef.inView) {
-      students.start();
-      snippets.start();
-      professors.start();
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [statsRef.inView]);
-
   // Prevent rendering the landing UI while session state is unresolved
   // or while redirecting authenticated users to home.
   if (isLoading || isAuthenticated) {
@@ -123,7 +51,7 @@ export default function LandingPage() {
     <>
       <Head>
         <title>Home — ESICodeHub</title>
-        <meta name="description" content="Share code, submit assignments, and collaborate transparently under academic supervision at École Supérieure d'Informatique." />
+        <meta name="description" content="ESICodeHub helps ESI students and professors manage assignments, share code submissions, discuss questions, and review plagiarism reports." />
       </Head>
 
       <style jsx global>{`
@@ -281,6 +209,157 @@ export default function LandingPage() {
           border-color: rgba(148,163,184,.55);
           transform: translateY(-2px);
         }
+
+        .nav-links {
+          display: flex;
+          align-items: center;
+          gap: 32px;
+        }
+
+        .nav-mobile-auth {
+          display: none;
+        }
+
+        .hero-content-grid {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 4rem;
+          align-items: center;
+          width: 100%;
+          padding-top: 3rem;
+          padding-bottom: 4rem;
+        }
+
+        .hero-title {
+          font-family: 'Outfit', sans-serif;
+          font-size: clamp(2.8rem, 4.5vw, 4rem);
+          font-weight: 400;
+          line-height: 1.1;
+          letter-spacing: -.02em;
+          color: #f1f5f9;
+          margin-bottom: 1.25rem;
+          animation: fadeUp .6s ease .08s both;
+          text-wrap: balance;
+        }
+
+        .hero-subtitle {
+          font-size: 1.1rem;
+          color: #64748b;
+          line-height: 1.75;
+          max-width: 460px;
+          margin-bottom: 2rem;
+          animation: fadeUp .6s ease .16s both;
+        }
+
+        .hero-ctas {
+          display: flex;
+          gap: 1rem;
+          flex-wrap: wrap;
+          margin-bottom: 2.5rem;
+          animation: fadeUp .6s ease .24s both;
+        }
+
+        .problem-grid {
+          display: grid;
+          grid-template-columns: repeat(3, 1fr);
+          gap: 1.5rem;
+        }
+
+        .solution-grid {
+          background: linear-gradient(135deg, #0f172a, #1e293b);
+          border: 1px solid rgba(59,130,246,.2);
+          border-radius: 20px;
+          padding: 2.5rem 3rem;
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 3rem;
+          align-items: center;
+        }
+
+        .how-grid {
+          display: grid;
+          grid-template-columns: repeat(3, minmax(0, 1fr));
+          gap: 1.2rem;
+        }
+
+        .how-step {
+          background: rgba(255,255,255,.03);
+          border: 1px solid rgba(255,255,255,.08);
+          border-radius: 14px;
+          padding: 1.4rem;
+        }
+
+        .features-grid {
+          display: grid;
+          grid-template-columns: repeat(2, 1fr);
+          gap: 1.5rem;
+        }
+
+        @media (max-width: 900px) {
+          .hero-content-grid {
+            grid-template-columns: 1fr;
+            gap: 2rem;
+            padding-top: 1.5rem;
+          }
+          .hero-visual {
+            order: 2;
+          }
+          .problem-grid {
+            grid-template-columns: 1fr;
+          }
+          .solution-grid {
+            grid-template-columns: 1fr;
+            padding: 2rem;
+            gap: 1.5rem;
+          }
+        }
+
+        @media (max-width: 640px) {
+          .nav-links {
+            display: none;
+          }
+          .nav-mobile-auth {
+            display: inline-flex;
+            padding: .45rem 1.1rem;
+            font-size: .84rem;
+          }
+          .hero-title {
+            font-size: clamp(2rem, 9.5vw, 2.45rem);
+            line-height: 1.08;
+          }
+          .hero-subtitle {
+            font-size: .97rem;
+            line-height: 1.6;
+            max-width: none;
+          }
+          .hero-ctas {
+            flex-direction: column;
+            margin-bottom: 1.8rem;
+          }
+          .hero-ctas > * {
+            width: 100%;
+            justify-content: center;
+          }
+          .floating-badge {
+            display: none;
+          }
+          .how-grid {
+            grid-template-columns: 1fr;
+          }
+          .features-grid {
+            grid-template-columns: 1fr;
+          }
+        }
+
+        @media (max-width: 400px) {
+          .mobile-shell {
+            padding-left: 1rem !important;
+            padding-right: 1rem !important;
+          }
+          .hero-title {
+            font-size: 1.95rem;
+          }
+        }
       `}</style>
 
       <div style={{ minHeight: '100vh', background: '#0d1b2a' }}>
@@ -294,7 +373,7 @@ export default function LandingPage() {
           borderBottom: '1px solid rgba(255,255,255,.06)',
           background: 'rgba(13,27,42,.85)',
           backdropFilter: 'blur(16px)',
-        }}>
+        }} className="mobile-shell">
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <div style={{ width: 32, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <Image
@@ -311,13 +390,17 @@ export default function LandingPage() {
             </span>
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: 32 }}>
+          <div className="nav-links">
             <a href="#features" className="nav-link">Features</a>
             <Link href="/register" className="nav-link">Sign up</Link>
             <Link href="/login" className="btn-primary" style={{ padding: '.45rem 1.25rem', fontSize: '.875rem' }}>
               Sign in
             </Link>
           </div>
+
+          <Link href="/login" className="btn-primary nav-mobile-auth">
+            Sign in
+          </Link>
         </nav>
 
         {/* ════════════════ HERO ════════════════ */}
@@ -329,7 +412,7 @@ export default function LandingPage() {
           position: 'relative',
           overflow: 'hidden',
           background: 'linear-gradient(160deg, #0d1b2a 0%, #0f2035 60%, #0d1b2a 100%)',
-        }}>
+        }} className="mobile-shell">
           <div className="hero-grid" />
           <div className="noise" />
 
@@ -337,7 +420,7 @@ export default function LandingPage() {
           <div style={{ position: 'absolute', top: '15%', left: '5%', width: 500, height: 500, background: 'radial-gradient(circle, rgba(37,99,235,.12) 0%, transparent 65%)', pointerEvents: 'none' }} />
           <div style={{ position: 'absolute', bottom: '10%', right: '10%', width: 400, height: 400, background: 'radial-gradient(circle, rgba(79,70,229,.1) 0%, transparent 65%)', pointerEvents: 'none' }} />
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4rem', alignItems: 'center', width: '100%', paddingTop: '3rem', paddingBottom: '4rem' }}>
+          <div className="hero-content-grid">
 
             {/* Left — copy */}
             <div>
@@ -355,35 +438,20 @@ export default function LandingPage() {
               </div>
 
               {/* Headline */}
-              <h1 style={{
-                fontFamily: "'Outfit', sans-serif",
-                fontSize: 'clamp(2.8rem, 4.5vw, 4rem)',
-                fontWeight: 400,
-                lineHeight: 1.1,
-                letterSpacing: '-.02em',
-                color: '#f1f5f9',
-                marginBottom: '1.25rem',
-                animation: 'fadeUp .6s ease .08s both',
-              }}>
-                The code platform<br />
+              <h1 className="hero-title">
+                The academic code workspace<br />
                 <em style={{ fontStyle: 'italic', color: '#93c5fd' }}>built for ESI.</em>
               </h1>
 
               {/* Subheadline */}
-              <p style={{
-                fontSize: '1.1rem',
-                color: '#64748b',
-                lineHeight: 1.75,
-                maxWidth: 460,
-                marginBottom: '2rem',
-                animation: 'fadeUp .6s ease .16s both',
-              }}>
-                Share code, submit assignments, and collaborate transparently under academic supervision — all in one place built exclusively for{' '}
+              <p className="hero-subtitle">
+                Use one ESI-only platform to share personal code submissions, submit coursework, ask technical questions in the forum, and follow professor feedback and plagiarism checks.
+                Access is limited to{' '}
                 <span style={{ color: '#94a3b8', fontWeight: 600 }}>@esi.dz</span> accounts.
               </p>
 
               {/* CTAs */}
-              <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', marginBottom: '2.5rem', animation: 'fadeUp .6s ease .24s both' }}>
+              <div className="hero-ctas">
                 <Link href="/login" className="btn-primary">
                   Sign in with ESI email
                   <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
@@ -402,8 +470,8 @@ export default function LandingPage() {
               <div style={{ display: 'flex', gap: '1.5rem', flexWrap: 'wrap', animation: 'fadeUp .6s ease .32s both' }}>
                 {[
                   { icon: '🔒', label: '@esi.dz only' },
-                  { icon: '🎓', label: 'Academic use' },
-                  { icon: '⚡', label: 'Free to use' },
+                  { icon: '📚', label: 'Assignments + submissions' },
+                  { icon: '🛡️', label: 'Professor plagiarism reports' },
                 ].map(item => (
                   <div key={item.label} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: '.8125rem', color: '#475569' }}>
                     <span>{item.icon}</span>
@@ -414,7 +482,7 @@ export default function LandingPage() {
             </div>
 
             {/* Right — code mockup */}
-            <div style={{ animation: 'fadeIn .8s ease .3s both', position: 'relative' }}>
+            <div className="hero-visual" style={{ animation: 'fadeIn .8s ease .3s both', position: 'relative' }}>
               <div className="code-window" style={{
                 background: 'rgba(9,15,32,.96)',
                 border: '1px solid rgba(59,130,246,.2)',
@@ -454,7 +522,7 @@ export default function LandingPage() {
               </div>
 
               {/* Floating badges */}
-              <div style={{
+              <div className="floating-badge" style={{
                 position: 'absolute', top: -16, right: -16,
                 background: 'rgba(34,197,94,.12)', border: '1px solid rgba(34,197,94,.3)',
                 borderRadius: 10, padding: '8px 14px',
@@ -464,7 +532,7 @@ export default function LandingPage() {
               }}>
                 ✓ Submitted on time
               </div>
-              <div style={{
+              <div className="floating-badge" style={{
                 position: 'absolute', bottom: 40, left: -20,
                 background: 'rgba(99,102,241,.12)', border: '1px solid rgba(99,102,241,.3)',
                 borderRadius: 10, padding: '8px 14px',
@@ -478,41 +546,69 @@ export default function LandingPage() {
           </div>
         </section>
 
-        {/* ════════════════ STATS STRIP ════════════════ */}
-        <div ref={statsRef.ref} style={{
+        {/* ════════════════ HOW IT WORKS ════════════════ */}
+        <section style={{
+          padding: '3.5rem max(1.5rem, calc(50% - 680px))',
           borderTop: '1px solid rgba(255,255,255,.06)',
           borderBottom: '1px solid rgba(255,255,255,.06)',
           background: 'rgba(255,255,255,.02)',
-          padding: '2.5rem max(1.5rem, calc(50% - 680px))',
-          display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)',
-          gap: '2rem',
-        }}>
-          {[
-            { value: students.count, suffix: '+', label: 'ESI students' },
-            { value: snippets.count, suffix: '+', label: 'Code snippets shared' },
-            { value: professors.count, suffix: '', label: 'Professors active' },
-          ].map(stat => (
-            <div key={stat.label} style={{ textAlign: 'center' }}>
-              <div style={{
-                fontFamily: "'Instrument Serif', serif",
-                fontSize: 'clamp(2.2rem, 3vw, 3rem)',
-                fontWeight: 400,
-                background: 'linear-gradient(135deg, #93c5fd, #818cf8)',
-                WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
-                backgroundClip: 'text',
-              }}>
-                {stat.value.toLocaleString()}{stat.suffix}
-              </div>
-              <div style={{ fontSize: '.85rem', color: '#475569', marginTop: 4 }}>{stat.label}</div>
+        }} className="mobile-shell">
+          <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
+            <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '.72rem', color: '#3b82f6', letterSpacing: '.15em', textTransform: 'uppercase', marginBottom: 12 }}>
+              {'// how it works'}
             </div>
-          ))}
-        </div>
+            <h2 style={{ fontFamily: "'Outfit', sans-serif", fontSize: 'clamp(1.45rem, 3.6vw, 2.1rem)', fontWeight: 400, color: '#f1f5f9', lineHeight: 1.25 }}>
+              Understand ESICodeHub in three steps
+            </h2>
+          </div>
+
+          <div className="how-grid">
+            {[
+              {
+                n: '1',
+                title: 'Sign in with your ESI email',
+                body: 'Access is limited to @esi.dz accounts so coursework and discussions stay inside the school community.',
+              },
+              {
+                n: '2',
+                title: 'Share code or submit assignments',
+                body: 'Create personal submissions, upload assignment files before deadlines, and organize work by language and course.',
+              },
+              {
+                n: '3',
+                title: 'Get feedback and track progress',
+                body: 'Read professor reviews, follow assignment status, and use forum discussions to solve technical blockers faster.',
+              },
+            ].map((step) => (
+              <article key={step.n} className="how-step">
+                <div style={{
+                  width: 30,
+                  height: 30,
+                  borderRadius: '50%',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontFamily: "'JetBrains Mono', monospace",
+                  fontSize: '.86rem',
+                  color: '#93c5fd',
+                  border: '1px solid rgba(147,197,253,.4)',
+                  background: 'rgba(59,130,246,.12)',
+                  marginBottom: 12,
+                }}>
+                  {step.n}
+                </div>
+                <h3 style={{ color: '#f1f5f9', fontSize: '.98rem', marginBottom: 8 }}>{step.title}</h3>
+                <p style={{ color: '#64748b', fontSize: '.88rem', lineHeight: 1.65 }}>{step.body}</p>
+              </article>
+            ))}
+          </div>
+        </section>
 
         {/* ════════════════ PROBLEM / SOLUTION ════════════════ */}
         <section style={{
           padding: '6rem max(1.5rem, calc(50% - 680px))',
           background: '#f8fafc',
-        }}>
+        }} className="mobile-shell">
           <div style={{ textAlign: 'center', marginBottom: '3.5rem' }}>
             <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '.72rem', color: '#3b82f6', letterSpacing: '.15em', textTransform: 'uppercase', marginBottom: 12 }}>
                 {'// why it exists'}
@@ -522,7 +618,7 @@ export default function LandingPage() {
             </h2>
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1.5rem' }}>
+          <div className="problem-grid">
             {[
               {
                 icon: (
@@ -533,7 +629,7 @@ export default function LandingPage() {
                 ),
                 color: '#ef4444',
                 title: 'No visibility',
-                body: "Professors receive assignments as email attachments or through ad-hoc tools. There's no history, no version tracking, and no structured way to give line-by-line feedback.",
+                body: "Without a central workflow, submissions and feedback get scattered across tools and become difficult to track throughout the semester.",
               },
               {
                 icon: (
@@ -544,7 +640,7 @@ export default function LandingPage() {
                 ),
                 color: '#f59e0b',
                 title: 'AI-generated code',
-                body: 'Without a structured submission system, detecting AI-generated or copied code is manual and time-consuming — professors spend hours investigating instead of teaching.',
+                body: 'Manual plagiarism checks are slow. Professors need one place to run checks and inspect similarity reports per assignment.',
               },
               {
                 icon: (
@@ -556,7 +652,7 @@ export default function LandingPage() {
                 ),
                 color: '#3b82f6',
                 title: 'Isolated students',
-                body: "Students have no shared space to learn from each other's code under academic supervision. Collaboration happens informally, without structure or accountability.",
+                body: 'Students still need a course-focused space to ask questions, share context, and get help without leaving the academic environment.',
               },
             ].map(card => (
               <div key={card.title} className="problem-card" style={{
@@ -584,16 +680,7 @@ export default function LandingPage() {
           </div>
 
           {/* Solution card */}
-          <div style={{
-            background: 'linear-gradient(135deg, #0f172a, #1e293b)',
-            border: '1px solid rgba(59,130,246,.2)',
-            borderRadius: 20,
-            padding: '2.5rem 3rem',
-            display: 'grid',
-            gridTemplateColumns: '1fr 1fr',
-            gap: '3rem',
-            alignItems: 'center',
-          }}>
+          <div className="solution-grid">
             <div>
               <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '.72rem', color: '#3b82f6', letterSpacing: '.15em', textTransform: 'uppercase', marginBottom: 12 }}>
                   {'// the solution'}
@@ -602,15 +689,15 @@ export default function LandingPage() {
                 A supervised academic code platform, built exclusively for ESI.
               </h3>
               <p style={{ color: '#64748b', fontSize: '.9rem', lineHeight: 1.75 }}>
-                ESICodeHub gives professors structured visibility into every submission, automated plagiarism detection, and inline feedback tools — while giving students a space to share, learn, and collaborate under real academic supervision.
+                ESICodeHub centralizes assignment submissions, plagiarism reporting, professor feedback, and forum discussions in one interface used by ESI students and professors.
               </p>
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
               {[
                 { label: 'Structured submissions', icon: '📋' },
-                { label: 'AST plagiarism detection', icon: '🔍' },
-                { label: 'Inline code review', icon: '✏️' },
-                { label: 'Full audit trail', icon: '🗂️' },
+                { label: 'Plagiarism reports', icon: '🔍' },
+                { label: 'Professor reviews', icon: '✏️' },
+                { label: 'Forum Q&A', icon: '💬' },
               ].map(item => (
                 <div key={item.label} style={{
                   background: 'rgba(255,255,255,.04)',
@@ -631,7 +718,7 @@ export default function LandingPage() {
         <section ref={featuresRef as React.RefObject<HTMLElement>} id="features" style={{
           padding: '6rem max(1.5rem, calc(50% - 680px))',
           background: '#0d1b2a',
-        }}>
+        }} className="mobile-shell">
           <div style={{ textAlign: 'center', marginBottom: '3.5rem' }}>
             <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '.72rem', color: '#3b82f6', letterSpacing: '.15em', textTransform: 'uppercase', marginBottom: 12 }}>
                 {'// features'}
@@ -641,7 +728,7 @@ export default function LandingPage() {
             </h2>
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '1.5rem' }}>
+          <div className="features-grid">
             {[
               {
                 icon: (
@@ -651,7 +738,7 @@ export default function LandingPage() {
                 ),
                 color: '#3b82f6', colorBg: 'rgba(59,130,246,.1)',
                 title: 'Code Sharing',
-                desc: 'Upload and share source code with syntax highlighting across 20+ languages. Set visibility to public for the community or private for personal use.',
+                desc: 'Create personal code submissions with title, language, and files. Mark each submission as public or private, then browse shared public submissions.',
                 tag: 'For everyone',
               },
               {
@@ -665,7 +752,7 @@ export default function LandingPage() {
                 ),
                 color: '#10b981', colorBg: 'rgba(16,185,129,.1)',
                 title: 'Assignment Submissions',
-                desc: 'Professors create structured assignments with deadlines. Students submit code directly — with version history, late submission tracking, and per-assignment targeting by year and section.',
+                desc: 'Professors publish assignments with deadlines, languages, and class targeting (year, section, group). Students upload files, and late status is tracked per submission.',
                 tag: 'Students + Professors',
               },
               {
@@ -677,7 +764,7 @@ export default function LandingPage() {
                 ),
                 color: '#f59e0b', colorBg: 'rgba(245,158,11,.1)',
                 title: 'Plagiarism Detection',
-                desc: 'Automated AST-based similarity analysis powered by MOSS. Professors get detailed reports comparing all submissions for a given assignment — in seconds, not hours.',
+                desc: 'Professors can run plagiarism checks for each assignment and inspect similarity matches in the generated report view.',
                 tag: 'For professors',
               },
               {
@@ -687,9 +774,9 @@ export default function LandingPage() {
                   </svg>
                 ),
                 color: '#8b5cf6', colorBg: 'rgba(139,92,246,.1)',
-                title: 'Peer & Professor Review',
-                desc: 'Inline line-by-line comments directly on code, structured grading with grade/20, and general feedback — all visible to the student in one clean interface.',
-                tag: 'For professors',
+                title: 'Peer Review',
+                desc: 'Students can get peer help in the forum through questions and answers, while professors review assignment code with comments and grades.',
+                tag: 'Forum + assignments',
               },
             ].map(feat => (
               <div key={feat.title} className="feature-card" style={{
@@ -739,11 +826,11 @@ export default function LandingPage() {
           padding: '1.25rem max(1.5rem, calc(50% - 680px))',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           gap: '2.5rem', flexWrap: 'wrap',
-        }}>
+        }} className="mobile-shell">
           {[
             'Restricted to @esi.dz accounts',
             'Built by ESI students',
-            'Academic year 2025–2026',
+            'Used by students and professors',
           ].map((item, i) => (
             <div key={item} style={{ display: 'flex', alignItems: 'center', gap: i > 0 ? '2.5rem' : 0 }}>
               {i > 0 && <span style={{ color: '#1e3a5f', fontSize: '.75rem' }}>·</span>}
@@ -759,7 +846,7 @@ export default function LandingPage() {
           padding: '6rem max(1.5rem, calc(50% - 680px))',
           background: '#0d1b2a',
           textAlign: 'center',
-        }}>
+        }} className="mobile-shell">
           <div style={{
             maxWidth: 600, margin: '0 auto',
             background: 'linear-gradient(135deg, rgba(37,99,235,.08), rgba(79,70,229,.08))',
@@ -794,7 +881,7 @@ export default function LandingPage() {
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
           flexWrap: 'wrap', gap: '1rem',
           background: 'rgba(0,0,0,.2)',
-        }}>
+        }} className="mobile-shell">
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <div style={{ width: 24, height: 24, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <Image

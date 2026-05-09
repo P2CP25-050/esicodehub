@@ -15,6 +15,18 @@ SAFE_TEXT_FILENAMES = {
 }
 
 
+ALLOWED_ATTACHMENT_EXTENSIONS = {
+    '.pdf', '.txt', '.docx', '.zip',
+}
+
+ALLOWED_ATTACHMENT_MIME_TYPES = {
+    'application/pdf',
+    'application/zip',
+    'application/x-zip-compressed',
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+}
+
+
 def validate_code_file(file):
     """
     Validates that the uploaded file is safe and text-based.
@@ -75,6 +87,32 @@ def validate_code_file(file):
 
     # If the MIME is not in the list it is mostly a Trojan hourse
     if not is_valid_mime:
+        raise serializers.ValidationError(
+            f"Security Error: File content type ({mime_type}) is not allowed."
+        )
+
+    return file
+
+
+def validate_attachment_file(file):
+    """Validate non-code attachments for "Other" submissions."""
+    ext = os.path.splitext(file.name)[1].lower()
+    if ext not in ALLOWED_ATTACHMENT_EXTENSIONS:
+        raise serializers.ValidationError(
+            f"File type {ext} is not allowed."
+        )
+
+    file_content = file.read(2048)
+    file.seek(0)
+
+    mime_type = magic.from_buffer(file_content, mime=True)
+    if mime_type.startswith('text/'):
+        return file
+
+    if mime_type == 'application/octet-stream':
+        return file
+
+    if mime_type not in ALLOWED_ATTACHMENT_MIME_TYPES:
         raise serializers.ValidationError(
             f"Security Error: File content type ({mime_type}) is not allowed."
         )

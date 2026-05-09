@@ -128,9 +128,17 @@ export default function Header({ activePage = "" }: HeaderProps) {
     return () => document.removeEventListener('mousedown', handler);
   }, [bellOpen]);
 
-  // Close search modal on route change
-  useEffect(() => { setMenuOpen(false); setSearchOpen(false); }, [router.pathname]);
-
+  // Close menu and search modal on route change
+  useEffect(() => {
+    const handleRouteChange = () => {
+      setMenuOpen(false);
+      setSearchOpen(false);
+    };
+    
+    router.events.on('routeChangeStart', handleRouteChange);
+    return () => router.events.off('routeChangeStart', handleRouteChange);
+  }, [router.events]);
+  
   useEffect(() => {
     document.body.style.overflow = menuOpen ? "hidden" : "";
     return () => { document.body.style.overflow = ""; };

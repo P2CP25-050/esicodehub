@@ -1,7 +1,6 @@
 import io
 import zipfile
 from django.db import transaction
-from django.db.models import Q
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404
 from pathlib import PurePosixPath
@@ -19,7 +18,7 @@ from .serializers import (
     PersonalSubmissionDetailSerializer,
     PersonalSubmissionListSerializer,
 )
-from .validators import validate_code_file
+from .validators import validate_code_file, validate_attachment_file
 
 # File size limits in bytes
 MAX_FILE_SIZE = 10 * 1024 * 1024    # 10MB per file
@@ -27,18 +26,25 @@ MAX_TOTAL_SIZE = 50 * 1024 * 1024   # 50MB per submission
 
 
 class PersonalSubmissionListCreateView(APIView):
-    """List public submissions and create new personal submissions."""
+    """List visible submissions and create new personal submissions."""
 
     permission_classes = [IsAuthenticated]
 
+    def get_queryset(self):
+        user = self.request.user
+        base_queryset = PersonalSubmission.objects.select_related(
+            'owner'
+        ).prefetch_related('files')
+        queryset = base_queryset.filter(
+            owner__role=user.role
+        ).exclude(
+            visibility=PersonalSubmission.Visibility.PRIVATE
+        )
+        own_queryset = base_queryset.filter(owner=user)
+        return (queryset | own_queryset).distinct()
+
     def get(self, request):
-        queryset = PersonalSubmission.objects.select_related('owner').prefetch_related(
-            'files'
-        )
-        queryset = queryset.filter(
-            Q(visibility=PersonalSubmission.Visibility.PUBLIC)
-            | Q(owner=request.user)
-        )
+        queryset = self.get_queryset()
         mine = request.query_params.get('mine')
         if mine and mine.strip().lower() in {'1', 'true', 'yes'}:
             queryset = queryset.filter(owner=request.user)
@@ -222,6 +228,8 @@ class FileUploadView(APIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
+        is_other_submission = submission.language == 'other'
+
         # Validate each file before doing anything
         for file in files:
             # Check individual file size
@@ -233,7 +241,10 @@ class FileUploadView(APIView):
 
             # Check file extension and MIME type through the validator
             try:
-                validate_code_file(file)
+                if is_other_submission:
+                    validate_attachment_file(file)
+                else:
+                    validate_code_file(file)
             except serializers.ValidationError as e:
                 return Response(
                     {'detail': e.detail[0]},
