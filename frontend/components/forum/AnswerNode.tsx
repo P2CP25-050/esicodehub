@@ -77,6 +77,7 @@ export function AnswerNode({
               score={answer.vote_score}
               userVote={answer.user_vote}
               onVote={(v) => onVote(answer.id, v)}
+              hidden={isOwn}
             />
           </div>
 

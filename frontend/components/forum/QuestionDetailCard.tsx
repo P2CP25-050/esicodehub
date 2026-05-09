@@ -60,7 +60,12 @@ export function QuestionDetailCard({
         <div className="flex gap-4 items-start">
           {/* Votes */}
           <div className="shrink-0 pt-1">
-            <VoteButtons score={question.vote_score} userVote={null} onVote={onVote} />
+            <VoteButtons
+              score={question.vote_score}
+              userVote={question.user_vote ?? null}
+              onVote={onVote}
+              hidden={isOwn}
+            />
           </div>
 
           <div className="flex-1 min-w-0">
