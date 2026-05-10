@@ -116,29 +116,72 @@ function DeleteModal({ fileName, onConfirm, onCancel, loading }: {
 
 function Dropzone({ onFiles }: { onFiles: (f: File[]) => void }) {
   const [over, setOver] = useState(false);
-  const ref = useRef<HTMLInputElement>(null);
-  const onDrop = useCallback((e: React.DragEvent) => { e.preventDefault(); setOver(false); onFiles(Array.from(e.dataTransfer.files)); }, [onFiles]);
+  const fileRef = useRef<HTMLInputElement>(null);
+  const dirRef = useRef<HTMLInputElement>(null);
+
+  const onDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    setOver(false);
+    onFiles(Array.from(e.dataTransfer.files));
+  }, [onFiles]);
+
   return (
     <div
-      onClick={() => ref.current?.click()}
       onDragOver={(e) => { e.preventDefault(); setOver(true); }}
       onDragLeave={() => setOver(false)}
       onDrop={onDrop}
-      className={`border-2 border-dashed rounded-xl p-6 sm:p-9 text-center cursor-pointer select-none transition-colors ${
-        over ? "border-navy bg-navy/5" : "border-black/20 bg-black/5 hover:border-black/40"
+      className={`border-2 border-dashed rounded-xl p-8 sm:p-10 text-center select-none transition-colors ${
+        over ? "border-navy bg-navy/5" : "border-black/20 bg-black/[0.02] hover:border-black/30"
       }`}
     >
-      <div className="flex justify-center mb-3">
-        <svg width="48" height="48" viewBox="0 0 48 48" fill="none">
-          <path d="M30 4H12C10.9391 4 9.92172 4.42143 9.17157 5.17157C8.42143 5.92172 8 6.93913 8 8V40C8 41.0609 8.42143 42.0783 9.17157 42.8284C9.92172 43.5786 10.9391 44 12 44H36C37.0609 44 38.0783 43.5786 38.8284 42.8284C39.5786 42.0783 40 41.0609 40 40V14L30 4Z" stroke="#051650" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round"/>
-          <path d="M28 4V12C28 13.0609 28.4214 14.0783 29.1716 14.8284C29.9217 15.5786 30.9391 16 32 16H40" stroke="#051650" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round"/>
-          <path d="M24 24V36" stroke="#051650" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round"/>
-          <path d="M30 30L24 24L18 30" stroke="#051650" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round"/>
+      {/* Upload icon */}
+      <div className="flex justify-center mb-4">
+        <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#051650" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+          <polyline points="17 8 12 3 7 8" />
+          <line x1="12" y1="3" x2="12" y2="15" />
         </svg>
       </div>
-      <p className="text-sm text-black/70 mb-1"><span className="text-navy font-bold">Click to upload</span> or drag & drop files here</p>
-      <p className="text-xs text-black/40">Any file type · Max 25 MB each</p>
-      <input ref={ref} type="file" multiple className="hidden" onChange={(e) => e.target.files && onFiles(Array.from(e.target.files))} />
+
+      <p className="text-sm font-semibold text-black/80 mb-1">Drag &amp; drop files or a folder here</p>
+      <p className="text-[11px] font-mono tracking-widest uppercase text-black/35 mb-5">
+        Text / Code files only · Max 50 MB total
+      </p>
+
+      <div className="flex items-center justify-center gap-3 flex-wrap">
+        <button
+          type="button"
+          onClick={() => fileRef.current?.click()}
+          className={btnPrimaryCls}
+        >
+          Upload Files
+        </button>
+        <button
+          type="button"
+          onClick={() => dirRef.current?.click()}
+          className={btnOutlineCls}
+        >
+          Upload Directory
+        </button>
+      </div>
+
+      {/* Hidden inputs */}
+      <input
+        ref={fileRef}
+        type="file"
+        multiple
+        className="hidden"
+        onChange={(e) => e.target.files && onFiles(Array.from(e.target.files))}
+      />
+      <input
+        ref={dirRef}
+        type="file"
+        // @ts-ignore – non-standard but widely supported
+        webkitdirectory=""
+        mozdirectory=""
+        className="hidden"
+        onChange={(e) => e.target.files && onFiles(Array.from(e.target.files))}
+      />
     </div>
   );
 }

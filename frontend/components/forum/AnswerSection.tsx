@@ -3,7 +3,9 @@ import {
   createAnswer,
   voteAnswer,
   acceptAnswer,
+  unacceptAnswer,
   deleteAnswer,
+  getQuestion,
 } from "@/services/forum";
 import type { Answer, AnswerCreatePayload, QuestionDetail } from "@/services/forum";
 import { AnswerNode } from "@/components/forum/AnswerNode";
@@ -24,13 +26,27 @@ function removeFromTree(answers: Answer[], id: number): Answer[] {
     .map((a) => ({ ...a, replies: removeFromTree(a.replies ?? [], id) }));
 }
 
-/** Mark exactly one answer as accepted (and clear all others) in the tree. */
 function updateAcceptedInTree(answers: Answer[], acceptedId: number): Answer[] {
   return answers.map((a) => ({
     ...a,
     is_accepted: a.id === acceptedId,
     replies: updateAcceptedInTree(a.replies ?? [], acceptedId),
   }));
+}
+
+function clearAcceptedInTree(answers: Answer[]): Answer[] {
+  return answers.map((a) => ({
+    ...a,
+    is_accepted: false,
+    replies: clearAcceptedInTree(a.replies ?? []),
+  }));
+}
+
+function updateAnswerInTree(answers: Answer[], updated: Answer): Answer[] {
+  return answers.map((a) => {
+    if (a.id === updated.id) return { ...updated, replies: a.replies ?? [] };
+    return { ...a, replies: updateAnswerInTree(a.replies ?? [], updated) };
+  });
 }
 
 // ── Props ─────────────────────────────────────────────────────────────────────
@@ -50,7 +66,6 @@ export function AnswerSection({
 }: AnswerSectionProps) {
   const questionId = question.id;
 
-  // Post-answer form state
   const [answerBody, setAnswerBody] = useState("");
   const [showCode, setShowCode] = useState(false);
   const [ansCode, setAnsCode] = useState("");
@@ -58,23 +73,98 @@ export function AnswerSection({
   const [posting, setPosting] = useState(false);
   const [ansError, setAnsError] = useState("");
 
+  // Track which answer is currently being accepted/unaccepted so the node
+  // can show a spinner and we can surface errors back to the user.
+  const [acceptingId, setAcceptingId] = useState<number | null>(null);
+  const [acceptError, setAcceptError] = useState("");
+
   const hasAccepted = (question.answers ?? []).some((a) => a.is_accepted);
 
-  // Handlers
+  // ── Handlers ──────────────────────────────────────────────────────────────
+
   const handleAnswerVote = (id: number, v: 1 | -1) => {
     voteAnswer(questionId, id, v).catch(() => {});
   };
 
-  const handleAccept = (answerId: number) => {
-    acceptAnswer(questionId, answerId)
-      .then(() =>
-        onQuestionUpdate((q) => ({
-          ...q,
-          answers: updateAcceptedInTree(q.answers, answerId),
-        }))
-      )
-      .catch(() => {});
-  };
+  /**
+   * Accept an answer:
+   * 1. Optimistically mark it accepted in local state immediately
+   * 2. Fire the real API call
+   * 3. On failure, roll back from server and surface the error
+   */
+  const handleAccept = useCallback(
+    async (answerId: number) => {
+      setAcceptError("");
+      setAcceptingId(answerId);
+
+      // Snapshot previous state for rollback
+      const previous = question.answers;
+
+      // Optimistic update — instant UI feedback
+      onQuestionUpdate((q) => ({
+        ...q,
+        answers: updateAcceptedInTree(q.answers, answerId),
+      }));
+
+      try {
+        await acceptAnswer(questionId, answerId);
+      } catch (err: unknown) {
+        // Determine a useful error message
+        const message =
+          err instanceof Error ? err.message : "Failed to accept answer. Please try again.";
+        setAcceptError(message);
+
+        // Roll back — try a fresh server fetch first, fall back to snapshot
+        try {
+          const fresh = await getQuestion(questionId);
+          onQuestionUpdate(() => fresh);
+        } catch {
+          // If the refresh also fails, restore the snapshot we took above
+          onQuestionUpdate((q) => ({ ...q, answers: previous }));
+        }
+      } finally {
+        setAcceptingId(null);
+      }
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [questionId, onQuestionUpdate, question.answers]
+  );
+
+  /**
+   * Unaccept: clears the accepted badge immediately, reverts on failure.
+   */
+  const handleUnaccept = useCallback(
+    async (answerId: number) => {
+      setAcceptError("");
+      setAcceptingId(answerId);
+
+      const previous = question.answers;
+
+      onQuestionUpdate((q) => ({
+        ...q,
+        answers: clearAcceptedInTree(q.answers),
+      }));
+
+      try {
+        await unacceptAnswer(questionId, answerId);
+      } catch (err: unknown) {
+        const message =
+          err instanceof Error ? err.message : "Failed to unaccept answer. Please try again.";
+        setAcceptError(message);
+
+        try {
+          const fresh = await getQuestion(questionId);
+          onQuestionUpdate(() => fresh);
+        } catch {
+          onQuestionUpdate((q) => ({ ...q, answers: previous }));
+        }
+      } finally {
+        setAcceptingId(null);
+      }
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [questionId, onQuestionUpdate, question.answers]
+  );
 
   const handleDeleteAnswer = useCallback(
     (id: number) => {
@@ -92,6 +182,16 @@ export function AnswerSection({
       onQuestionUpdate((q) => ({
         ...q,
         answers: injectReply(q.answers, parentId, newAnswer),
+      }));
+    },
+    [onQuestionUpdate]
+  );
+
+  const handleEdited = useCallback(
+    (updated: Answer) => {
+      onQuestionUpdate((q) => ({
+        ...q,
+        answers: updateAnswerInTree(q.answers, updated),
       }));
     },
     [onQuestionUpdate]
@@ -119,7 +219,6 @@ export function AnswerSection({
     }
   };
 
-  // Split accepted vs regular top-level answers
   const acceptedAnswers = (question.answers ?? []).filter(
     (a) => a.is_accepted && a.parent === null
   );
@@ -133,10 +232,13 @@ export function AnswerSection({
     currentUserEmail,
     canAccept: question.can_accept_answer ?? false,
     hasAccepted,
+    acceptingId,
     onVote: handleAnswerVote,
     onAccept: handleAccept,
+    onUnaccept: handleUnaccept,
     onDelete: handleDeleteAnswer,
     onReplied: handleReplied,
+    onEdited: handleEdited,
   };
 
   const topLevelCount = (question.answers ?? []).filter((a) => a.parent === null).length;
@@ -160,6 +262,22 @@ export function AnswerSection({
           </span>
         )}
       </div>
+
+      {/* Accept/unaccept error banner */}
+      {acceptError && (
+        <div className="mb-4 flex items-center justify-between gap-3 bg-red-50 border border-red-200 text-red-700 text-xs font-semibold px-4 py-2.5 rounded-xl">
+          <span>{acceptError}</span>
+          <button
+            onClick={() => setAcceptError("")}
+            className="text-red-400 hover:text-red-600 transition-colors shrink-0"
+            aria-label="Dismiss"
+          >
+            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+      )}
 
       {/* Pinned accepted answers */}
       {acceptedAnswers.map((a) => (

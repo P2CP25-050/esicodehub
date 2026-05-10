@@ -3,6 +3,7 @@ import type { PaginatedResponse } from '../submissions/submissions.types';
 import type {
   Answer,
   AnswerCreatePayload,
+  AnswerUpdatePayload,
   ForumListParams,
   QuestionCreatePayload,
   QuestionDetail,
@@ -49,6 +50,18 @@ export const deleteQuestion = async (id: number): Promise<void> => {
   await apiClient.delete(`${QUESTIONS_BASE}${id}/`);
 };
 
+/**
+ * Close a question so it no longer accepts new answers.
+ * Sends PATCH { is_closed: true } to the question detail endpoint.
+ */
+export const closeQuestion = async (id: number): Promise<QuestionDetail> => {
+  const res = await apiClient.patch<QuestionDetail>(
+    `${QUESTIONS_BASE}${id}/`,
+    { is_closed: true }
+  );
+  return res.data;
+};
+
 export const createAnswer = async (
   questionId: number,
   data: AnswerCreatePayload
@@ -63,7 +76,7 @@ export const createAnswer = async (
 export const updateAnswer = async (
   questionId: number,
   answerId: number,
-  data: Partial<AnswerCreatePayload>
+  data: AnswerUpdatePayload
 ): Promise<Answer> => {
   const res = await apiClient.patch<Answer>(
     `${QUESTIONS_BASE}${questionId}/answers/${answerId}/`,
@@ -80,6 +93,20 @@ export const deleteAnswer = async (
 };
 
 export const acceptAnswer = async (
+  questionId: number,
+  answerId: number
+): Promise<Answer> => {
+  const res = await apiClient.post<Answer>(
+    `${QUESTIONS_BASE}${questionId}/answers/${answerId}/accept/`
+  );
+  return res.data;
+};
+
+/**
+ * Un-accept (revoke) the currently accepted answer.
+ * Calls the same accept endpoint — the backend toggles the state.
+ */
+export const unacceptAnswer = async (
   questionId: number,
   answerId: number
 ): Promise<Answer> => {

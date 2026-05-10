@@ -6,6 +6,8 @@ import {
   getQuestion,
   deleteQuestion,
   voteQuestion,
+  updateQuestion,
+  closeQuestion,
 } from "@/services/forum";
 import type { QuestionDetail } from "@/services/forum";
 import Header from "@/components/submissions/Header";
@@ -22,34 +24,22 @@ function QuestionDetailContent() {
   const router = useRouter();
 
   const [question, setQuestion] = useState<QuestionDetail | null>(null);
-  // Starts as false because `isLoading` (derived below) is true while the
-  // router hasn't resolved, so the spinner shows on first render without
-  // needing loading=true here.
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  // Derive a validated numeric id only after the router is ready.
-  // router.query.id can be undefined (first render) or string[] (catch-all
-  // routes), so we reject anything that isn't a single numeric string.
   const rawId = router.isReady ? router.query.id : undefined;
   const questionId =
     typeof rawId === "string" && /^\d+$/.test(rawId)
       ? Number(rawId)
       : null;
 
-  // Derive the "invalid id" error directly from router state so we avoid
-  // calling setState synchronously inside a useEffect (react-hooks/set-state-in-effect).
   const idError =
     router.isReady && questionId === null ? "Invalid question ID." : "";
 
-  // Treat the page as loading while the router hasn't resolved yet, or while a
-  // fetch is in flight.
   const isLoading = !router.isReady || loading;
-
   const displayError = idError || error;
 
   useEffect(() => {
-    // Wait for the router. If the id is invalid we show the derived error instead.
     if (!router.isReady || questionId === null) return;
 
     let cancelled = false;
@@ -59,40 +49,30 @@ function QuestionDetailContent() {
       setError("");
       try {
         const q = await getQuestion(questionId);
-        if (!cancelled) {
-          setQuestion(q);
-        }
+        if (!cancelled) setQuestion(q);
       } catch {
-        if (!cancelled) {
-          setError("Failed to load question.");
-        }
+        if (!cancelled) setError("Failed to load question.");
       } finally {
-        if (!cancelled) {
-          setLoading(false);
-        }
+        if (!cancelled) setLoading(false);
       }
     };
 
     void loadQuestion();
-
     return () => { cancelled = true; };
   }, [router.isReady, questionId]);
 
   const hasAccepted = (question?.answers ?? []).some((a) => a.is_accepted);
 
+  // ── Question vote ─────────────────────────────────────────────────────────
   const handleQuestionVote = async (v: 1 | -1) => {
     if (questionId === null) return;
-    // Do not allow the question author to vote on their own question
-    // (the VoteButtons are hidden for them, so this is a safety guard).
     if (question?.author_email === currentUserEmail) return;
     setError("");
 
-    // Optimistic update: clicking active direction toggles off, clicking neutral sets vote.
-    // Switching direction directly is blocked by VoteButtons, guard here too.
     setQuestion((prev) => {
       if (!prev) return prev;
       const prevVote = prev.user_vote ?? null;
-      if (prevVote !== null && prevVote !== v) return prev; // blocked
+      if (prevVote !== null && prevVote !== v) return prev;
       const nextVote: 1 | -1 | null = prevVote === v ? null : v;
       const delta = (nextVote ?? 0) - (prevVote ?? 0);
       return { ...prev, vote_score: prev.vote_score + delta, user_vote: nextVote };
@@ -107,19 +87,16 @@ function QuestionDetailContent() {
           ...("user_vote" in q ? { user_vote: (q as { user_vote?: 1 | -1 | null }).user_vote ?? v } : {}),
         } : null);
       }
-    } catch (err) {
-      // Roll back optimistic update
+    } catch {
       try {
-        const refreshedQuestion = await getQuestion(questionId);
-        setQuestion(refreshedQuestion);
-      } catch {
-        // If the refresh fails too, keep the existing state and surface the error.
-      }
+        const refreshed = await getQuestion(questionId);
+        setQuestion(refreshed);
+      } catch { /* keep existing state */ }
       setError("Failed to submit vote.");
-      throw err;
     }
   };
 
+  // ── Question delete ───────────────────────────────────────────────────────
   const handleDeleteQuestion = async () => {
     if (questionId === null) return;
     if (!confirm("Delete this question?")) return;
@@ -127,6 +104,29 @@ function QuestionDetailContent() {
     router.push("/forum");
   };
 
+  // ── Question edit ─────────────────────────────────────────────────────────
+  const handleEditQuestion = useCallback(
+    async (data: {
+      title: string;
+      body: string;
+      code_snippet?: string;
+      code_language?: string;
+    }) => {
+      if (questionId === null) return;
+      const updated = await updateQuestion(questionId, data);
+      setQuestion((prev) => prev ? { ...prev, ...updated } : prev);
+    },
+    [questionId]
+  );
+
+  // ── Question close ────────────────────────────────────────────────────────
+  const handleCloseQuestion = useCallback(async () => {
+    if (questionId === null) return;
+    const updated = await closeQuestion(questionId);
+    setQuestion((prev) => prev ? { ...prev, ...updated } : prev);
+  }, [questionId]);
+
+  // ── Answer tree updates ───────────────────────────────────────────────────
   const handleQuestionUpdate = useCallback(
     (updater: (q: QuestionDetail) => QuestionDetail) => {
       setQuestion((prev) => (prev ? updater(prev) : prev));
@@ -185,6 +185,8 @@ function QuestionDetailContent() {
                   currentUserEmail={currentUserEmail}
                   onVote={handleQuestionVote}
                   onDelete={handleDeleteQuestion}
+                  onEdit={handleEditQuestion}
+                  onClose={handleCloseQuestion}
                 />
 
                 <AnswerSection
