@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, ChangeEvent } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import Header from "@/components/submissions/Header";
+import Head from "next/head";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { useAuth } from "@/context/AuthContext";
 import {
@@ -9,6 +10,7 @@ import {
   updateBio,
   uploadAvatar,
   getRecentActivity,
+  triggerPasswordReset,
 } from "@/services/profile/api";
 import type {
   ActivityItem,
@@ -489,6 +491,10 @@ function ProfilePage() {
   const [avatarLoadError, setAvatarLoadError] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  const [resetLoading, setResetLoading] = useState(false);
+  const [resetError, setResetError] = useState<string | null>(null);
+  const [resetSuccess, setResetSuccess] = useState<string | null>(null);
+
   const [activity, setActivity] = useState<ActivityItem[]>([]);
   const [profileData, setProfileData] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
@@ -577,6 +583,21 @@ function ProfilePage() {
     }
   };
 
+  const handleResetPassword = async () => {
+    setResetLoading(true);
+    setResetError(null);
+    setResetSuccess(null);
+    try {
+      await triggerPasswordReset(email);
+      setResetSuccess("Password reset email sent.");
+    } catch (err: unknown) {
+      setResetError(err instanceof Error ? err.message : "Failed to trigger password reset.");
+    } finally {
+      setResetLoading(false);
+      setTimeout(() => setResetSuccess(null), 5000);
+    }
+  };
+
   if (!user) return null;
 
   const role = profileData?.role ?? user.role ?? "student";
@@ -589,6 +610,9 @@ function ProfilePage() {
 
   return (
     <div className="pf-page">
+      <Head>
+        <title>{firstName ? `${firstName}'s Profile — ESICodeHub` : `My Profile — ESICodeHub`}</title>
+      </Head>
       <Header />
       <div className="pf-container">
 
@@ -683,7 +707,19 @@ function ProfilePage() {
 
               <div className="pf-field">
                 <label className="pf-field-label">Email</label>
-                <p className="pf-field-value">{email}</p>
+                <p className="pf-field-value" style={{ marginBottom: 8 }}>{email}</p>
+                <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                  <button
+                    className="pf-upload-btn"
+                    onClick={handleResetPassword}
+                    disabled={resetLoading}
+                    type="button"
+                  >
+                    {resetLoading ? 'Sending…' : 'Reset password'}
+                  </button>
+                  {resetError && <p className="pf-error">{resetError}</p>}
+                  {resetSuccess && <p className="pf-success">{resetSuccess}</p>}
+                </div>
               </div>
 
               <div className="pf-field">
