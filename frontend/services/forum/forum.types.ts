@@ -34,6 +34,7 @@ export interface QuestionListItem {
   vote_score: number;
   has_accepted_answer: boolean;
   view_count: number;
+  user_vote?: 1 | -1 | null;
   created_at: string;
 }
 
@@ -43,6 +44,7 @@ export interface QuestionDetail extends QuestionListItem {
   code_language: string;
   is_closed: boolean;
   author_email: string;
+  user_vote?: 1 | -1 | null;
   can_accept_answer: boolean;
   answers: Answer[];
 }
