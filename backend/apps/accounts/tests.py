@@ -238,7 +238,7 @@ class PublicProfileApiTests(TestCase):
         self.client.force_authenticate(user=self.student)
 
     def test_public_profile_filters_private_submissions_and_hides_professor_fields(self):
-        response = self.client.get(f'/api/profiles/{self.student.school_id}/')
+        response = self.client.get(f'/api/profiles/{self.student.public_id}/')
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data['school_id'], self.student.school_id)
@@ -262,7 +262,7 @@ class PublicProfileApiTests(TestCase):
         self.assertNotIn('Private submission', titles)
 
     def test_public_profile_omits_student_fields_for_professor(self):
-        response = self.client.get(f'/api/profiles/{self.professor.school_id}/')
+        response = self.client.get(f'/api/profiles/{self.professor.public_id}/')
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertNotIn('study_year', response.data)
