@@ -337,15 +337,15 @@ const initialExpandedDirs = (nodes: TreeNode[]): Set<string> => {
 };
 
 const LoadingShell = () => (
-  <div className="min-h-screen bg-linear-to-b from-slate-100 via-slate-50 to-white">
+  <div style={{ minHeight: '100vh', background: '#fff', position: 'relative' }}>
     <Header activePage="Assignments" />
-    <main className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
-      <div className="h-20 animate-pulse rounded-2xl border border-slate-200 bg-white/90" />
-      <div className="mt-5 grid gap-5 lg:grid-cols-[300px_minmax(0,1fr)]">
-        <div className="h-[70vh] animate-pulse rounded-2xl border border-slate-200 bg-white/90" />
-        <div className="h-[70vh] animate-pulse rounded-2xl border border-slate-200 bg-white/90" />
+    <main style={{ maxWidth: 1180, margin: '0 auto', padding: '40px 28px 80px', position: 'relative', zIndex: 1 }}>
+      <div style={{ height: 72, border: '1.5px solid #000', borderTop: '4px solid #051650', background: '#f7f7f5', animation: 'pulse 2s cubic-bezier(.4,0,.6,1) infinite' }} />
+      <div style={{ marginTop: 20, display: 'grid', gap: 20, gridTemplateColumns: '300px 1fr' }}>
+        <div style={{ height: '70vh', border: '1.5px solid #000', borderTop: '4px solid #051650', background: '#f7f7f5', animation: 'pulse 2s cubic-bezier(.4,0,.6,1) infinite' }} />
+        <div style={{ height: '70vh', border: '1.5px solid #000', borderTop: '4px solid #051650', background: '#f7f7f5', animation: 'pulse 2s cubic-bezier(.4,0,.6,1) infinite' }} />
       </div>
-      <div className="mt-5 h-72 animate-pulse rounded-2xl border border-slate-200 bg-white/90" />
+      <div style={{ marginTop: 20, height: 288, border: '1.5px solid #000', borderTop: '4px solid #051650', background: '#f7f7f5', animation: 'pulse 2s cubic-bezier(.4,0,.6,1) infinite' }} />
     </main>
   </div>
 );
@@ -374,11 +374,11 @@ const FileTree = memo(function FileTree({
             <button
               type="button"
               onClick={() => onToggleDir(node.fullPath)}
-              className="group flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-sm font-medium text-slate-600 transition-colors duration-150 hover:bg-slate-100 hover:text-slate-900"
-              style={{ paddingLeft: 8 + depth * 14 }}
+              className="group flex w-full items-center gap-2 px-2 py-1.5 text-left text-sm font-medium transition-colors duration-150 hover:bg-[#f0efec]"
+              style={{ fontFamily: "'Space Mono', monospace", fontSize: 12, color: '#444', paddingLeft: 8 + depth * 14 }}
               aria-expanded={isExpanded}
             >
-              <span className="inline-flex h-4 w-4 items-center justify-center text-xs text-slate-400 group-hover:text-slate-700">
+              <span className="inline-flex h-4 w-4 items-center justify-center text-xs" style={{ color: '#999' }}>
                 {isExpanded ? '▾' : '▸'}
               </span>
               <span className="truncate">{node.name}</span>
@@ -396,16 +396,16 @@ const FileTree = memo(function FileTree({
           type="button"
           onClick={() => onSelectFile(node.file)}
           title={node.fullPath}
-          style={{ paddingLeft: 8 + depth * 14 }}
           className={
-            'w-full rounded-lg px-2 py-1.5 text-left text-sm transition-all duration-150 ' +
+            'w-full px-2 py-1.5 text-left text-sm transition-all duration-150 ' +
             (isSelected
-              ? 'bg-blue-600/15 text-blue-900 ring-1 ring-inset ring-blue-500/40 shadow-sm'
-              : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900')
+              ? 'bg-[#051650]/10 font-bold'
+              : 'hover:bg-[#f0efec]')
           }
+          style={{ fontFamily: "'Space Mono', monospace", fontSize: 12, color: isSelected ? '#051650' : '#444', paddingLeft: 8 + depth * 14 }}
         >
           <span className="inline-flex max-w-full items-center gap-2">
-            <span className="text-slate-400">#</span>
+            <span style={{ color: '#aaa' }}>#</span>
             <span className="truncate">{node.name}</span>
           </span>
         </button>
@@ -450,7 +450,7 @@ function AssignmentSubmissionReviewPageContent() {
   const [lineSelectorValue, setLineSelectorValue] = useState('1');
 
   const [toast, setToast] = useState<ToastState>(null);
-  const [plagiarismOpen, setPlagiarismOpen] = useState(true);
+  const [plagiarismOpen, setPlagiarismOpen] = useState(false);
   const [plagiarismState, setPlagiarismState] =
     useState<PlagiarismPanelState>('loading');
   const [plagiarismReport, setPlagiarismReport] = useState<PlagiarismReport | null>(null);
@@ -1196,21 +1196,19 @@ function AssignmentSubmissionReviewPageContent() {
 
   if (viewState === 'error' || !submission) {
     return (
-      <div className="min-h-screen bg-linear-to-b from-slate-100 via-slate-50 to-white">
+      <div style={{ minHeight: '100vh', background: '#fff' }}>
         <Header activePage="Assignments" />
-        <main className="mx-auto max-w-4xl px-4 py-10 sm:px-6 lg:px-8">
-          <div className="rounded-2xl border border-rose-200 bg-white p-8 shadow-sm">
+        <main style={{ maxWidth: 1180, margin: '0 auto', padding: '40px 28px' }}>
+          <div style={{ border: '1.5px solid #000', borderTop: '4px solid #cc0000', background: '#fff8f8', padding: 32 }}>
             <button
               type="button"
               onClick={handleBack}
-              className="inline-flex items-center gap-2 rounded-full border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 transition-all duration-200 hover:bg-slate-50"
+              style={{ display: 'inline-flex', alignItems: 'center', gap: 8, border: '1.5px solid #000', background: '#fff', padding: '7px 16px', fontFamily: "'Space Mono', monospace", fontSize: 11, fontWeight: 700, cursor: 'pointer', letterSpacing: '0.05em', textTransform: 'uppercase' }}
             >
-              <span aria-hidden="true">←</span>
-              Back
+              ← Back
             </button>
-
-            <h1 className="mt-6 text-2xl font-bold text-slate-900">Unable to load review page</h1>
-            <p className="mt-2 text-sm text-slate-600">{pageError ?? 'Unknown error.'}</p>
+            <h1 style={{ marginTop: 24, fontFamily: "'Playfair Display', Georgia, serif", fontSize: 28, fontWeight: 900, color: '#000' }}>Unable to load review page</h1>
+            <p style={{ marginTop: 8, fontSize: 14, color: '#666' }}>{pageError ?? 'Unknown error.'}</p>
           </div>
         </main>
       </div>
@@ -1220,104 +1218,237 @@ function AssignmentSubmissionReviewPageContent() {
   return (
     <>
       <Head>
-        <title>Review Submission - ESICodeHub</title>
+        <title>Review Submission — ESICodeHub</title>
       </Head>
 
       <style jsx global>{`
+        @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500;600&display=swap');
+
         @keyframes fadeUp {
-          from {
-            opacity: 0;
-            transform: translateY(12px);
-          }
-          to {
-            opacity: 1;
-            transform: translateY(0);
-          }
+          from { opacity: 0; transform: translateY(12px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes srRiseIn {
+          from { opacity: 0; transform: translateY(16px); }
+          to { opacity: 1; transform: translateY(0); }
         }
 
         .assignment-review-line-highlight {
-          background: linear-gradient(
-            90deg,
-            rgba(250, 204, 21, 0.28),
-            rgba(250, 204, 21, 0.14)
-          );
+          background: linear-gradient(90deg, rgba(250, 204, 21, 0.28), rgba(250, 204, 21, 0.14));
           border-left: 2px solid rgba(234, 179, 8, 0.95);
         }
-
         .assignment-review-line-gutter {
           border-left: 2px solid rgba(245, 158, 11, 0.85);
           margin-left: 4px;
         }
+
+        .sr-page {
+          min-height: 100vh;
+          background: #ffffff;
+          font-family: 'DM Sans', system-ui, sans-serif;
+          color: #000;
+          position: relative;
+        }
+        .sr-page::before {
+          content: '';
+          position: fixed;
+          top: 0; right: 0;
+          width: 280px;
+          height: 100vh;
+          background: #051650;
+          clip-path: polygon(80px 0, 100% 0, 100% 100%, 0 100%);
+          z-index: 0;
+          pointer-events: none;
+        }
+        .sr-page::after {
+          content: '';
+          position: fixed;
+          top: 64px; left: 0; right: 0;
+          height: 1.5px;
+          background: #000;
+          z-index: 0;
+          pointer-events: none;
+        }
+        .sr-container {
+          max-width: 1180px;
+          margin: 0 auto;
+          padding: 40px 28px 80px;
+          position: relative;
+          z-index: 1;
+        }
+        .sr-card {
+          background: #fff;
+          border: 1.5px solid #000;
+          border-top: 4px solid #051650;
+          position: relative;
+        }
+        .sr-card::after {
+          content: '';
+          position: absolute;
+          bottom: -2px; right: -2px;
+          width: 20px; height: 20px;
+          border-bottom: 4px solid #051650;
+          border-right: 4px solid #051650;
+          pointer-events: none;
+        }
+        .sr-aside {
+          background: #fff;
+          border: 1.5px solid #000;
+          border-top: 4px solid #051650;
+          position: relative;
+          overflow: hidden;
+        }
+        .sr-editor-panel {
+          background: #0d1117;
+          border: 1.5px solid #000;
+          border-top: 4px solid #051650;
+          position: relative;
+          overflow: hidden;
+        }
+        .sr-section-label {
+          font-family: 'Space Mono', monospace;
+          font-size: 10px;
+          letter-spacing: 0.14em;
+          text-transform: uppercase;
+          color: #666;
+          font-weight: 700;
+        }
+        .sr-mono { font-family: 'Space Mono', monospace; }
+        .sr-back-btn {
+          display: inline-flex;
+          align-items: center;
+          gap: 8px;
+          border: 1.5px solid #000;
+          background: #fff;
+          padding: 7px 16px;
+          font-family: 'Space Mono', monospace;
+          font-size: 11px;
+          font-weight: 700;
+          cursor: pointer;
+          letter-spacing: 0.05em;
+          text-transform: uppercase;
+          transition: background 0.15s;
+        }
+        .sr-back-btn:hover { background: #f0efec; }
+        .sr-input {
+          border: 1.5px solid #000;
+          background: #f7f7f5;
+          padding: 8px 12px;
+          font-family: 'DM Sans', sans-serif;
+          font-size: 14px;
+          color: #000;
+          outline: none;
+          width: 100%;
+          transition: background 0.15s;
+          border-radius: 0;
+        }
+        .sr-input:focus { background: #fff; border-color: #051650; }
+        .sr-input::placeholder { color: #aaa; }
+        .sr-btn-primary {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          background: #051650;
+          color: #fff;
+          border: 1.5px solid #051650;
+          padding: 9px 22px;
+          font-family: 'Space Mono', monospace;
+          font-size: 11px;
+          font-weight: 700;
+          cursor: pointer;
+          letter-spacing: 0.06em;
+          text-transform: uppercase;
+          transition: opacity 0.15s;
+        }
+        .sr-btn-primary:hover { opacity: 0.85; }
+        .sr-btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+        .sr-btn-ghost {
+          display: inline-flex;
+          align-items: center;
+          gap: 6px;
+          border: 1.5px solid #000;
+          background: #fff;
+          padding: 5px 12px;
+          font-family: 'Space Mono', monospace;
+          font-size: 11px;
+          font-weight: 700;
+          cursor: pointer;
+          letter-spacing: 0.04em;
+          transition: background 0.15s;
+        }
+        .sr-btn-ghost:hover { background: #f0efec; }
+        .sr-btn-ghost:disabled { opacity: 0.5; cursor: not-allowed; }
+        .sr-tag {
+          display: inline-flex;
+          align-items: center;
+          border: 1.5px solid #000;
+          padding: 2px 10px;
+          font-family: 'Space Mono', monospace;
+          font-size: 10px;
+          font-weight: 700;
+          letter-spacing: 0.06em;
+          text-transform: uppercase;
+        }
+        .sr-tag-late   { border-color: #cc0000; color: #cc0000; background: #fff8f8; }
+        .sr-tag-ontime { border-color: #1a7a3c; color: #1a7a3c; background: #f2fdf6; }
+        .sr-tag-blue   { border-color: #051650; color: #051650; background: #f0f3ff; }
+        .sr-tag-warn   { border-color: #b85c00; color: #b85c00; background: #fff8f2; }
+        .sr-animate { animation: srRiseIn 0.35s ease both; }
+        @media (max-width: 900px) {
+          .sr-page::before { display: none; }
+          .sr-container { padding: 20px 16px 60px; }
+        }
       `}</style>
 
-      <div className="min-h-screen bg-linear-to-b from-slate-100 via-slate-50 to-white text-slate-900">
+      <div className="sr-page">
         <Header activePage="Assignments" />
 
-        <main className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
-          <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
+        <main className="sr-container">
+          {/* Info bar */}
+          <section className="sr-card p-4 sm:p-5 sr-animate" style={{ animationDelay: '0ms' }}>
             <div className="flex flex-wrap items-center justify-between gap-4">
               <button
                 type="button"
                 onClick={handleBack}
-                className="group inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-slate-300 hover:bg-slate-50 hover:shadow active:scale-95"
+                className="sr-back-btn"
               >
-                <svg
-                  width="14"
-                  height="14"
-                  viewBox="0 0 16 16"
-                  fill="none"
-                  className="text-slate-500 transition-transform duration-200 group-hover:-translate-x-0.5 group-hover:text-slate-700"
-                  aria-hidden="true"
-                >
-                  <path
-                    d="M6.5 3.5 2 8m0 0 4.5 4.5M2 8h12"
-                    stroke="currentColor"
-                    strokeWidth="1.75"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
+                <svg width="12" height="12" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                  <path d="M6.5 3.5 2 8m0 0 4.5 4.5M2 8h12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                 </svg>
                 Back
               </button>
 
-              <div className="flex flex-wrap items-center gap-3 text-sm text-slate-600">
-                <span className="font-semibold text-slate-900">{submission.student_name}</span>
-                <span className="text-slate-300">•</span>
-                <span>Submitted {formatSubmittedAt(submission.submitted_at)}</span>
-                <span className="text-slate-300">•</span>
-                <span
-                  className={
-                    'inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-semibold ' +
-                    (submission.is_late
-                      ? 'border-rose-200 bg-rose-50 text-rose-700'
-                      : 'border-emerald-200 bg-emerald-50 text-emerald-700')
-                  }
-                >
-                  {submission.is_late ? 'Late submission' : 'On time'}
+              <div className="flex flex-wrap items-center gap-3">
+                <span className="sr-mono font-bold" style={{ fontSize: 13 }}>{submission.student_name}</span>
+                <span style={{ color: '#ccc' }}>·</span>
+                <span className="text-xs" style={{ color: '#666' }}>Submitted {formatSubmittedAt(submission.submitted_at)}</span>
+                <span style={{ color: '#ccc' }}>·</span>
+                <span className={'sr-tag ' + (submission.is_late ? 'sr-tag-late' : 'sr-tag-ontime')}>
+                  {submission.is_late ? 'Late' : 'On time'}
                 </span>
               </div>
             </div>
           </section>
 
-          <section className="mt-5 grid gap-5 lg:grid-cols-[300px_minmax(0,1fr)]">
-            <aside className="h-[56vh] min-h-95 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm lg:h-[74vh]">
-              <div className="border-b border-slate-200 p-4">
-                <h2 className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">
-                  File Tree
-                </h2>
+          {/* File tree + editor grid */}
+          <section className="mt-5 grid gap-5 lg:grid-cols-[300px_minmax(0,1fr)] sr-animate" style={{ animationDelay: '60ms' }}>
+            <aside className="sr-aside h-[56vh] min-h-[380px] lg:h-[74vh]">
+              <div className="border-b border-black p-4">
+                <p className="sr-section-label">File Tree</p>
                 <div className="mt-3">
                   <input
                     value={fileSearch}
                     onChange={(event) => setFileSearch(event.target.value)}
                     placeholder="Search files..."
-                    className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700 placeholder:text-slate-400 outline-none transition-all duration-200 focus:border-blue-300 focus:bg-white focus:ring-2 focus:ring-blue-200/60"
+                    className="sr-input"
+                    style={{ fontSize: 13 }}
                   />
                 </div>
               </div>
 
               <div className="h-[calc(56vh-88px)] overflow-y-auto px-2 py-2 lg:h-[calc(74vh-88px)]">
                 {flatVisibleFiles.length === 0 ? (
-                  <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50 px-4 py-6 text-center text-sm text-slate-500">
+                  <div className="border border-dashed border-black/20 bg-[#f7f7f5] px-4 py-6 text-center text-sm" style={{ color: '#666' }}>
                     {fileSearch.trim()
                       ? 'No matching files for this search.'
                       : 'No files attached to this submission.'}
@@ -1334,6 +1465,7 @@ function AssignmentSubmissionReviewPageContent() {
               </div>
             </aside>
 
+            {/* Editor + plagiarism column */}
             <div
               className={
                 'grid gap-4 ' +
@@ -1342,10 +1474,11 @@ function AssignmentSubmissionReviewPageContent() {
                   : 'xl:grid-cols-1')
               }
             >
-              <section className="h-[56vh] min-h-95 overflow-hidden rounded-2xl border border-slate-200 bg-slate-900 shadow-sm lg:h-[74vh]">
-                <div className="flex items-center justify-between gap-3 border-b border-slate-700 px-4 py-3">
+              {/* Code editor panel */}
+              <section className="sr-editor-panel h-[56vh] min-h-[380px] lg:h-[74vh]">
+                <div className="flex items-center justify-between gap-3 border-b border-white/10 px-4 py-3">
                   <div className="min-w-0">
-                    <p className="truncate text-sm font-semibold text-slate-100">
+                    <p className="sr-mono truncate text-sm font-bold text-slate-100">
                       {selectedFilePath || 'Select a file'}
                     </p>
                     {selectedFileMeta ? (
@@ -1353,16 +1486,17 @@ function AssignmentSubmissionReviewPageContent() {
                     ) : null}
                   </div>
                   <div className="flex items-center gap-2">
-                    <div className="text-xs text-slate-400">
+                    <div className="sr-section-label text-slate-400" style={{ textTransform: 'none' }}>
                       {commentLinesForSelectedFile.length} commented line
                       {commentLinesForSelectedFile.length === 1 ? '' : 's'}
                     </div>
                     <button
                       type="button"
                       onClick={() => setPlagiarismOpen((prev) => !prev)}
-                      className="rounded-lg border border-slate-600 bg-slate-800 px-2.5 py-1.5 text-xs font-semibold text-slate-200 transition-colors hover:bg-slate-700"
+                      className="sr-btn-ghost"
+                      style={{ background: '#1e293b', borderColor: '#475569', color: '#e2e8f0' }}
                     >
-                      {plagiarismOpen ? 'Hide plagiarism panel' : 'Show plagiarism panel'}
+                      {plagiarismOpen ? 'Hide plagiarism' : 'Show plagiarism'}
                     </button>
                   </div>
                 </div>
@@ -1380,7 +1514,7 @@ function AssignmentSubmissionReviewPageContent() {
                         scheduleHoverHide();
                       }}
                       style={{ top: hoverButtonTop }}
-                      className="absolute right-3 z-10 inline-flex h-7 w-7 items-center justify-center rounded-full border border-yellow-300 bg-yellow-200/90 text-base font-bold text-yellow-900 shadow transition-all duration-200 hover:scale-105 hover:bg-yellow-100"
+                      className="absolute right-3 z-10 inline-flex h-7 w-7 items-center justify-center border border-yellow-300 bg-yellow-200/90 text-base font-bold text-yellow-900 shadow transition-all duration-200 hover:scale-105 hover:bg-yellow-100"
                       title={`Add line comment at line ${hoveredLine}`}
                     >
                       +
@@ -1389,12 +1523,10 @@ function AssignmentSubmissionReviewPageContent() {
 
                   {inlineComment ? (
                   <div
-                    style={{ top: inlineComment.top }}
-                    className="absolute left-4 right-4 z-20 w-auto rounded-xl border border-slate-200 bg-white p-3 shadow-lg animate-[fadeUp_0.18s_ease] sm:left-auto sm:right-4 sm:w-[320px]"
+                    style={{ top: inlineComment.top, background: '#fff', border: '1.5px solid #000', borderTop: '4px solid #051650', padding: 12, zIndex: 20 }}
+                    className="absolute left-4 right-4 sm:left-auto sm:right-4 sm:w-[320px] animate-[fadeUp_0.18s_ease]"
                   >
-                    <p className="text-xs font-semibold text-slate-700">
-                      Add comment at line {inlineComment.lineNumber}
-                    </p>
+                    <p className="sr-section-label">Add comment — line {inlineComment.lineNumber}</p>
                     <textarea
                       value={inlineComment.content}
                       onChange={(event) =>
@@ -1409,20 +1541,23 @@ function AssignmentSubmissionReviewPageContent() {
                       }
                       placeholder="Write your line-level feedback..."
                       rows={3}
-                      className="mt-2 w-full resize-none rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-2 text-sm text-slate-700 outline-none transition-all duration-200 focus:border-blue-300 focus:bg-white focus:ring-2 focus:ring-blue-200/70"
+                      className="sr-input mt-2 resize-none"
+                      style={{ fontSize: 13 }}
                     />
                     <div className="mt-2 flex items-center justify-end gap-2">
                       <button
                         type="button"
                         onClick={() => setInlineComment(null)}
-                        className="rounded-lg border border-slate-200 px-2.5 py-1.5 text-xs font-semibold text-slate-600 transition-colors hover:bg-slate-100"
+                        className="sr-btn-ghost"
+                        style={{ fontSize: 11, padding: '4px 10px' }}
                       >
                         Cancel
                       </button>
                       <button
                         type="button"
                         onClick={handleAddPendingComment}
-                        className="rounded-lg bg-blue-600 px-2.5 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-blue-700"
+                        className="sr-btn-primary"
+                        style={{ fontSize: 11, padding: '4px 10px' }}
                       >
                         Add
                       </button>
@@ -1431,8 +1566,8 @@ function AssignmentSubmissionReviewPageContent() {
                   ) : null}
 
                   {fileLoading ? (
-                  <div className="absolute inset-0 z-10 flex items-center justify-center bg-slate-900/65">
-                    <div className="inline-flex items-center gap-2 rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100">
+                  <div className="absolute inset-0 z-10 flex items-center justify-center" style={{ background: 'rgba(13,17,23,0.72)' }}>
+                    <div className="inline-flex items-center gap-2 px-3 py-2" style={{ border: '1.5px solid #475569', background: '#1e293b', color: '#e2e8f0', fontFamily: "'Space Mono', monospace", fontSize: 12 }}>
                       <span className="h-4 w-4 animate-spin rounded-full border-2 border-slate-400 border-t-slate-100" />
                       Loading file...
                     </div>
@@ -1479,38 +1614,38 @@ function AssignmentSubmissionReviewPageContent() {
               </section>
 
               {plagiarismOpen ? (
-                <aside className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+                <aside className="sr-card overflow-y-auto" style={{ padding: 16, maxHeight: '74vh' }}>
                   <div className="flex items-start justify-between gap-2">
                     <div>
-                      <h3 className="text-sm font-semibold uppercase tracking-[0.08em] text-slate-700">
-                        Plagiarism Snapshot
-                      </h3>
-                      <p className="mt-1 text-xs text-slate-500">
+                      <p className="sr-section-label">Plagiarism Snapshot</p>
+                      <p className="mt-1 text-xs" style={{ color: '#666' }}>
                         For {submission.student_email || submission.student_name}
                       </p>
                     </div>
                     <button
                       type="button"
                       onClick={() => setPlagiarismOpen(false)}
-                      className="rounded-md border border-slate-200 px-2 py-1 text-xs font-semibold text-slate-600 hover:bg-slate-50"
+                      className="sr-btn-ghost"
+                      style={{ fontSize: 11, padding: '4px 10px' }}
                     >
                       Collapse
                     </button>
                   </div>
 
                   {plagiarismState === 'loading' ? (
-                    <p className="mt-4 text-sm text-slate-500">Loading plagiarism data...</p>
+                    <p className="mt-4 text-sm" style={{ color: '#666' }}>Loading plagiarism data...</p>
                   ) : null}
 
                   {plagiarismState === 'error' ? (
-                    <div className="mt-4 rounded-xl border border-rose-200 bg-rose-50 p-3">
-                      <p className="text-sm font-medium text-rose-700">
+                    <div className="mt-4" style={{ border: '1.5px solid #cc0000', borderTop: '3px solid #cc0000', background: '#fff8f8', padding: 12 }}>
+                      <p className="text-sm font-bold" style={{ color: '#cc0000' }}>
                         {plagiarismError || 'Failed to load plagiarism data.'}
                       </p>
                       <button
                         type="button"
                         onClick={() => void fetchPlagiarism()}
-                        className="mt-2 rounded-lg border border-rose-200 bg-white px-3 py-1.5 text-xs font-semibold text-rose-700 hover:bg-rose-100"
+                        className="sr-btn-ghost mt-2"
+                        style={{ fontSize: 11, borderColor: '#cc0000', color: '#cc0000' }}
                       >
                         Retry
                       </button>
@@ -1518,16 +1653,17 @@ function AssignmentSubmissionReviewPageContent() {
                   ) : null}
 
                   {plagiarismState === 'not-run' ? (
-                    <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50 p-3">
-                      <p className="text-sm font-semibold text-slate-800">Plagiarism check not run yet</p>
-                      <p className="mt-1 text-xs text-slate-500">
+                    <div className="mt-4" style={{ border: '1.5px solid #000', background: '#f7f7f5', padding: 12 }}>
+                      <p className="text-sm font-bold">Plagiarism check not run yet</p>
+                      <p className="mt-1 text-xs" style={{ color: '#666' }}>
                         Run a plagiarism check to see MOSS and AI indicators for this submission.
                       </p>
                       <button
                         type="button"
                         onClick={handleRunPlagiarismCheck}
                         disabled={runningPlagiarismCheck}
-                        className="mt-3 rounded-lg bg-slate-900 px-3 py-1.5 text-xs font-semibold text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
+                        className="sr-btn-primary mt-3"
+                        style={{ fontSize: 11, padding: '6px 14px' }}
                       >
                         {runningPlagiarismCheck ? 'Starting...' : 'Run plagiarism check'}
                       </button>
@@ -1537,11 +1673,11 @@ function AssignmentSubmissionReviewPageContent() {
                   {plagiarismState === 'ready' && plagiarismReport ? (
                     <>
                       {(plagiarismReport.status === 'pending' || plagiarismReport.status === 'running') ? (
-                        <div className="mt-4 rounded-xl border border-blue-200 bg-blue-50 p-3">
-                          <p className="text-sm font-semibold text-blue-800">
+                        <div className="mt-4" style={{ border: '1.5px solid #051650', borderTop: '3px solid #051650', background: '#f0f3ff', padding: 12 }}>
+                          <p className="text-sm font-bold" style={{ color: '#051650' }}>
                             Plagiarism check is {plagiarismReport.status}
                           </p>
-                          <p className="mt-1 text-xs text-blue-700">
+                          <p className="mt-1 text-xs" style={{ color: '#444' }}>
                             This panel auto-refreshes while analysis is running.
                           </p>
                         </div>
@@ -1549,78 +1685,71 @@ function AssignmentSubmissionReviewPageContent() {
 
                       {plagiarismReport.status === 'complete' ? (
                         <>
-                          <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50 p-3">
-                            <p className="text-xs font-semibold uppercase tracking-[0.08em] text-slate-500">
-                              Highest MOSS Match
-                            </p>
+                          <div className="mt-4" style={{ border: '1.5px solid #000', background: '#f7f7f5', padding: 12 }}>
+                            <p className="sr-section-label">Highest MOSS Match</p>
                             {highestPair ? (
-                              <p className="mt-1 text-sm font-semibold text-slate-900">
+                              <p className="mt-1 text-sm font-bold">
                                 {Math.round(highestPair.similarityForSubmission)}% match with{' '}
                                 {highestPair.counterpartEmail || highestPair.counterpartName}
                               </p>
                             ) : (
-                              <p className="mt-1 text-sm text-slate-600">No similarity pairs for this submission.</p>
+                              <p className="mt-1 text-sm" style={{ color: '#666' }}>No similarity pairs for this submission.</p>
                             )}
                           </div>
 
                           <div
-                            className={
-                              'mt-3 rounded-xl border p-3 ' +
-                              (aiSummary.flagged
-                                ? 'border-rose-200 bg-rose-50'
-                                : 'border-emerald-200 bg-emerald-50')
-                            }
+                            className="mt-3"
+                            style={{
+                              border: `1.5px solid ${aiSummary.flagged ? '#cc0000' : '#1a7a3c'}`,
+                              borderTop: `3px solid ${aiSummary.flagged ? '#cc0000' : '#1a7a3c'}`,
+                              background: aiSummary.flagged ? '#fff8f8' : '#f2fdf6',
+                              padding: 12,
+                            }}
                           >
-                            <p className="text-xs font-semibold uppercase tracking-[0.08em] text-slate-500">
-                              AI Usage Flag
-                            </p>
-                            <p className="mt-1 text-sm font-semibold text-slate-900">
+                            <p className="sr-section-label">AI Usage Flag</p>
+                            <p className="mt-1 text-sm font-bold">
                               {aiSummary.flagged ? 'Flagged as AI-like' : 'Not flagged as AI-like'}
                             </p>
-                            <p className="mt-1 text-xs text-slate-600">
+                            <p className="mt-1 text-xs" style={{ color: '#444' }}>
                               Confidence: {aiSummary.confidence}
                               {aiSummary.score != null ? ` (${Math.round(aiSummary.score)}%)` : ''}
                             </p>
                           </div>
 
                           <div className="mt-3">
-                            <p className="text-xs font-semibold uppercase tracking-[0.08em] text-slate-500">
-                              Pairs Involving This Submission
-                            </p>
+                            <p className="sr-section-label">Pairs Involving This Submission</p>
 
                             {submissionPairs.length === 0 ? (
-                              <p className="mt-2 text-sm text-slate-500">No pairs found for this submission.</p>
+                              <p className="mt-2 text-sm" style={{ color: '#666' }}>No pairs found for this submission.</p>
                             ) : (
                               <div className="mt-2 max-h-72 space-y-2 overflow-y-auto pr-1">
                                 {submissionPairs.map((pair) => (
                                   <div
                                     key={pair.id}
-                                    className="rounded-lg border border-slate-200 bg-white p-2.5"
+                                    style={{ border: '1.5px solid #000', background: '#f7f7f5', padding: 10 }}
                                   >
                                     <div className="flex items-center justify-between gap-2">
                                       <span
-                                        className={
-                                          'inline-flex rounded-full border px-2 py-0.5 text-[11px] font-semibold ' +
-                                          toneForSimilarity(pair.similarityForSubmission)
-                                        }
+                                        className={'sr-tag ' + toneForSimilarity(pair.similarityForSubmission)}
                                       >
                                         {Math.round(pair.similarityForSubmission)}%
                                       </span>
-                                      <span className="text-[11px] text-slate-500">{pair.language}</span>
+                                      <span className="sr-section-label">{pair.language}</span>
                                     </div>
-                                    <p className="mt-1 text-xs text-slate-700">
+                                    <p className="mt-1 text-xs" style={{ color: '#444' }}>
                                       Match with {pair.counterpartEmail || pair.counterpartName}
                                     </p>
-                                    <p className="mt-1 text-[11px] text-slate-500">
+                                    <p className="mt-1 text-xs" style={{ color: '#666' }}>
                                       {pair.linesMatched} matched lines
-                                      {pair.isAiFlag ? ' • AI reference involved' : ''}
+                                      {pair.isAiFlag ? ' · AI reference involved' : ''}
                                     </p>
                                     {pair.mossLink ? (
                                       <a
                                         href={pair.mossLink}
                                         target="_blank"
                                         rel="noreferrer"
-                                        className="mt-1 inline-flex text-[11px] font-semibold text-blue-700 hover:text-blue-900"
+                                        className="mt-1 inline-flex text-xs font-bold"
+                                        style={{ color: '#051650', borderBottom: '1px solid #051650' }}
                                       >
                                         View MOSS diff
                                       </a>
@@ -1634,26 +1763,28 @@ function AssignmentSubmissionReviewPageContent() {
                       ) : null}
 
                       {plagiarismReport.status === 'failed' ? (
-                        <div className="mt-4 rounded-xl border border-rose-200 bg-rose-50 p-3">
-                          <p className="text-sm font-semibold text-rose-700">Plagiarism check failed</p>
-                          <p className="mt-1 text-xs text-rose-600">
+                        <div className="mt-4" style={{ border: '1.5px solid #cc0000', borderTop: '3px solid #cc0000', background: '#fff8f8', padding: 12 }}>
+                          <p className="text-sm font-bold" style={{ color: '#cc0000' }}>Plagiarism check failed</p>
+                          <p className="mt-1 text-xs" style={{ color: '#b00' }}>
                             {plagiarismReport.error_message || 'The report could not be generated.'}
                           </p>
                           <button
                             type="button"
                             onClick={handleRunPlagiarismCheck}
                             disabled={runningPlagiarismCheck}
-                            className="mt-3 rounded-lg border border-rose-200 bg-white px-3 py-1.5 text-xs font-semibold text-rose-700 hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-60"
+                            className="sr-btn-ghost mt-3"
+                            style={{ fontSize: 11, borderColor: '#cc0000', color: '#cc0000' }}
                           >
                             {runningPlagiarismCheck ? 'Starting...' : 'Retry check'}
                           </button>
                         </div>
                       ) : null}
 
-                      <div className="mt-4 border-t border-slate-200 pt-3">
+                      <div className="mt-4" style={{ borderTop: '1.5px solid #000', paddingTop: 12 }}>
                         <Link
                           href={fullPlagiarismReportHref}
-                          className="text-xs font-semibold text-blue-700 hover:text-blue-900"
+                          className="sr-mono text-xs font-bold"
+                          style={{ color: '#051650', borderBottom: '1.5px solid #051650' }}
                         >
                           Open full plagiarism report →
                         </Link>
@@ -1665,28 +1796,28 @@ function AssignmentSubmissionReviewPageContent() {
             </div>
           </section>
 
-          <section className="mt-5 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+          <section className="sr-card mt-5 p-5 sr-animate" style={{ animationDelay: '120ms' }}>
             <div className="flex flex-wrap items-center justify-between gap-3">
-              <h3 className="text-lg font-semibold text-slate-900">My Review</h3>
-              <span className="rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-700">
+              <h3 style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: 22, fontWeight: 900 }}>My Review</h3>
+              <span className={'sr-tag ' + (myReview ? 'sr-tag-blue' : 'sr-tag-ontime')}>
                 {myReview ? 'Updating existing review' : 'New review'}
               </span>
             </div>
 
             <div className="mt-4 grid gap-4 lg:grid-cols-[minmax(0,1fr)_220px]">
               <label className="block">
-                <span className="text-sm font-medium text-slate-700">General comment</span>
+                <span className="sr-section-label">General comment</span>
                 <textarea
                   value={generalComment}
                   onChange={(event) => setGeneralComment(event.target.value)}
                   placeholder="Summarize strengths, issues, and next steps for this student."
                   rows={5}
-                  className="mt-2 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-700 outline-none transition-all duration-200 focus:border-blue-300 focus:bg-white focus:ring-2 focus:ring-blue-200/70"
+                  className="sr-input mt-2 resize-none"
                 />
               </label>
 
               <label className="block">
-                <span className="text-sm font-medium text-slate-700">Grade</span>
+                <span className="sr-section-label">Grade</span>
                 <div className="mt-2 flex items-center gap-2">
                   <input
                     value={gradeInput}
@@ -1695,24 +1826,26 @@ function AssignmentSubmissionReviewPageContent() {
                     min={0}
                     max={20}
                     step={0.25}
-                    placeholder="0 - 20"
-                    className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm font-semibold text-slate-800 outline-none transition-all duration-200 focus:border-blue-300 focus:bg-white focus:ring-2 focus:ring-blue-200/70"
+                    placeholder="0 – 20"
+                    className="sr-input"
+                    style={{ fontWeight: 700 }}
                   />
-                  <span className="text-sm font-semibold text-slate-500">/ 20</span>
+                  <span className="sr-mono text-sm font-bold">/ 20</span>
                 </div>
-                <p className="mt-2 text-xs text-slate-500">
-                  Leave empty if you want to submit feedback without a grade.
+                <p className="mt-2 text-xs" style={{ color: '#888' }}>
+                  Leave empty to submit feedback without a grade.
                 </p>
               </label>
             </div>
 
-            <div className="mt-5 rounded-xl border border-slate-200 bg-slate-50 p-4">
+            <div className="mt-5" style={{ border: '1.5px solid #000', background: '#f7f7f5', padding: 16 }}>
               <div className="flex flex-wrap items-center justify-between gap-2">
-                <h4 className="text-sm font-semibold text-slate-800">Pending line comments</h4>
+                <p className="sr-section-label">Pending line comments</p>
                 <div className="flex flex-wrap items-center gap-2">
                   <label
                     htmlFor="line-selector"
-                    className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-700"
+                    className="inline-flex items-center gap-2"
+                    style={{ border: '1.5px solid #000', background: '#fff', padding: '4px 10px', fontFamily: "'Space Mono', monospace", fontSize: 11, fontWeight: 700 }}
                   >
                     <span>Line</span>
                     <input
@@ -1730,25 +1863,24 @@ function AssignmentSubmissionReviewPageContent() {
                         }
                       }}
                       disabled={!selectedFileId}
-                      className="w-20 rounded-md border border-slate-200 bg-slate-50 px-2 py-1 text-xs font-semibold text-slate-700 outline-none focus:border-blue-300 focus:bg-white focus:ring-2 focus:ring-blue-200/70 disabled:cursor-not-allowed disabled:opacity-50"
+                      style={{ width: 56, border: '1.5px solid #ccc', background: '#f7f7f5', padding: '2px 6px', fontFamily: "'Space Mono', monospace", fontSize: 11, fontWeight: 700, outline: 'none' }}
                     />
-                    <span className="text-[11px] text-slate-500">/ {Math.max(1, currentFileLineCount)}</span>
                   </label>
 
                   <button
                     type="button"
                     disabled={!selectedFileId}
                     onClick={handleOpenSelectorComment}
-                    className="inline-flex items-center gap-1 rounded-lg border border-blue-200 bg-blue-50 px-3 py-1.5 text-xs font-semibold text-blue-700 transition-all duration-200 hover:border-blue-300 hover:bg-blue-100 disabled:cursor-not-allowed disabled:opacity-50"
+                    className="sr-btn-primary"
+                    style={{ fontSize: 11, padding: '6px 14px' }}
                   >
-                    <span className="text-sm leading-none">+</span>
-                    Add line comment
+                    + Add line comment
                   </button>
                 </div>
               </div>
 
               {pendingComments.length === 0 ? (
-                <p className="mt-3 text-sm text-slate-500">
+                <p className="mt-3 text-sm" style={{ color: '#888' }}>
                   No line comments yet. Use the line selector or click a line number in the editor.
                 </p>
               ) : (
@@ -1760,23 +1892,20 @@ function AssignmentSubmissionReviewPageContent() {
                     return (
                       <div
                         key={comment.key}
-                        className={
-                          'flex items-start justify-between gap-3 rounded-lg border border-slate-200 bg-white px-3 py-2 transition-all duration-200 ' +
-                          (removing
-                            ? 'translate-y-1 opacity-0'
-                            : 'translate-y-0 opacity-100')
-                        }
+                        className={'flex items-start justify-between gap-3 transition-all duration-200 ' + (removing ? 'translate-y-1 opacity-0' : 'translate-y-0 opacity-100')}
+                        style={{ border: '1.5px solid #000', background: '#fff', padding: '8px 12px' }}
                       >
                         <div>
-                          <p className="text-xs font-semibold text-slate-500">
-                            File: {filePath}  Line: {comment.line_number}
+                          <p className="sr-section-label">
+                            {filePath} · Line {comment.line_number}
                           </p>
-                          <p className="mt-1 text-sm text-slate-700">{comment.content}</p>
+                          <p className="mt-1 text-sm">{comment.content}</p>
                         </div>
                         <button
                           type="button"
                           onClick={() => removePendingComment(comment.key)}
-                          className="rounded-md px-2 py-1 text-xs font-bold text-rose-600 transition-colors hover:bg-rose-50"
+                          className="sr-btn-ghost"
+                          style={{ fontSize: 11, padding: '2px 8px', borderColor: '#cc0000', color: '#cc0000' }}
                           aria-label="Remove line comment"
                         >
                           ✕
@@ -1793,21 +1922,21 @@ function AssignmentSubmissionReviewPageContent() {
                 type="button"
                 disabled={saving}
                 onClick={handleSaveReview}
-                className="inline-flex items-center justify-center rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white shadow transition-all duration-200 hover:-translate-y-0.5 hover:bg-blue-700 hover:shadow-md disabled:cursor-not-allowed disabled:opacity-60"
+                className="sr-btn-primary"
               >
                 {saving ? 'Saving review...' : 'Save Review'}
               </button>
-              <p className="text-xs text-slate-500">
+              <p className="text-xs" style={{ color: '#888' }}>
                 Saving will replace your previous review entirely.
               </p>
             </div>
           </section>
 
-          <section className="mt-5 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-            <h3 className="text-lg font-semibold text-slate-900">Other Reviews</h3>
+          <section className="sr-card mt-5 p-5 sr-animate" style={{ animationDelay: '180ms' }}>
+            <h3 style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: 22, fontWeight: 900 }}>Other Reviews</h3>
 
             {otherReviews.length === 0 ? (
-              <p className="mt-3 text-sm text-slate-500">
+              <p className="mt-3 text-sm" style={{ color: '#888' }}>
                 No reviews from other professors yet.
               </p>
             ) : (
@@ -1818,18 +1947,18 @@ function AssignmentSubmissionReviewPageContent() {
                   return (
                     <article
                       key={review.id}
-                      className="rounded-xl border border-slate-200 bg-slate-50 p-4"
+                      style={{ border: '1.5px solid #000', background: '#f7f7f5', padding: 16 }}
                     >
                       <div className="flex flex-wrap items-center justify-between gap-3">
-                        <p className="text-sm font-semibold text-slate-900">
+                        <p className="sr-mono text-sm font-bold">
                           {review.professor_name}
                         </p>
-                        <span className="rounded-full border border-slate-300 bg-white px-2.5 py-1 text-xs font-semibold text-slate-600">
-                          Grade: {review.grade == null ? '-' : review.grade}/20
+                        <span className="sr-tag sr-tag-blue">
+                          Grade: {review.grade == null ? '—' : review.grade}/20
                         </span>
                       </div>
 
-                      <p className="mt-2 text-sm text-slate-700">
+                      <p className="mt-2 text-sm">
                         {review.general_comment || 'No general comment.'}
                       </p>
 
@@ -1837,7 +1966,8 @@ function AssignmentSubmissionReviewPageContent() {
                         <button
                           type="button"
                           onClick={() => toggleOtherReview(review.id)}
-                          className="text-xs font-semibold text-blue-700 transition-colors hover:text-blue-900"
+                          className="sr-btn-ghost"
+                          style={{ fontSize: 11 }}
                         >
                           {isExpanded
                             ? `Hide line comments (${review.comments.length})`
@@ -1847,18 +1977,17 @@ function AssignmentSubmissionReviewPageContent() {
                         {isExpanded ? (
                           <div className="mt-2 space-y-2">
                             {review.comments.length === 0 ? (
-                              <p className="text-xs text-slate-500">No line comments.</p>
+                              <p className="text-xs" style={{ color: '#888' }}>No line comments.</p>
                             ) : (
                               review.comments.map((comment) => (
                                 <div
                                   key={comment.id}
-                                  className="rounded-lg border border-slate-200 bg-white px-3 py-2"
+                                  style={{ border: '1.5px solid #000', background: '#fff', padding: '8px 12px' }}
                                 >
-                                  <p className="text-xs font-semibold text-slate-500">
-                                    {fileIdToPath.get(comment.file) ?? `File #${comment.file}`}  Line:{' '}
-                                    {comment.line_number}
+                                  <p className="sr-section-label">
+                                    {fileIdToPath.get(comment.file) ?? `File #${comment.file}`} · Line {comment.line_number}
                                   </p>
-                                  <p className="mt-1 text-sm text-slate-700">{comment.content}</p>
+                                  <p className="mt-1 text-sm">{comment.content}</p>
                                 </div>
                               ))
                             )}
@@ -1874,14 +2003,20 @@ function AssignmentSubmissionReviewPageContent() {
         </main>
 
         {toast ? (
-          <div className="pointer-events-none fixed right-4 top-20 z-50">
+          <div className="pointer-events-none fixed right-4 top-20 z-50 animate-[fadeUp_0.2s_ease]">
             <div
-              className={
-                'rounded-xl border px-4 py-3 text-sm font-semibold shadow-lg animate-[fadeUp_0.2s_ease] ' +
-                (toast.type === 'success'
-                  ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
-                  : 'border-rose-200 bg-rose-50 text-rose-700')
-              }
+              style={{
+                border: `1.5px solid ${toast.type === 'success' ? '#1a7a3c' : '#cc0000'}`,
+                borderTop: `4px solid ${toast.type === 'success' ? '#1a7a3c' : '#cc0000'}`,
+                background: toast.type === 'success' ? '#f2fdf6' : '#fff8f8',
+                color: toast.type === 'success' ? '#1a7a3c' : '#cc0000',
+                padding: '10px 18px',
+                fontFamily: "'Space Mono', monospace",
+                fontSize: 12,
+                fontWeight: 700,
+                letterSpacing: '0.04em',
+                boxShadow: '4px 4px 0 #000',
+              }}
             >
               {toast.message}
             </div>
