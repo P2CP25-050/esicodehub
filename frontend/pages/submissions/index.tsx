@@ -248,18 +248,7 @@ useEffect(() => {
             </div>
           </main>
 
-          <footer className="mt-16 border-t border-black/10 bg-white/80 backdrop-blur-sm">
-            <div className="es-container py-6! flex items-center justify-between flex-wrap gap-4">
-              <div className="flex items-center gap-2">
-                <span className="text-sm font-bold font-mono text-black/60">ESICodeHub</span>
-              </div>
-              <p className="text-xs text-black/50 font-medium">© {new Date().getFullYear()} ESICodeHub · Built for ESI students</p>
-              <div className="flex gap-4">
-                <span className="text-xs text-black/50 cursor-pointer hover:text-black transition-colors" onClick={() => router.push('/')}>Home</span>
-                <span className="text-xs text-black/50 cursor-pointer hover:text-black transition-colors" onClick={() => router.push('/submissions')}>Submissions</span>
-              </div>
-            </div>
-          </footer>
+
         </div>
       </>
     </ProtectedRoute>

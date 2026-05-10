@@ -874,43 +874,7 @@ export default function LandingPage() {
           </div>
         </section>
 
-        {/* ════════════════ FOOTER ════════════════ */}
-        <footer style={{
-          borderTop: '1px solid rgba(255,255,255,.06)',
-          padding: '2rem max(1.5rem, calc(50% - 680px))',
-          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          flexWrap: 'wrap', gap: '1rem',
-          background: 'rgba(0,0,0,.2)',
-        }} className="mobile-shell">
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <div style={{ width: 24, height: 24, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <Image
-                src="/esicodehub-logo.png"
-                alt="ESICodeHub Logo"
-                width={24}
-                height={24}
-                style={{ objectFit: 'contain' }}
-              />
-            </div>
-            <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '.8rem', color: '#334155' }}>
-              ESICodeHub © {new Date().getFullYear()}
-            </span>
-          </div>
 
-          <div style={{ display: 'flex', gap: '1.5rem' }}>
-            {[
-              { label: 'Submissions', href: '/submissions' },
-              { label: 'Sign in', href: '/login' },
-            ].map(link => (
-              <Link key={link.href} href={link.href} style={{ fontSize: '.8125rem', color: '#334155', textDecoration: 'none', transition: 'color .15s' }}
-                onMouseEnter={e => (e.currentTarget.style.color = '#94a3b8')}
-                onMouseLeave={e => (e.currentTarget.style.color = '#334155')}
-              >
-                {link.label}
-              </Link>
-            ))}
-          </div>
-        </footer>
 
       </div>
     </>
