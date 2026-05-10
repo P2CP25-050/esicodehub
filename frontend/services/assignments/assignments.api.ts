@@ -111,6 +111,45 @@ export const getSubmissions = async (
   return res.data;
 };
 
+const getFilenameFromContentDisposition = (value?: string): string | null => {
+  if (!value) return null;
+
+  const utfMatch = value.match(/filename\*=UTF-8''([^;]+)/i);
+  if (utfMatch && utfMatch[1]) {
+    try {
+      return decodeURIComponent(utfMatch[1]);
+    } catch {
+      return utfMatch[1];
+    }
+  }
+
+  const quotedMatch = value.match(/filename="([^"]+)"/i);
+  if (quotedMatch && quotedMatch[1]) return quotedMatch[1];
+
+  const plainMatch = value.match(/filename=([^;]+)/i);
+  if (plainMatch && plainMatch[1]) return plainMatch[1].trim();
+
+  return null;
+};
+
+export const downloadSubmissionsZip = async (
+  assignmentId: number
+): Promise<{ blob: Blob; filename: string }> => {
+  const res = await apiClient.get<Blob>(
+    `/assignments/${assignmentId}/download-submissions/`,
+    {
+      responseType: 'blob',
+    }
+  );
+
+  const contentDisposition = res.headers['content-disposition'];
+  const fallbackName = `assignment-${assignmentId}-submissions.zip`;
+  const filename =
+    getFilenameFromContentDisposition(contentDisposition) || fallbackName;
+
+  return { blob: res.data, filename };
+};
+
 export const getSubmission = async (
   assignmentId: number,
   submissionId: number

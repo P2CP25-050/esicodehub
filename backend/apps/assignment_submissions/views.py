@@ -1,4 +1,6 @@
 """Views for the assignment_submissions app."""
+import io
+import zipfile
 import magic
 from pathlib import PurePosixPath
 
@@ -511,6 +513,86 @@ class ProfessorSubmissionListView(APIView):
             return str(esi_student.group) == group_value
         except EsiStudent.DoesNotExist:
             return False
+
+
+class AssignmentSubmissionsDownloadView(APIView):
+    """Download all submissions for an assignment as a zip archive."""
+
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, pk):
+        if request.user.role != 'professor':
+            return Response(
+                {'detail': 'You do not have permission to perform this action.'},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        assignment = get_object_or_404(
+            Assignment.objects.select_related('professor'),
+            pk=pk,
+        )
+
+        if assignment.professor != request.user:
+            return Response(
+                {'detail': 'You do not have permission to perform this action.'},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        submissions = (
+            AssignmentSubmission.objects.filter(assignment=assignment)
+            .select_related('student')
+            .prefetch_related('files')
+            .order_by('id')
+        )
+
+        if not submissions.exists():
+            return Response(
+                {'error': 'No submissions yet.'},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        buffer = io.BytesIO()
+        name_counts = {}
+        with zipfile.ZipFile(buffer, 'w', zipfile.ZIP_DEFLATED) as zf:
+            for submission in submissions:
+                student_school_id = (
+                    submission.student.school_id
+                    or str(submission.student.id)
+                )
+                for submission_file in submission.files.all():
+                    ext = PurePosixPath(
+                        submission_file.file_path or submission_file.file_name
+                    ).suffix
+                    if not ext:
+                        ext = PurePosixPath(submission_file.file_name).suffix
+                    if not ext:
+                        ext = '.txt'
+
+                    base = f'{student_school_id}_{submission.id}'
+                    base_key = f'{base}{ext}'
+                    count = name_counts.get(base_key, 0)
+                    filename = (
+                        f'{base}_{count + 1}{ext}' if count else base_key
+                    )
+                    name_counts[base_key] = count + 1
+
+                    content = get_file_bytes(submission_file.gcs_path)
+                    zf.writestr(filename, content)
+
+        buffer.seek(0)
+        safe_title = (
+            assignment.title.replace('"', "'")
+            .replace('/', '-')
+            .replace('\\', '-')
+            .strip()
+        )
+        if not safe_title:
+            safe_title = f'assignment-{assignment.id}'
+        zip_name = f'{safe_title}_submissions.zip'
+
+        response = HttpResponse(buffer.read(), content_type='application/zip')
+        response['Content-Disposition'] = f'attachment; filename="{zip_name}"'
+        return response
 
 
 class ProfessorSubmissionDetailView(APIView):

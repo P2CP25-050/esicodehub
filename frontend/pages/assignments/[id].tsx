@@ -16,6 +16,7 @@ import Head from 'next/head';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
 import { useAuth } from '@/context/AuthContext';
 import {
+  downloadSubmissionsZip,
   getAssignment,
   getMySubmission,
   getSubmissions,
@@ -67,6 +68,8 @@ const getErrorMessage = (error: unknown, fallback: string): string => {
   if (axios.isAxiosError(error)) {
     const detail = error.response?.data?.detail;
     if (typeof detail === 'string' && detail.trim()) return detail;
+    const message = error.response?.data?.error;
+    if (typeof message === 'string' && message.trim()) return message;
     if (typeof error.message === 'string' && error.message.trim()) return error.message;
   }
 
@@ -75,6 +78,31 @@ const getErrorMessage = (error: unknown, fallback: string): string => {
   }
 
   return fallback;
+};
+
+const getDownloadErrorMessage = async (
+  error: unknown,
+  fallback: string
+): Promise<string> => {
+  if (axios.isAxiosError(error)) {
+    const payload = error.response?.data;
+    if (payload instanceof Blob) {
+      try {
+        const text = await payload.text();
+        const parsed = JSON.parse(text) as { detail?: unknown; error?: unknown };
+        if (typeof parsed.detail === 'string' && parsed.detail.trim()) {
+          return parsed.detail;
+        }
+        if (typeof parsed.error === 'string' && parsed.error.trim()) {
+          return parsed.error;
+        }
+      } catch {
+        return fallback;
+      }
+    }
+  }
+
+  return getErrorMessage(error, fallback);
 };
 
 const resolveAssignmentPdfUrl = (value?: string | null): string | null => {
@@ -220,6 +248,7 @@ function AssignmentDetailPageContent() {
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [showUploadZone, setShowUploadZone] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [downloadingSubmissions, setDownloadingSubmissions] = useState(false);
   const [showPdfViewer, setShowPdfViewer] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [toast, setToast] = useState<{ type: 'success' | 'error' | 'info'; message: string } | null>(null);
@@ -613,6 +642,34 @@ function AssignmentDetailPageContent() {
   const handleRunPlagiarism = () => {
     if (!assignmentId || !deadlinePassed) return;
     void router.push(`/assignments/${assignmentId}/plagiarism`);
+  };
+
+  const handleDownloadSubmissions = async () => {
+    if (!assignmentId) return;
+    setDownloadingSubmissions(true);
+
+    try {
+      const { blob, filename } = await downloadSubmissionsZip(assignmentId);
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.setTimeout(() => window.URL.revokeObjectURL(url), 1000);
+    } catch (error: unknown) {
+      const message = await getDownloadErrorMessage(
+        error,
+        'Failed to download submissions.'
+      );
+      setToast({
+        type: 'error',
+        message,
+      });
+    } finally {
+      setDownloadingSubmissions(false);
+    }
   };
 
   if (!router.isReady || loadingAssignment || (loadingRoleData && !initialDataLoaded)) {
@@ -1099,6 +1156,24 @@ function AssignmentDetailPageContent() {
                     <h2 className="text-xl font-bold text-[#0d1b2a]">Submissions ({assignment.submission_count})</h2>
                     <p className="mt-1 text-sm text-slate-500">Review student submissions for this assignment.</p>
                   </div>
+                  {isCreator && (
+                    <button
+                      type="button"
+                      onClick={handleDownloadSubmissions}
+                      disabled={downloadingSubmissions}
+                      className={
+                        'inline-flex items-center gap-2 rounded-xl px-4 py-2 text-xs font-bold transition-colors ' +
+                        (downloadingSubmissions
+                          ? 'cursor-not-allowed bg-slate-200 text-slate-500'
+                          : 'bg-blue-600 text-white hover:bg-blue-700')
+                      }
+                    >
+                      {downloadingSubmissions && (
+                        <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white" />
+                      )}
+                      {downloadingSubmissions ? 'Generating ZIP...' : 'Download all submissions'}
+                    </button>
+                  )}
                 </div>
 
                 <div className="mt-5">
