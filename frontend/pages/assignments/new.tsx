@@ -7,6 +7,7 @@ import Field from "@/components/submissions/Field";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { listSubjects, createAssignment, uploadAssignmentDescriptionPdf } from "@/services/assignments";
 import type { Subject } from "@/services/assignments";
+import Head from "next/head";
 
 type AcademicYear = "1CP" | "2CP" | "1CS" | "2CS" | "3CS";
 const ACADEMIC_YEARS: AcademicYear[] = ["1CP", "2CP", "1CS", "2CS", "3CS"];
