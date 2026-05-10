@@ -658,6 +658,7 @@ function NewSubmissionForm() {
           {/* ── Sidebar Preview ── */}
           <SubmissionPreview
             title={title}
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             language={language as any}
             type={typeLabel}
             courseTag={courseTag}
