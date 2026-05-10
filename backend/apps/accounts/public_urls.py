@@ -5,5 +5,5 @@ from apps.accounts import views
 
 urlpatterns = [
     path('search/', views.profile_search, name='profile-search'),
-    path('<path:school_id>/', views.profile_public, name='profile-public'),
+    path('<path:public_id>/', views.profile_public, name='profile-public'),
 ]

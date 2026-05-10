@@ -1,4 +1,9 @@
-import { tagColor } from "@/utils/forum";
+function tagChip(tag: string): string {
+  const palette = ["ts-tag-navy", "ts-tag-ink", "ts-tag-mid"];
+  let hash = 0;
+  for (let i = 0; i < tag.length; i++) hash = tag.charCodeAt(i) + ((hash << 5) - hash);
+  return palette[Math.abs(hash) % palette.length];
+}
 
 interface TagSidebarProps {
   popularTags: string[];
@@ -6,7 +11,6 @@ interface TagSidebarProps {
   loading: boolean;
   onTagClick: (tag: string) => void;
   onClear: () => void;
-  // Mobile drawer
   isOpen: boolean;
   onClose: () => void;
 }
@@ -22,120 +26,229 @@ export function TagSidebar({
 }: TagSidebarProps) {
   return (
     <>
-      {/* ── Mobile drawer backdrop ── */}
+      <style>{`
+        /* ── Shared tag styles ── */
+        .ts-tag {
+          font-family: var(--font-mono);
+          font-size: 10px;
+          font-weight: 700;
+          letter-spacing: 0.1em;
+          text-transform: uppercase;
+          padding: 4px 10px;
+          border: 1px solid;
+          background: none;
+          cursor: pointer;
+          transition: opacity 0.12s, background 0.12s, color 0.12s;
+        }
+        .ts-tag:hover { opacity: 0.65; }
+        .ts-tag-active {
+          background: var(--navy) !important;
+          color: var(--paper) !important;
+          border-color: var(--navy) !important;
+          opacity: 1 !important;
+        }
+        .ts-tag-navy { color: var(--navy); border-color: var(--navy); }
+        .ts-tag-ink  { color: var(--ink);  border-color: var(--ink);  }
+        .ts-tag-mid  { color: #444;        border-color: #aaa;        }
+
+        .ts-clear-btn {
+          font-family: var(--font-mono);
+          font-size: 10px;
+          font-weight: 700;
+          letter-spacing: 0.1em;
+          text-transform: uppercase;
+          padding: 4px 10px;
+          border: 1px solid #cc2200;
+          background: none;
+          color: #cc2200;
+          cursor: pointer;
+          transition: background 0.12s, color 0.12s;
+        }
+        .ts-clear-btn:hover { background: #cc2200; color: var(--paper); }
+
+        /* ── Desktop sidebar ── */
+        .ts-desktop {
+          display: none;
+          flex-direction: column;
+          gap: 0;
+          width: 200px;
+          flex-shrink: 0;
+          position: sticky;
+          top: 24px;
+        }
+        @media (min-width: 1024px) { .ts-desktop { display: flex; } }
+
+        .ts-desktop-card {
+          background: var(--paper);
+          border: var(--rule);
+          border-top: 4px solid var(--navy);
+          padding: 20px 18px;
+          position: relative;
+        }
+        .ts-desktop-card::after {
+          content: '';
+          position: absolute;
+          bottom: -1px; right: -1px;
+          width: 16px; height: 16px;
+          border-bottom: 3px solid var(--navy);
+          border-right: 3px solid var(--navy);
+        }
+
+        .ts-section-label {
+          font-family: var(--font-mono);
+          font-size: 9px;
+          letter-spacing: 0.22em;
+          text-transform: uppercase;
+          color: var(--navy);
+          font-weight: 700;
+          margin-bottom: 14px;
+          display: flex;
+          align-items: center;
+          gap: 8px;
+        }
+        .ts-section-label::after {
+          content: '';
+          flex: 1;
+          height: 1px;
+          background: var(--navy);
+          opacity: 0.25;
+        }
+
+        .ts-tag-list {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 6px;
+        }
+        .ts-empty {
+          font-family: var(--font-mono);
+          font-size: 10px;
+          letter-spacing: 0.08em;
+          color: #aaa;
+          text-transform: uppercase;
+        }
+
+        /* ── Mobile backdrop ── */
+        .ts-backdrop {
+          position: fixed;
+          inset: 0;
+          z-index: 30;
+          background: rgba(0,0,0,0.45);
+        }
+        @media (min-width: 1024px) { .ts-backdrop { display: none !important; } }
+
+        /* ── Mobile drawer ── */
+        .ts-drawer {
+          position: fixed;
+          top: 0; left: 0;
+          z-index: 40;
+          height: 100%;
+          width: 280px;
+          background: var(--paper);
+          border-right: var(--rule);
+          transform: translateX(-100%);
+          transition: transform 0.28s ease-in-out;
+          display: flex;
+          flex-direction: column;
+        }
+        .ts-drawer.ts-drawer-open { transform: translateX(0); }
+        @media (min-width: 1024px) { .ts-drawer { display: none !important; } }
+
+        .ts-drawer-header {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          padding: 18px 20px;
+          border-bottom: var(--rule);
+        }
+        .ts-drawer-title {
+          font-family: var(--font-mono);
+          font-size: 10px;
+          font-weight: 700;
+          letter-spacing: 0.2em;
+          text-transform: uppercase;
+          color: var(--navy);
+        }
+        .ts-drawer-close {
+          background: none;
+          border: none;
+          cursor: pointer;
+          color: #888;
+          padding: 4px;
+          transition: color 0.12s;
+          display: flex;
+        }
+        .ts-drawer-close:hover { color: var(--ink); }
+
+        .ts-drawer-body {
+          padding: 20px;
+          display: flex;
+          flex-wrap: wrap;
+          gap: 8px;
+          overflow-y: auto;
+        }
+      `}</style>
+
+      {/* Mobile backdrop */}
       {isOpen && (
-        <div
-          className="fixed inset-0 z-30 bg-black/30 lg:hidden"
-          onClick={onClose}
-        />
+        <div className="ts-backdrop" onClick={onClose} />
       )}
 
-      {/* ── Mobile drawer ── */}
-      <aside
-        className={`
-          fixed top-0 left-0 z-40 h-full w-72 bg-white shadow-2xl
-          transform transition-transform duration-300 ease-in-out lg:hidden
-          ${isOpen ? "translate-x-0" : "-translate-x-full"}
-        `}
-      >
-        <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100">
-          <span className="text-sm font-bold text-slate-700 uppercase tracking-widest">
-            Filter by Tag
-          </span>
-          <button
-            onClick={onClose}
-            className="text-slate-400 hover:text-slate-600 transition-colors"
-          >
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      {/* Mobile drawer */}
+      <aside className={`ts-drawer ${isOpen ? "ts-drawer-open" : ""}`}>
+        <div className="ts-drawer-header">
+          <span className="ts-drawer-title">Filter by Tag</span>
+          <button onClick={onClose} className="ts-drawer-close">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
             </svg>
           </button>
         </div>
-
-        <TagList
-          popularTags={popularTags}
-          activeTag={activeTag}
-          onTagClick={(tag) => { onTagClick(tag); onClose(); }}
-          onClear={() => { onClear(); onClose(); }}
-          className="p-5 flex flex-wrap gap-2 overflow-y-auto"
-          clearLabel="✕ Clear filter"
-          clearClassName="text-xs px-3 py-1.5 rounded-full border font-medium bg-red-50 text-red-500 border-red-200"
-          tagClassName="text-xs px-3 py-1.5 rounded-full border font-medium transition-all"
-        />
+        <div className="ts-drawer-body">
+          {activeTag && (
+            <button className="ts-clear-btn" onClick={() => { onClear(); onClose(); }}>
+              ✕ Clear filter
+            </button>
+          )}
+          {popularTags.length === 0 && (
+            <span className="ts-empty">No tags yet.</span>
+          )}
+          {popularTags.map((tag) => (
+            <button
+              key={tag}
+              onClick={() => { onTagClick(tag); onClose(); }}
+              className={`ts-tag ${activeTag === tag ? "ts-tag-active" : tagChip(tag)}`}
+            >
+              {tag}
+            </button>
+          ))}
+        </div>
       </aside>
 
-      {/* ── Desktop sidebar ── */}
-      <aside className="hidden lg:flex flex-col gap-4 w-52 xl:w-56 shrink-0 sticky top-6">
-        <div className="bg-white rounded-2xl border border-slate-200 p-4">
-          <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3">
-            Filter by Tag
-          </p>
+      {/* Desktop sidebar */}
+      <aside className="ts-desktop">
+        <div className="ts-desktop-card">
+          <p className="ts-section-label">Tags</p>
           {popularTags.length === 0 && !loading && (
-            <p className="text-xs text-slate-400">No tags yet.</p>
+            <span className="ts-empty">No tags yet.</span>
           )}
-          <TagList
-            popularTags={popularTags}
-            activeTag={activeTag}
-            onTagClick={onTagClick}
-            onClear={onClear}
-            className="flex flex-wrap gap-1.5"
-            clearLabel="✕ Clear"
-            clearClassName="text-xs px-2.5 py-1 rounded-full border font-medium bg-red-50 text-red-500 border-red-200 hover:bg-red-100 transition-colors"
-            tagClassName="text-xs px-2.5 py-1 rounded-full border font-medium transition-all"
-          />
+          <div className="ts-tag-list">
+            {activeTag && (
+              <button className="ts-clear-btn" onClick={onClear}>
+                ✕ Clear
+              </button>
+            )}
+            {popularTags.map((tag) => (
+              <button
+                key={tag}
+                onClick={() => onTagClick(tag)}
+                className={`ts-tag ${activeTag === tag ? "ts-tag-active" : tagChip(tag)}`}
+              >
+                {tag}
+              </button>
+            ))}
+          </div>
         </div>
       </aside>
     </>
-  );
-}
-
-// ── Internal shared tag list ─────────────────────────────────────────────────
-
-interface TagListProps {
-  popularTags: string[];
-  activeTag: string | undefined;
-  onTagClick: (tag: string) => void;
-  onClear: () => void;
-  className: string;
-  clearLabel: string;
-  clearClassName: string;
-  tagClassName: string;
-}
-
-function TagList({
-  popularTags,
-  activeTag,
-  onTagClick,
-  onClear,
-  className,
-  clearLabel,
-  clearClassName,
-  tagClassName,
-}: TagListProps) {
-  return (
-    <div className={className}>
-      {activeTag && (
-        <button onClick={onClear} className={clearClassName}>
-          {clearLabel}
-        </button>
-      )}
-      {popularTags.length === 0 && (
-        <p className="text-sm text-slate-400">No tags yet.</p>
-      )}
-      {popularTags.map((tag) => (
-        <button
-          key={tag}
-          onClick={() => onTagClick(tag)}
-          className={`
-            ${tagClassName}
-            ${activeTag === tag
-              ? "bg-blue-600 text-white border-blue-600"
-              : `${tagColor(tag)} hover:opacity-80`}
-          `}
-        >
-          {tag}
-        </button>
-      ))}
-    </div>
   );
 }

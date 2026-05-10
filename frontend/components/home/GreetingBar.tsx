@@ -1,61 +1,98 @@
 import Link from "next/link";
 
 interface GreetingBarProps {
-  firstName: string;
   role: "student" | "professor";
 }
 
-function getGreeting(): string {
-  const hour = new Date().getHours();
-  if (hour < 12) return "Good morning";
-  if (hour < 17) return "Good afternoon";
-  return "Good evening";
-}
-
-export default function GreetingBar({ firstName, role }: GreetingBarProps) {
-  const greeting = getGreeting();
+export default function GreetingBar({ role }: GreetingBarProps) {
   const isProfessor = role === "professor";
 
   return (
-    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
-      {/* Left: greeting + badge */}
-      <div className="flex flex-wrap items-center gap-3">
-        <h1 className="text-2xl sm:text-3xl font-extrabold text-[#0d1b2a] tracking-tight">
-          {greeting},{" "}
-          <span className="bg-gradient-to-r from-[#1d6ef5] to-[#00c6ff] bg-clip-text text-transparent">
-            {firstName}
-          </span>
-          !
-        </h1>
-        {isProfessor ? (
-          <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-purple-100 text-purple-700 border border-purple-200 tracking-wide uppercase">
-            Professor
-          </span>
-        ) : (
-          <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-blue-100 text-blue-700 border border-blue-200 tracking-wide uppercase">
-            Student
-          </span>
-        )}
-      </div>
+    <div
+      style={{
+        display: "flex",
+        justifyContent: "flex-end",
+        alignItems: "center",
+        gap: "12px",
+        flexWrap: "wrap",
+      }}
+    >
+      <Link
+        href="/submissions/new"
+        style={{
+          display: "inline-flex",
+          alignItems: "center",
+          gap: "8px",
+          padding: "10px 20px",
+          background: "var(--navy)",
+          color: "#ffffff",
+          fontSize: "11px",
+          fontWeight: 700,
+          fontFamily: "var(--font-mono)",
+          letterSpacing: "0.1em",
+          textTransform: "uppercase",
+          textDecoration: "none",
+          border: "1.5px solid var(--navy)",
+          transition: "background 0.15s, box-shadow 0.12s, transform 0.1s",
+          whiteSpace: "nowrap",
+        }}
+        onMouseEnter={(e) => {
+          const el = e.currentTarget as HTMLElement;
+          el.style.background = "var(--ink)";
+          el.style.borderColor = "var(--ink)";
+          el.style.boxShadow = "4px 4px 0 var(--navy)";
+          el.style.transform = "translate(-2px, -2px)";
+        }}
+        onMouseLeave={(e) => {
+          const el = e.currentTarget as HTMLElement;
+          el.style.background = "var(--navy)";
+          el.style.borderColor = "var(--navy)";
+          el.style.boxShadow = "none";
+          el.style.transform = "translate(0, 0)";
+        }}
+      >
+        + New Submission
+      </Link>
 
-      {/* Right: action buttons */}
-      <div className="flex flex-wrap items-center gap-3">
+      {isProfessor && (
         <Link
-          href="/submissions/new"
-          className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-[#1d6ef5] to-[#1558d4] text-white text-sm font-bold shadow-[0_4px_14px_rgba(29,110,245,0.35)] hover:opacity-90 transition-opacity whitespace-nowrap"
+          href="/assignments/new"
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            gap: "8px",
+            padding: "10px 20px",
+            background: "transparent",
+            color: "var(--ink)",
+            fontSize: "11px",
+            fontWeight: 700,
+            fontFamily: "var(--font-mono)",
+            letterSpacing: "0.1em",
+            textTransform: "uppercase",
+            textDecoration: "none",
+            border: "1.5px solid var(--ink)",
+            transition:
+              "background 0.15s, color 0.15s, box-shadow 0.12s, transform 0.1s",
+            whiteSpace: "nowrap",
+          }}
+          onMouseEnter={(e) => {
+            const el = e.currentTarget as HTMLElement;
+            el.style.background = "var(--ink)";
+            el.style.color = "#ffffff";
+            el.style.boxShadow = "4px 4px 0 #aaa";
+            el.style.transform = "translate(-2px, -2px)";
+          }}
+          onMouseLeave={(e) => {
+            const el = e.currentTarget as HTMLElement;
+            el.style.background = "transparent";
+            el.style.color = "var(--ink)";
+            el.style.boxShadow = "none";
+            el.style.transform = "translate(0, 0)";
+          }}
         >
-          <span className="text-base leading-none">+</span> New Submission
+          + Create Assignment
         </Link>
-
-        {isProfessor && (
-          <Link
-            href="/assignments/new"
-            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white border border-[#d1d9e6] text-[#374151] text-sm font-bold hover:bg-[#f8faff] transition-colors whitespace-nowrap shadow-sm"
-          >
-            <span className="text-base leading-none">+</span> Create Assignment
-          </Link>
-        )}
-      </div>
+      )}
     </div>
   );
 }

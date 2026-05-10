@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import Head from "next/head";
 import Link from "next/link";
 import { useRouter } from "next/router";
 import {
@@ -81,21 +82,39 @@ function QuestionDetailContent() {
 
   const handleQuestionVote = async (v: 1 | -1) => {
     if (questionId === null) return;
+    // Do not allow the question author to vote on their own question
+    // (the VoteButtons are hidden for them, so this is a safety guard).
+    if (question?.author_email === currentUserEmail) return;
     setError("");
+
+    // Optimistic update: clicking active direction toggles off, clicking neutral sets vote.
+    // Switching direction directly is blocked by VoteButtons, guard here too.
+    setQuestion((prev) => {
+      if (!prev) return prev;
+      const prevVote = prev.user_vote ?? null;
+      if (prevVote !== null && prevVote !== v) return prev; // blocked
+      const nextVote: 1 | -1 | null = prevVote === v ? null : v;
+      const delta = (nextVote ?? 0) - (prevVote ?? 0);
+      return { ...prev, vote_score: prev.vote_score + delta, user_vote: nextVote };
+    });
 
     try {
       const q = await voteQuestion(questionId, v);
       if (q && typeof q === "object" && "vote_score" in q) {
-        setQuestion((prev) => prev ? { ...prev, vote_score: q.vote_score } : null);
+        setQuestion((prev) => prev ? {
+          ...prev,
+          vote_score: q.vote_score,
+          ...("user_vote" in q ? { user_vote: (q as { user_vote?: 1 | -1 | null }).user_vote ?? v } : {}),
+        } : null);
       }
     } catch (err) {
+      // Roll back optimistic update
       try {
         const refreshedQuestion = await getQuestion(questionId);
         setQuestion(refreshedQuestion);
       } catch {
-        // If the refresh fails too, keep the existing question state and surface the vote error.
+        // If the refresh fails too, keep the existing state and surface the error.
       }
-
       setError("Failed to submit vote.");
       throw err;
     }
@@ -121,6 +140,9 @@ function QuestionDetailContent() {
 
   return (
     <>
+      <Head>
+        <title>{question ? `${question.title} — ESICodeHub` : 'Q&A Forum — ESICodeHub'}</title>
+      </Head>
       <Header activePage="Q&A Forums" />
 
       <div className="min-h-screen bg-[#eef0f8]">

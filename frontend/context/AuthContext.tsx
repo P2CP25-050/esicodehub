@@ -8,6 +8,7 @@ import {
 } from 'react';
 import { useRouter } from 'next/router';
 import { refreshToken, getMe, logout as logoutApi } from '@/services/auth';
+import { getProfile } from '@/services/profile/api';
 import { saveTokens, clearTokens } from '@/lib/tokens';
 
 export interface AuthUser {
@@ -15,6 +16,7 @@ export interface AuthUser {
   first_name: string;
   last_name: string;
   role: 'student' | 'professor';
+  school_id?: string;
 }
 
 interface AuthContextValue {
@@ -38,9 +40,22 @@ function getAuthInitPromise(): Promise<AuthUser | null> {
         saveTokens({ access: response.data.access });
         return getMe();
       })
-      .then((profile) => profile.data as AuthUser)
+      .then(async (profile) => {
+        const baseUser = profile.data as AuthUser;
+        try {
+          const fullProfile = await getProfile();
+          return {
+            ...baseUser,
+            school_id: fullProfile.school_id || undefined,
+          };
+        } catch {
+          return baseUser;
+        }
+      })
       .catch(() => {
         clearTokens();
+        // FIX: Reset so a subsequent login can re-trigger a fresh fetch
+        _authInitPromise = null;
         return null;
       });
   }
@@ -84,9 +99,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } catch {
       // ignore server errors — local cleanup must always proceed
     } finally {
-      clearTokens();
-      setUser(null);
+      // Reset singleton so the next login triggers a fresh auth check
+      _authInitPromise = null;
+      // Navigate BEFORE clearing state so ProtectedRoute doesn't see
+      // isAuthenticated=false while still on a protected page and race us.
       router.push('/login');
+      clearTokens();
+      if (typeof window !== 'undefined') {
+        window.localStorage.removeItem('profile_avatar_url');
+      }
+      setUser(null);
     }
   }, [router]);
 

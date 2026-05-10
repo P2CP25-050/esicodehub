@@ -6,6 +6,7 @@ export interface Answer {
   parent: number | null;
   author_name: string;
   author_email: string;
+  author_public_id: string;
   body: string;
   code_snippet: string;
   code_language: string;
@@ -23,10 +24,17 @@ export interface QuestionListItem {
   title: string;
   tags: string[];
   author_name: string;
+  author_public_id: string;
+  author_avatar?: string | null;
+  author_username?: string;
+  author_id?: number;
+  body?: string;
+  description?: string;
   answer_count: number;
   vote_score: number;
   has_accepted_answer: boolean;
   view_count: number;
+  user_vote?: 1 | -1 | null;
   created_at: string;
 }
 
@@ -36,6 +44,7 @@ export interface QuestionDetail extends QuestionListItem {
   code_language: string;
   is_closed: boolean;
   author_email: string;
+  user_vote?: 1 | -1 | null;
   can_accept_answer: boolean;
   answers: Answer[];
 }

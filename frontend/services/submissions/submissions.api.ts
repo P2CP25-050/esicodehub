@@ -3,6 +3,8 @@ import type {
   PersonalSubmission,
   PersonalSubmissionFile,
   PersonalSubmissionCreatePayload,
+  SubmissionComment,
+  SubmissionCommentCreatePayload,
   SubmissionListParams,
   PaginatedResponse,
 } from './submissions.types';
@@ -27,16 +29,16 @@ export const listSubmissions = async (
   const requestParams = params
     ? {
         language: params.language,
-        // Backend list endpoint expects `type` and `course` query params.
-        type: params.type ,
-        course: params.course ,
+        type: params.type,
+        course: params.course,
         search: params.search,
         page: params.page,
+        visibility: params.visibility,
+        mine: params.mine,
       }
     : undefined;
-
   const res = await apiClient.get<PaginatedResponse<PersonalSubmission>>(
-    '/personal-submissions/',
+    '/submissions/',
     { params: requestParams }
   );
   return res.data;
@@ -178,6 +180,54 @@ export const getFileContent = async (
 ): Promise<string> => {
   const res = await apiClient.get<string>(
     `/personal-submissions/${submissionId}/files/${fileId}/content/`
+  );
+  return res.data;
+};
+
+/**
+ * Lists all inline comments for a submission.
+ * Backend: GET /api/submissions/{id}/comments/
+ */
+export const listSubmissionComments = async (
+  submissionId: number
+): Promise<SubmissionComment[]> => {
+  const res = await apiClient.get<SubmissionComment[]>(
+    `/submissions/${submissionId}/comments/`
+  );
+  return res.data;
+};
+
+/**
+ * Creates a new inline comment on a submission.
+ * Backend: POST /api/submissions/{id}/comments/
+ */
+export const createSubmissionComment = async (
+  submissionId: number,
+  payload: SubmissionCommentCreatePayload
+): Promise<SubmissionComment> => {
+  const res = await apiClient.post<SubmissionComment>(
+    `/submissions/${submissionId}/comments/`,
+    payload
+  );
+  return res.data;
+};
+
+/**
+ * Deletes a comment authored by the current user.
+ * Backend: DELETE /api/submissions/{id}/comments/{cid}/
+ */
+export const deleteSubmissionComment = async (
+  submissionId: number,
+  commentId: number
+): Promise<void> => {
+  await apiClient.delete(`/submissions/${submissionId}/comments/${commentId}/`);
+};
+
+
+export const downloadSubmission = async (id: number): Promise<Blob> => {
+  const res = await apiClient.get(
+    `/personal-submissions/${id}/download/`,
+    { responseType: 'blob' }
   );
   return res.data;
 };

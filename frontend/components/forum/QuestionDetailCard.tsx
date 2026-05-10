@@ -60,7 +60,12 @@ export function QuestionDetailCard({
         <div className="flex gap-4 items-start">
           {/* Votes */}
           <div className="shrink-0 pt-1">
-            <VoteButtons score={question.vote_score} userVote={null} onVote={onVote} />
+            <VoteButtons
+              score={question.vote_score}
+              userVote={question.user_vote ?? null}
+              onVote={onVote}
+              hidden={isOwn}
+            />
           </div>
 
           <div className="flex-1 min-w-0">
@@ -89,12 +94,18 @@ export function QuestionDetailCard({
             </div>
 
             {/* Author */}
-            <div className="flex items-center gap-2 mb-4">
-              <div className="w-7 h-7 rounded-full bg-[#0d1b4b] flex items-center justify-center text-white text-[10px] font-black">
-                {initials(question.author_name)}
-              </div>
-              <span className="text-sm font-bold text-[#0d1b4b]">{question.author_name}</span>
-            </div>
+            <Link
+	      href={`/profile/${question.author_public_id}`}
+	      onClick={(e) => e.stopPropagation()}
+	      className="flex items-center gap-2 mb-4 w-fit group"
+	    >
+	   <div className="w-7 h-7 rounded-full bg-[#0d1b4b] flex items-center justify-center text-white text-[10px] font-black border-2 border-transparent group-hover:border-blue-300 transition-all">
+	     {initials(question.author_name)}
+	   </div>
+	   <span className="text-sm font-bold text-[#0d1b4b] group-hover:underline">
+	     {question.author_name}
+	     </span>
+	   </Link> 
 
             {/* Body */}
             <p className="text-sm text-slate-700 leading-relaxed whitespace-pre-wrap mb-4">
