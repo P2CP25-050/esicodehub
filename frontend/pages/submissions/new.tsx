@@ -595,10 +595,10 @@ function NewSubmissionForm() {
             {/* ── Section: Context ── */}
             <p className="ns-section-label">02 · Context</p>
 
-            <Field label="Course Tag" hint="Optional — e.g. AI101, DS201">
+            <Field label="Course Tag" hint="Optional — e.g. ALSDD, ARCHI">
               <input
                 className="ns-input"
-                placeholder="e.g. CS301"
+                placeholder="e.g. ALSDD, ARCHI"
                 value={courseTag}
                 onChange={(e: ChangeEvent<HTMLInputElement>) => setCourseTag(e.target.value)}
                 disabled={isSubmitting}

@@ -247,8 +247,8 @@ function MetadataTab({ submission, onSaved }: { submission: PersonalSubmission; 
             {SUBMISSION_TYPES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
           </select>
         </Field>
-        <Field label="Course tag" hint="Optional — e.g. AI101, DS201">
-          <input className={inputCls} value={form.course_tag} onChange={(e) => set("course_tag", e.target.value)} placeholder="e.g. CS301" />
+        <Field label="Course tag" hint="Optional — e.g. ALSDD, ARCHI">
+          <input className={inputCls} value={form.course_tag} onChange={(e) => set("course_tag", e.target.value)} placeholder="e.g. ALSDD, ARCHI" />
         </Field>
      <Field label="Visibility">
   <VisibilityToggle

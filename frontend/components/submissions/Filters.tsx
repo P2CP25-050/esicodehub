@@ -185,7 +185,7 @@ export default function Filters({
               type="text"
               value={courseTag}
               onChange={(e) => onCourseTagChange(e.target.value)}
-              placeholder="e.g. AI101, DS201"
+              placeholder="e.g. ALSDD, ARCHI"
               className={`
                 pl-9 pr-4 py-2.5 w-44 text-sm font-medium rounded-md
                 border outline-none transition-all duration-150

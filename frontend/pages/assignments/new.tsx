@@ -1118,7 +1118,7 @@ function NewAssignmentForm() {
                     </svg>
                   </div>
                   <p className="na-files-drop-title">Drag &amp; drop files or a folder here</p>
-                  <p className="na-files-drop-subtitle">TEXT / CODE FILES ONLY · MAX 50 MB TOTAL</p>
+                  <p className="na-files-drop-subtitle">PDF FILES ONLY · MAX 50 MB TOTAL</p>
                   <div className="na-files-btn-row">
                     <button
                       type="button"
