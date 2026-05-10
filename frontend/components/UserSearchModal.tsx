@@ -192,8 +192,8 @@ export default function UserSearchModal({ isOpen, onClose }: UserSearchModalProp
 
   const navigate = useCallback((user: SearchUser) => {
     router.push({
-      pathname: '/profile/[...public_id]',
-      query: { public_id: user.public_id.split('/') },
+      pathname: '/profile/[public_id]',
+      query: { public_id: user.public_id },
     });
     onClose();
   }, [router, onClose]);

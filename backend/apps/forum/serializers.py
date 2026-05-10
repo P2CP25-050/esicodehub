@@ -292,7 +292,6 @@ class QuestionDetailSerializer(serializers.ModelSerializer):
             'tags',
             'author_name',
             'author_email',
-            'author_public_id',
             'answer_count',
             'vote_score',
             'has_accepted_answer',
