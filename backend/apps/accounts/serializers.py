@@ -96,6 +96,7 @@ class UserProfileSerializer(serializers.ModelSerializer):
             'email',
             'role',
             'school_id',
+            'public_id',
             'created_at',
             'profile',
         ]
@@ -142,6 +143,7 @@ class PublicProfileSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = [
+            'public_id',
             'school_id',
             'first_name',
             'last_name',
@@ -224,11 +226,17 @@ class PublicProfileSerializer(serializers.ModelSerializer):
 
 
 class ProfileSearchResultSerializer(serializers.Serializer):
-    school_id = serializers.CharField()
+    public_id = serializers.UUIDField()
+    school_id = serializers.SerializerMethodField()
     name = serializers.SerializerMethodField()
     role = serializers.CharField()
     avatar = serializers.SerializerMethodField()
     study_year = serializers.SerializerMethodField()
+
+    def get_school_id(self, obj):
+        if obj.role == 'professor':
+            return None
+        return obj.school_id
 
     def get_name(self, obj):
         return f'{obj.first_name} {obj.last_name}'.strip()

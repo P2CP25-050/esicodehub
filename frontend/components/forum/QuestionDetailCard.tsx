@@ -95,7 +95,7 @@ export function QuestionDetailCard({
 
             {/* Author */}
             <Link
-	      href={`/profile/${question.author_school_id}`}
+	      href={`/profile/${question.author_public_id}`}
 	      onClick={(e) => e.stopPropagation()}
 	      className="flex items-center gap-2 mb-4 w-fit group"
 	    >

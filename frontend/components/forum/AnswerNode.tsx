@@ -87,7 +87,7 @@ export function AnswerNode({
             {/* Author + time */}
             <div className="flex items-center gap-2 mb-2 flex-wrap">
 	    <Link
-	      href={`/profile/${answer.author_school_id}`}
+	      href={`/profile/${answer.author_public_id}`}
 	      onClick={(e) => e.stopPropagation()}
 	      className="flex items-center gap-2 group"
 	    >

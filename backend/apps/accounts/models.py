@@ -1,4 +1,5 @@
 import secrets
+import uuid
 from datetime import timedelta
 from django.db.models.signals import post_save
 from django.dispatch import receiver
@@ -40,6 +41,13 @@ class User(AbstractUser):
     is_active = models.BooleanField(default=False)
     is_verified = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
+
+    public_id = models.UUIDField(
+            default=uuid.uuid4,
+            editable=False,
+            unique=True,
+            db_index=True,
+    )
 
     objects = UserManager()
 
