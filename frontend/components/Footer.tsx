@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import apiClient from '@/lib/axios';
+import { isAxiosError } from 'axios';
 
 const PROBLEM_CATEGORIES = [
   { value: 'bug', label: 'Bug / something is broken' },
@@ -43,14 +44,18 @@ export default function Footer() {
         page_url: typeof window !== 'undefined' ? window.location.pathname : '',
       });
       setDone(true);
-    } catch (err: any) {
-      const data = err?.response?.data;
+    } catch (err: unkown) {
       let msg = 'Failed to submit report. Please try again.';
-      if (data) {
-        if (typeof data.detail === 'string') msg = data.detail;
-        else if (typeof data === 'string') msg = data;
-        else if (data?.non_field_errors && Array.isArray(data.non_field_errors)) msg = String(data.non_field_errors[0]);
+
+      if (isAxiosError(err)) {
+        const data = err.response?.data;
+        if (data) {
+          if (typeof data.detail === 'string') msg = data.detail;
+          else if (typeof data === 'string') msg = data;
+          else if (data?.non_field_errors && Array.isArray(data.non_field_errors)) msg = String(data.non_field_errors[0]);
+        }
       }
+
       setError(msg);
     } finally {
       setSubmitting(false);
@@ -81,7 +86,7 @@ export default function Footer() {
         <div ref={overlayRef} className="fh-backdrop" onClick={(e) => { if (e.target === overlayRef.current) setShow(false); }}>
           <div className="fh-panel" role="dialog" aria-modal="true" aria-label="Report an issue">
             <h3 style={{ margin: 0, fontSize: 18, fontWeight: 800 }}>Report an issue</h3>
-            <p style={{ margin: '6px 0 12px', color: '#666', fontSize: 13 }}>Tell us what went wrong on this page — we'll review it.</p>
+            <p style={{ margin: '6px 0 12px', color: '#666', fontSize: 13 }}>Tell us what went wrong on this page — we&apos;ll review it.</p>
 
             {done ? (
               <div>

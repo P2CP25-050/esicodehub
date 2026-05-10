@@ -260,7 +260,7 @@ export default function UserSearchModal({ isOpen, onClose }: UserSearchModalProp
           <div style={ms.resultsList} role="listbox">
             {results.map((user, idx) => (
               <ResultRow
-                key={user.id}
+                key={user.public_id}
                 user={user}
                 highlighted={idx === highlightIdx}
                 onSelect={() => navigate(user)}
