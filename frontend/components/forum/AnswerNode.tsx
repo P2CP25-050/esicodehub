@@ -4,6 +4,7 @@ import { VoteButtons } from "@/components/forum/VoteButtons";
 import { CodeBlock } from "@/components/forum/CodeBlock";
 import { InlineAnswerForm } from "@/components/forum/InlineAnswerForm";
 import { timeAgo } from "@/utils/time";
+import Link from "next/link";
 
 function initials(name: string): string {
   return name.split(" ").map((w) => w[0]).join("").toUpperCase().slice(0, 2);
@@ -77,6 +78,7 @@ export function AnswerNode({
               score={answer.vote_score}
               userVote={answer.user_vote}
               onVote={(v) => onVote(answer.id, v)}
+              hidden={isOwn}
             />
           </div>
 
@@ -84,13 +86,21 @@ export function AnswerNode({
           <div className="flex-1 min-w-0">
             {/* Author + time */}
             <div className="flex items-center gap-2 mb-2 flex-wrap">
-              <div className="w-7 h-7 rounded-full bg-[#0d1b4b] flex items-center justify-center text-white text-[10px] font-black shrink-0">
-                {initials(answer.author_name)}
-              </div>
-              <span className="text-sm font-bold text-[#0d1b4b]">{answer.author_name}</span>
-              <span className="text-slate-300 text-xs">·</span>
-              <span className="text-xs text-slate-400">{timeAgo(answer.created_at)}</span>
-            </div>
+	    <Link
+	      href={`/profile/${answer.author_public_id}`}
+	      onClick={(e) => e.stopPropagation()}
+	      className="flex items-center gap-2 group"
+	    >
+	      <div className="w-7 h-7 rounded-full bg-[#0d1b4b] flex items-center justify-center text-white text-[10px] font-black shrink-0 border-2 border-transparent group-hover:border-blue-300 transition-all">
+	        {initials(answer.author_name)}
+	      </div>
+	      <span className="text-sm font-bold text-[#0d1b4b] group-hover:underline">
+	        {answer.author_name}
+	      </span>
+	    </Link>
+	    <span className="text-slate-300 text-xs">·</span>
+	    <span className="text-xs text-slate-400">{timeAgo(answer.created_at)}</span>
+	  </div>
 
             {/* Body */}
             <p className="text-sm text-slate-700 leading-relaxed whitespace-pre-wrap mb-2">

@@ -12,6 +12,24 @@ import type {
   Subject,
 } from './assignments.types';
 
+export interface AssignmentDescriptionPdfUploadResponse {
+  url: string;
+  description_pdf?: string;
+}
+
+const getPdfUrlFromUploadResponse = (
+  data: AssignmentDescriptionPdfUploadResponse | Record<string, unknown>
+): string => {
+  if (typeof data.url === 'string' && data.url.trim()) return data.url;
+
+  const descriptionPdf = (data as { description_pdf?: unknown }).description_pdf;
+  if (typeof descriptionPdf === 'string' && descriptionPdf.trim()) {
+    return descriptionPdf;
+  }
+
+  throw new Error('Upload succeeded but no PDF URL was returned by the server.');
+};
+
 export const listAssignments = async (
   params?: AssignmentListParams
 ): Promise<PaginatedResponse<Assignment>> => {
@@ -93,6 +111,45 @@ export const getSubmissions = async (
   return res.data;
 };
 
+const getFilenameFromContentDisposition = (value?: string): string | null => {
+  if (!value) return null;
+
+  const utfMatch = value.match(/filename\*=UTF-8''([^;]+)/i);
+  if (utfMatch && utfMatch[1]) {
+    try {
+      return decodeURIComponent(utfMatch[1]);
+    } catch {
+      return utfMatch[1];
+    }
+  }
+
+  const quotedMatch = value.match(/filename="([^"]+)"/i);
+  if (quotedMatch && quotedMatch[1]) return quotedMatch[1];
+
+  const plainMatch = value.match(/filename=([^;]+)/i);
+  if (plainMatch && plainMatch[1]) return plainMatch[1].trim();
+
+  return null;
+};
+
+export const downloadSubmissionsZip = async (
+  assignmentId: number
+): Promise<{ blob: Blob; filename: string }> => {
+  const res = await apiClient.get<Blob>(
+    `/assignments/${assignmentId}/download-submissions/`,
+    {
+      responseType: 'blob',
+    }
+  );
+
+  const contentDisposition = res.headers['content-disposition'];
+  const fallbackName = `assignment-${assignmentId}-submissions.zip`;
+  const filename =
+    getFilenameFromContentDisposition(contentDisposition) || fallbackName;
+
+  return { blob: res.data, filename };
+};
+
 export const getSubmission = async (
   assignmentId: number,
   submissionId: number
@@ -142,4 +199,22 @@ export const getReviews = async (
 export const listSubjects = async (): Promise<Subject[]> => {
   const res = await apiClient.get<Subject[]>('/subjects/');
   return res.data;
+};
+
+export const uploadAssignmentDescriptionPdf = async (
+  id: number,
+  file: File
+): Promise<AssignmentDescriptionPdfUploadResponse> => {
+  const formData = new FormData();
+  formData.append('file', file);
+
+  const res = await apiClient.post<AssignmentDescriptionPdfUploadResponse>(
+    `/assignments/${id}/upload-description/`,
+    formData
+  );
+
+  return {
+    ...res.data,
+    url: getPdfUrlFromUploadResponse(res.data),
+  };
 };

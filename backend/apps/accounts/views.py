@@ -371,16 +371,17 @@ def _build_public_recent_activity(user):
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
-def profile_public(request, school_id):
-    """Return a user's public profile by school_id."""
-    user = get_object_or_404(User.objects.select_related('profile'), school_id=school_id)
-
+def profile_public(request, public_id):
+    """Return a user's public profile by public_id (UUID)."""
+    user = get_object_or_404(
+        User.objects.select_related('profile'),
+        public_id=public_id
+    )
     student_map = {}
     if user.role == User.Role.STUDENT and user.school_id:
         student = EsiStudent.objects.filter(school_id=user.school_id).first()
         if student is not None:
             student_map[user.school_id] = student
-
     serializer = PublicProfileSerializer(
         user,
         context={

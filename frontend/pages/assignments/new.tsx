@@ -1,11 +1,11 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, ChangeEvent, DragEvent, useRef } from "react";
 import { useRouter } from "next/router";
 import Link from "next/link";
 import Header from "@/components/submissions/Header";
 import Field from "@/components/submissions/Field";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
-import { listSubjects, createAssignment } from "@/services/assignments";
+import { listSubjects, createAssignment, uploadAssignmentDescriptionPdf } from "@/services/assignments";
 import type { Subject } from "@/services/assignments";
 
 type AcademicYear = "1CP" | "2CP" | "1CS" | "2CS" | "3CS";
@@ -72,94 +72,303 @@ function validate(fields: { subject: string; title: string; year: string; langua
 const PAGE_CSS = `
   @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500;600&display=swap');
   :root {
-    --ink: #000000; --paper: #ffffff; --navy: #051650;
-    --rule: 1.5px solid #000; --surface: #f7f7f5; --surface-2: #f0efec;
-    --border-soft: #e0e0e0; --text-sub: #444444; --text-muted: #666666;
-    --red: #cc0000; --green: #1a7a3c; --orange: #b85c00;
-    --font-display: 'Playfair Display', serif; --font-mono: 'Space Mono', monospace; --font-body: 'DM Sans', sans-serif;
+    --ink:   #000000;
+    --paper: #ffffff;
+    --navy:  #051650;
+    --rule:  1.5px solid #000;
+    --font-display: 'Playfair Display', Georgia, serif;
+    --font-mono:    'Space Mono', monospace;
+    --font-body:    'DM Sans', sans-serif;
   }
-  .ap-page {
-    min-height: 100vh; background: var(--paper); font-family: var(--font-body); color: var(--ink); position: relative;
+
+  .na-page {
+    min-height: 100vh;
+    background: var(--paper);
+    font-family: var(--font-body);
+    color: var(--ink);
+    position: relative;
   }
-  .ap-page::before {
-    content: ''; position: fixed; top: 0; right: 0;
-    width: 280px; height: 100vh; background: var(--navy);
-    clip-path: polygon(80px 0, 100% 0, 100% 100%, 0 100%); z-index: 0; pointer-events: none;
+
+  /* Diagonal accent stripe */
+  .na-page::before {
+    content: '';
+    position: fixed;
+    top: 0; right: 0;
+    width: 340px;
+    height: 100vh;
+    background: var(--navy);
+    clip-path: polygon(60px 0, 100% 0, 100% 100%, 0 100%);
+    z-index: 0;
+    pointer-events: none;
   }
-  .ap-container {
-    max-width: 1200px; margin: 0 auto; padding: 40px 28px 80px; position: relative; z-index: 1;
+
+  .na-container {
+    max-width: 1180px;
+    margin: 0 auto;
+    padding: 40px 28px 80px;
+    position: relative;
+    z-index: 1;
   }
-  .ap-breadcrumb {
-    display: flex; align-items: center; gap: 10px; margin-bottom: 36px;
-    font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--text-muted);
+
+  /* Breadcrumb */
+  .na-breadcrumb {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 36px;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
   }
-  .ap-breadcrumb-link {
-    color: var(--navy); font-weight: 700; text-decoration: none;
-    border-bottom: 1.5px solid var(--navy); padding-bottom: 1px; transition: opacity 0.15s;
+  .na-breadcrumb-link {
+    color: var(--navy);
+    cursor: pointer;
+    font-weight: 700;
+    text-decoration: none;
+    border-bottom: 1.5px solid var(--navy);
+    padding-bottom: 1px;
   }
-  .ap-breadcrumb-link:hover { opacity: 0.65; }
-  .ap-breadcrumb-sep { color: #aaa; }
-  .ap-page-header {
-    display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between;
-    gap: 16px; padding-bottom: 28px; border-bottom: var(--rule); margin-bottom: 32px;
+  .na-breadcrumb-sep { color: #999; }
+  .na-breadcrumb-current { color: #555; }
+
+  /* Page header */
+  .na-page-header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 32px;
+    padding-bottom: 24px;
+    border-bottom: var(--rule);
   }
-  .ap-page-title {
-    font-family: var(--font-display); font-size: 40px; font-weight: 900; color: var(--ink);
-    margin: 0 0 6px; line-height: 1.05; letter-spacing: -0.02em;
+
+  .na-page-title {
+    font-family: var(--font-display);
+    font-size: 42px;
+    font-weight: 900;
+    color: var(--ink);
+    margin: 0 0 4px;
+    line-height: 1.06;
+    letter-spacing: -0.02em;
   }
-  .ap-page-title span { color: var(--navy); }
-  .ap-page-subtitle {
-    font-family: var(--font-mono); font-size: 9.5px; letter-spacing: 0.18em;
-    text-transform: uppercase; color: var(--text-muted); font-weight: 700; margin: 0;
+  .na-page-title span { color: var(--navy); }
+
+  .na-page-subtitle {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: #666;
+    margin: 0;
   }
-  .ap-layout { display: grid; grid-template-columns: 1fr 300px; gap: 24px; align-items: start; }
-  .ap-form-card {
-    background: var(--surface); border: var(--rule); padding: 32px;
+
+  /* Layout */
+  .na-layout {
+    display: grid;
+    grid-template-columns: 1fr 300px;
+    gap: 32px;
+    align-items: start;
   }
-  .ap-form-section-title {
-    font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.18em;
-    text-transform: uppercase; color: var(--text-muted); margin: 0 0 20px;
-    padding-bottom: 10px; border-bottom: 1px solid var(--border-soft);
+
+  /* Form card */
+  .na-form-card {
+    background: var(--paper);
+    border: var(--rule);
+    padding: 40px;
   }
-  .ap-divider { margin: 24px 0; border: none; border-top: 1px solid var(--border-soft); }
-  .ap-input, .ap-select, .ap-textarea {
-    width: 100%; padding: 10px 14px; background: var(--paper); border: var(--rule);
-    color: var(--ink); font-family: var(--font-body); font-size: 13px; outline: none;
-    transition: box-shadow 0.15s;
+
+  .na-form-section-title {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: #888;
+    margin: 0 0 20px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid #eee;
   }
-  .ap-input:focus, .ap-select:focus, .ap-textarea:focus {
-    box-shadow: 3px 3px 0 var(--navy); border-color: var(--navy);
+
+  .na-divider {
+    margin: 28px 0;
+    border: none;
+    border-top: 1px solid #e0e0e0;
   }
-  .ap-select { appearance: none; cursor: pointer; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%23000' stroke-width='1.5' fill='none'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 14px center; padding-right: 36px; }
-  .ap-textarea { min-height: 100px; resize: vertical; }
-  .ap-chip-group { display: flex; flex-wrap: wrap; gap: 8px; }
-  .ap-chip {
-    padding: 6px 14px; background: var(--paper); border: var(--rule);
-    color: var(--text-sub); font-family: var(--font-mono); font-size: 11px; font-weight: 700;
-    letter-spacing: 0.08em; text-transform: uppercase; cursor: pointer; transition: all 0.12s;
+
+  /* Inputs */
+  .na-input, .na-select, .na-textarea {
+    width: 100%;
+    padding: 11px 14px;
+    border: 1.5px solid #ccc;
+    background: #fafafa;
+    font-family: var(--font-body);
+    font-size: 14px;
+    color: var(--ink);
+    outline: none;
+    box-sizing: border-box;
+    transition: border-color 0.15s;
+    border-radius: 0;
   }
-  .ap-chip:hover { background: var(--surface-2); box-shadow: 2px 2px 0 var(--navy); }
-  .ap-chip.selected { background: var(--navy); border-color: var(--navy); color: var(--paper); }
-  .ap-chip:disabled { opacity: 0.4; cursor: not-allowed; }
-  .ap-subsection-row { display: flex; align-items: center; gap: 16px; margin-bottom: 12px; flex-wrap: wrap; }
-  .ap-subsection-label {
-    font-family: var(--font-mono); font-size: 11px; font-weight: 700;
-    color: var(--navy); letter-spacing: 0.1em; text-transform: uppercase; min-width: 50px;
+  .na-input:focus, .na-select:focus, .na-textarea:focus {
+    border-color: var(--navy);
+    background: var(--paper);
   }
-  .ap-toggle-row { display: flex; align-items: center; gap: 10px; }
-  .ap-checkbox { width: 16px; height: 16px; cursor: pointer; accent-color: var(--navy); }
-  .ap-actions {
-    display: flex; gap: 12px; justify-content: flex-end;
-    margin-top: 28px; padding-top: 24px; border-top: var(--rule);
+  .na-select {
+    appearance: none;
+    cursor: pointer;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%23051650' stroke-width='1.5' fill='none'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 14px center;
+    padding-right: 36px;
   }
-  .btn-primary {
-    padding: 11px 28px; background: var(--navy); color: var(--paper);
-    border: 1.5px solid var(--navy); font-family: var(--font-mono); font-size: 11px;
-    font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; cursor: pointer;
-    transition: background 0.15s, box-shadow 0.12s, transform 0.1s;
+  .na-textarea {
+    min-height: 100px;
+    resize: vertical;
   }
-  .btn-primary:hover:not(:disabled) {
-    background: var(--ink); border-color: var(--ink); box-shadow: 4px 4px 0 var(--navy);
+
+  /* Chips */
+  .na-chip-group {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .na-chip {
+    padding: 6px 16px;
+    border: 1.5px solid #bbb;
+    background: var(--paper);
+    color: #444;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.12s;
+  }
+  .na-chip:hover:not(:disabled) {
+    border-color: var(--navy);
+    color: var(--navy);
+  }
+  .na-chip.selected {
+    background: var(--navy);
+    border-color: var(--navy);
+    color: var(--paper);
+  }
+  .na-chip:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+  }
+
+  /* Subsection row */
+  .na-subsection-row {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 12px;
+    flex-wrap: wrap;
+  }
+  .na-subsection-label {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--navy);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    min-width: 50px;
+  }
+
+  /* Toggle / checkbox row */
+  .na-toggle-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .na-checkbox {
+    width: 17px;
+    height: 17px;
+    cursor: pointer;
+    accent-color: var(--navy);
+  }
+  .na-toggle-label {
+    font-size: 14px;
+    color: var(--ink);
+    cursor: pointer;
+  }
+
+  .na-pdf-dropzone {
+    border: 2px dashed #cbd5e1;
+    background: #f8fafc;
+    cursor: pointer;
+    text-align: center;
+    padding: 32px 24px;
+    color: #64748b;
+    transition: border-color 0.15s, background 0.15s, color 0.15s;
+  }
+  .na-pdf-dropzone.drag-over {
+    border-color: var(--navy);
+    background: #f0f8ff;
+    color: var(--navy);
+  }
+  .na-pdf-file {
+    border: 1.5px solid #ccc;
+    background: #fafafa;
+    padding: 12px;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+  }
+  .na-pdf-name {
+    margin: 0 0 4px;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--ink);
+  }
+  .na-pdf-size {
+    margin: 0;
+    font-size: 12px;
+    color: #666;
+  }
+  .na-pdf-helper-title {
+    margin: 0 0 8px;
+    font-size: 14px;
+    font-weight: 600;
+    color: currentColor;
+  }
+  .na-pdf-helper-subtitle {
+    margin: 0;
+    font-size: 12px;
+    color: currentColor;
+  }
+
+  /* Actions */
+  .na-actions {
+    display: flex;
+    gap: 12px;
+    justify-content: flex-end;
+    margin-top: 32px;
+    padding-top: 24px;
+    border-top: var(--rule);
+  }
+  .na-btn-primary {
+    padding: 13px 32px;
+    background: var(--navy);
+    color: var(--paper);
+    border: 1.5px solid var(--navy);
+    font-family: var(--font-mono);
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: background 0.15s, box-shadow 0.15s, transform 0.1s;
+  }
+  .na-btn-primary:hover:not(:disabled) {
+    background: var(--ink);
+    border-color: var(--ink);
+    box-shadow: 4px 4px 0 var(--navy);
     transform: translate(-2px, -2px);
   }
   .btn-outline {
@@ -200,6 +409,23 @@ const PAGE_CSS = `
     .ap-page::before { display: none; }
   }
 `;
+
+// PDF helpers
+
+const formatFileSize = (value: number): string => {
+  if (!Number.isFinite(value) || value < 0) return '-';
+  if (value < 1024) return `${value} B`;
+  const kb = value / 1024;
+  if (kb < 1024) return `${kb.toFixed(1)} KB`;
+  return `${(kb / 1024).toFixed(1)} MB`;
+};
+
+const isPdfFile = (file: File): boolean => {
+  if (file.type === 'application/pdf') return true;
+  return file.name.toLowerCase().endsWith('.pdf');
+};
+
+// Preview
 
 interface AssignmentPreviewProps {
   subjectName: string | undefined;
@@ -245,12 +471,15 @@ function Chip({ label, selected, onClick, disabled }: ChipProps) {
 
 function NewAssignmentForm() {
   const router = useRouter();
+const fileInputRef = useRef<HTMLInputElement | null>(null);
+
   useEffect(() => {
     if (typeof document === "undefined") return;
     const id = "ap-new-styles";
     if (!document.getElementById(id)) {
       const tag = document.createElement("style");
-      tag.id = id; tag.textContent = PAGE_CSS;
+      tag.id = id; 
+      tag.textContent = PAGE_CSS;
       document.head.appendChild(tag);
     }
   }, []);
@@ -266,6 +495,9 @@ function NewAssignmentForm() {
   const [targetGroups, setTargetGroups] = useState<number[]>([]);
   const [deadline, setDeadline] = useState("");
   const [allowLate, setAllowLate] = useState(false);
+  const [selectedPdf, setSelectedPdf] = useState<File | null>(null);
+  const [dragOver, setDragOver] = useState(false);
+
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [loadingSubjects, setLoadingSubjects] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -275,6 +507,40 @@ function NewAssignmentForm() {
   useEffect(() => {
     listSubjects().then(setSubjects).catch(() => setSubjects([])).finally(() => setLoadingSubjects(false));
   }, []);
+
+  const openFileDialog = () => {
+    fileInputRef.current?.click();
+  };
+
+  const setPdfFile = (file: File) => {
+    if (!isPdfFile(file)) {
+      setSubmitError('Please upload a PDF file.');
+      return;
+    }
+    setSubmitError(null);
+    setSelectedPdf(file);
+  };
+
+  const handleFileInput = (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    setPdfFile(file);
+    event.target.value = '';
+  };
+
+  const handleDrop = (event: DragEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    setDragOver(false);
+    const file = event.dataTransfer.files?.[0];
+    if (file) setPdfFile(file);
+  };
+
+  const clearSelectedPdf = () => {
+    setSelectedPdf(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
 
   const isSpecialityYear = year === "2CS" || year === "3CS";
   const availableSections = year ? SECTIONS_BY_YEAR[year as AcademicYear] : [];
@@ -327,6 +593,12 @@ function NewAssignmentForm() {
         deadline: new Date(deadline).toISOString(),
         allow_late: allowLate,
       });
+
+      // Upload PDF if selected
+      if (selectedPdf) {
+        await uploadAssignmentDescriptionPdf(assignment.id, selectedPdf);
+      }
+
       router.push(`/assignments/${assignment.id}`);
     } catch (err: unknown) {
       setSubmitError(err instanceof Error ? err.message : "Something went wrong.");
@@ -348,7 +620,11 @@ function NewAssignmentForm() {
   const selectedSubjectName = subjects.find(s => String(s.id) === subject)?.name;
 
   return (
-    <div className="ap-page">
+    <div className="na-page">
+      <Head>
+        <title>Create Assignment — ESICodeHub</title>
+        <style id="na-ink-styles">{PAGE_CSS}</style>
+      </Head>
       <Header activePage="Assignments" />
       <div className="ap-container">
         <nav className="ap-breadcrumb">
@@ -463,6 +739,61 @@ function NewAssignmentForm() {
               </div>
             </Field>
 
+            <Field label="PDF Description" hint="Optional — upload PDF instructions for students">
+              {selectedPdf ? (
+                <div className="na-pdf-file">
+                  <div>
+                    <p className="na-pdf-name">{selectedPdf.name}</p>
+                    <p className="na-pdf-size">
+                      {formatFileSize(selectedPdf.size)}
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={clearSelectedPdf}
+                    disabled={submitting}
+                    className="na-btn-outline"
+                  >
+                    Remove
+                  </button>
+                </div>
+              ) : (
+                <div
+                  onDragOver={(event) => {
+                    event.preventDefault();
+                    setDragOver(true);
+                  }}
+                  onDragLeave={() => setDragOver(false)}
+                  onDrop={handleDrop}
+                  onClick={openFileDialog}
+                  className={`na-pdf-dropzone${dragOver ? ' drag-over' : ''}`}
+                  role="button"
+                  tabIndex={0}
+                  onKeyDown={(event) => {
+                    if (event.key === 'Enter' || event.key === ' ') {
+                      event.preventDefault();
+                      openFileDialog();
+                    }
+                  }}
+                >
+                  <p className="na-pdf-helper-title">
+                    Drag and drop PDF or click to browse
+                  </p>
+                  <p className="na-pdf-helper-subtitle">
+                    Optional PDF with assignment details
+                  </p>
+                </div>
+              )}
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".pdf"
+                onChange={handleFileInput}
+                style={{ display: 'none' }}
+              />
+            </Field>
+
+            {/* Progress */}
             {submitting && (
               <div className="ap-progress-wrap">
                 <span className="ap-progress-label">Creating assignment…</span>

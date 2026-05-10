@@ -31,6 +31,29 @@ export interface SubmissionOwner {
   role:       'student' | 'professor';
 }
 
+export interface SubmissionCommentAuthor {
+  email?: string;
+  first_name?: string;
+  last_name?: string;
+  avatar?: string | null;
+}
+
+export interface SubmissionComment {
+  id: number;
+  line_number: number;
+  body: string;
+  created_at: string;
+  author?: SubmissionCommentAuthor;
+  author_name?: string;
+  author_email?: string;
+  author_avatar?: string | null;
+}
+
+export interface SubmissionCommentCreatePayload {
+  line_number: number;
+  body: string;
+}
+
 // Represents a student's submission, including metadata and optionally attached files and owner info.
 export interface PersonalSubmission {
   id:          number;
@@ -64,6 +87,8 @@ export interface SubmissionListParams {
   course?:   string;
   search?:   string;            // search by title or description
   page?:     number;            // which page to fetch
+  visibility?: 'public' | 'private';
+  mine?:     boolean;
 }
 
 /**

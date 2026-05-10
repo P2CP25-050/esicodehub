@@ -4,6 +4,7 @@ import { QuestionCard } from "@/components/forum/Questioncard";
 interface QuestionFeedProps {
   questions: QuestionListItem[];
   voteMap: Record<number, number>;
+  userVoteMap: Record<number, 1 | -1 | null>;
   loading: boolean;
   loadingMore: boolean;
   hasNextPage: boolean;
@@ -17,6 +18,7 @@ interface QuestionFeedProps {
 export function QuestionFeed({
   questions,
   voteMap,
+  userVoteMap,
   loading,
   loadingMore,
   hasNextPage,
@@ -145,6 +147,7 @@ export function QuestionFeed({
               key={q.id}
               question={q}
               voteScore={voteMap[q.id] ?? q.vote_score}
+              userVote={userVoteMap[q.id] ?? q.user_vote ?? null}
               onVote={onVote}
               activeTag={activeTag}
               onTagClick={onTagClick}
