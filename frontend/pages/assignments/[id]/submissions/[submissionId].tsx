@@ -376,18 +376,7 @@ const FileTree = memo(function FileTree({
               onClick={() => onToggleDir(node.fullPath)}
               className="group flex w-full items-center gap-2 px-2 py-1.5 text-left text-sm font-medium transition-colors duration-150 hover:bg-[#f0efec]"
               style={{ fontFamily: "'Space Mono', monospace", fontSize: 12, color: '#444', paddingLeft: 8 + depth * 14 }}
-  const fileInputRef = useRef<HTMLInputElement | null>(null);
-
-  useEffect(() => {
-    if (typeof document === "undefined") return;
-    const id = "ap-new-styles";
-    if (!document.getElementById(id)) {
-      const tag = document.createElement("style");
-      tag.id = id; 
-      tag.textContent = PAGE_CSS;
-      document.head.appendChild(tag);
-    }
-  }, []);              aria-expanded={isExpanded}
+	      aria-expanded={isExpanded}
             >
               <span className="inline-flex h-4 w-4 items-center justify-center text-xs" style={{ color: '#999' }}>
                 {isExpanded ? '▾' : '▸'}
@@ -462,30 +451,7 @@ function AssignmentSubmissionReviewPageContent() {
 
   const [toast, setToast] = useState<ToastState>(null);
   const [plagiarismOpen, setPlagiarismOpen] = useState(false);
-  const [plagiarismState, setPlagiari  const fileInputRef = useRef<HTMLInputElement | null>(null);
-
-  useEffect(() => {
-    if (typeof document === "undefined") return;
-    const id = "ap-new-styles";
-    if (!document.getElementById(id)) {
-      const tag = document.createElement("style");
-      tag.id = id; 
-      tag.textContent = PAGE_CSS;
-      document.head.appendChild(tag);
-    }  const fileInputRef = useRef<HTMLInputElement | null>(null);
-
-  useEffect(() => {
-    if (typeof document === "undefined") return;
-    const id = "ap-new-styles";
-    if (!document.getElementById(id)) {
-      const tag = document.createElement("style");
-      tag.id = id; 
-      tag.textContent = PAGE_CSS;
-      document.head.appendChild(tag);
-    }
-  }, []);
-  }, []);smState] =
-    useState<PlagiarismPanelState>('loading');
+  const [plagiarismState, setPlagiarismState] = useState<PlagiarismPanelState>('loading');
   const [plagiarismReport, setPlagiarismReport] = useState<PlagiarismReport | null>(null);
   const [plagiarismError, setPlagiarismError] = useState<string | null>(null);
   const [runningPlagiarismCheck, setRunningPlagiarismCheck] = useState(false);

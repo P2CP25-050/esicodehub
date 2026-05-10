@@ -371,12 +371,12 @@ const PAGE_CSS = `
     box-shadow: 4px 4px 0 var(--navy);
     transform: translate(-2px, -2px);
   }
-  .btn-outline {
+  .na-btn-outline {
     padding: 11px 20px; background: transparent; border: var(--rule);
     font-family: var(--font-mono); font-size: 11px; font-weight: 700;
     text-transform: uppercase; cursor: pointer;
   }
-  .btn-outline:hover { box-shadow: 2px 2px 0 var(--ink); }
+  .na-btn-outline:hover { box-shadow: 2px 2px 0 var(--ink); }
   .ap-field-error {
     font-family: var(--font-mono); font-size: 11px; color: var(--red); margin-top: 6px;
   }
@@ -440,16 +440,16 @@ interface AssignmentPreviewProps {
 
 function AssignmentPreview({ subjectName, title, year, assignmentType, languages, targetingSummary, deadline, allowLate }: AssignmentPreviewProps) {
   return (
-    <div className="ap-preview-card">
-      <h3 className="ap-preview-title">Preview</h3>
-      <div className="ap-preview-item"><span className="ap-preview-label">Subject</span><span>{subjectName || "—"}</span></div>
-      <div className="ap-preview-item"><span className="ap-preview-label">Title</span><span>{title || "—"}</span></div>
-      <div className="ap-preview-item"><span className="ap-preview-label">Year</span><span>{year || "—"}</span></div>
-      <div className="ap-preview-item"><span className="ap-preview-label">Type</span><span>{assignmentType || "—"}</span></div>
-      <div className="ap-preview-item"><span className="ap-preview-label">Langs</span><span>{languages.length ? languages.join(", ") : "—"}</span></div>
-      <div className="ap-preview-item"><span className="ap-preview-label">Target</span><span>{targetingSummary || "—"}</span></div>
-      <div className="ap-preview-item"><span className="ap-preview-label">Deadline</span><span>{deadline ? new Date(deadline).toLocaleString() : "—"}</span></div>
-      <div className="ap-preview-item"><span className="ap-preview-label">Late</span><span>{allowLate ? "Allowed" : "Not allowed"}</span></div>
+    <div className="na-preview-card">
+      <h3 className="na-preview-title">Preview</h3>
+      <div className="na-preview-item"><span className="na-preview-label">Subject</span><span>{subjectName || "—"}</span></div>
+      <div className="na-preview-item"><span className="na-preview-label">Title</span><span>{title || "—"}</span></div>
+      <div className="na-preview-item"><span className="na-preview-label">Year</span><span>{year || "—"}</span></div>
+      <div className="na-preview-item"><span className="na-preview-label">Type</span><span>{assignmentType || "—"}</span></div>
+      <div className="na-preview-item"><span className="na-preview-label">Langs</span><span>{languages.length ? languages.join(", ") : "—"}</span></div>
+      <div className="na-preview-item"><span className="na-preview-label">Target</span><span>{targetingSummary || "—"}</span></div>
+      <div className="na-preview-item"><span className="na-preview-label">Deadline</span><span>{deadline ? new Date(deadline).toLocaleString() : "—"}</span></div>
+      <div className="na-preview-item"><span className="na-preview-label">Late</span><span>{allowLate ? "Allowed" : "Not allowed"}</span></div>
     </div>
   );
 }
@@ -626,72 +626,72 @@ const fileInputRef = useRef<HTMLInputElement | null>(null);
         <style id="na-ink-styles">{PAGE_CSS}</style>
       </Head>
       <Header activePage="Assignments" />
-      <div className="ap-container">
-        <nav className="ap-breadcrumb">
-          <Link href="/" className="ap-breadcrumb-link">~/home</Link>
-          <span className="ap-breadcrumb-sep">/</span>
-          <Link href="/assignments" className="ap-breadcrumb-link">assignments</Link>
-          <span className="ap-breadcrumb-sep">/</span>
+      <div className="na-container">
+        <nav className="na-breadcrumb">
+          <Link href="/" className="na-breadcrumb-link">~/home</Link>
+          <span className="na-breadcrumb-sep">/</span>
+          <Link href="/assignments" className="na-breadcrumb-link">assignments</Link>
+          <span className="na-breadcrumb-sep">/</span>
           <span>new</span>
         </nav>
 
-        <div className="ap-page-header">
+        <div className="na-page-header">
           <div>
-            <h1 className="ap-page-title">New <span>Assignment</span></h1>
-            <p className="ap-page-subtitle">Define targeting, languages, and deadlines</p>
+            <h1 className="na-page-title">New <span>Assignment</span></h1>
+            <p className="na-page-subtitle">Define targeting, languages, and deadlines</p>
           </div>
         </div>
 
-        <div className="ap-layout">
-          <form className="ap-form-card" onSubmit={handleSubmit}>
-            <p className="ap-form-section-title">Assignment Details</p>
-            {submitError && <div className="ap-error-banner"><span>⚠ {submitError}</span></div>}
+        <div className="na-layout">
+          <form className="na-form-card" onSubmit={handleSubmit}>
+            <p className="na-form-section-title">Assignment Details</p>
+            {submitError && <div className="na-error-banner"><span>⚠ {submitError}</span></div>}
 
             <Field label="Subject" required>
-              <select className="ap-select" value={subject} onChange={e => { setSubject(e.target.value); setErrors(prev => ({ ...prev, subject: undefined })); }} disabled={loadingSubjects || submitting}>
+              <select className="na-select" value={subject} onChange={e => { setSubject(e.target.value); setErrors(prev => ({ ...prev, subject: undefined })); }} disabled={loadingSubjects || submitting}>
                 <option value="">{loadingSubjects ? "Loading subjects…" : "Select a subject"}</option>
                 {subjects.map(s => <option key={s.id} value={String(s.id)}>{s.code} — {s.name}</option>)}
               </select>
-              {errors.subject && <div className="ap-field-error">{errors.subject}</div>}
+              {errors.subject && <div className="na-field-error">{errors.subject}</div>}
             </Field>
 
             <Field label="Title" required>
-              <input className="ap-input" placeholder="e.g. Lab Report 3 — Binary Trees" value={title} onChange={e => { setTitle(e.target.value); setErrors(prev => ({ ...prev, title: undefined })); }} disabled={submitting} />
-              {errors.title && <div className="ap-field-error">{errors.title}</div>}
+              <input className="na-input" placeholder="e.g. Lab Report 3 — Binary Trees" value={title} onChange={e => { setTitle(e.target.value); setErrors(prev => ({ ...prev, title: undefined })); }} disabled={submitting} />
+              {errors.title && <div className="na-field-error">{errors.title}</div>}
             </Field>
 
             <Field label="Description" hint="Optional — instructions or context">
-              <textarea className="ap-textarea" placeholder="Describe the assignment..." value={description} onChange={e => setDescription(e.target.value)} disabled={submitting} />
+              <textarea className="na-textarea" placeholder="Describe the assignment..." value={description} onChange={e => setDescription(e.target.value)} disabled={submitting} />
             </Field>
 
             <Field label="Assignment Type" required>
-              <div className="ap-chip-group">
+              <div className="na-chip-group">
                 {ASSIGNMENT_TYPES.map(t => <Chip key={t} label={t} selected={assignmentType === t} onClick={() => { setAssignmentType(prev => prev === t ? "" : t); setErrors(prev => ({ ...prev, type: undefined })); }} disabled={submitting} />)}
               </div>
-              {errors.type && <div className="ap-field-error">{errors.type}</div>}
+              {errors.type && <div className="na-field-error">{errors.type}</div>}
             </Field>
 
             <Field label="Languages" required>
-              <div className="ap-chip-group">
+              <div className="na-chip-group">
                 {ASSIGNMENT_LANGUAGES.map(lang => <Chip key={lang} label={lang} selected={languages.includes(lang)} onClick={() => handleLanguageToggle(lang)} disabled={submitting} />)}
               </div>
-              {errors.languages && <div className="ap-field-error">{errors.languages}</div>}
+              {errors.languages && <div className="na-field-error">{errors.languages}</div>}
             </Field>
 
-            <hr className="ap-divider" />
-            <p className="ap-form-section-title">Targeting</p>
+            <hr className="na-divider" />
+            <p className="na-form-section-title">Targeting</p>
 
             <Field label="Year" required>
-              <div className="ap-chip-group">
+              <div className="na-chip-group">
                 {ACADEMIC_YEARS.map(y => <Chip key={y} label={y} selected={year === y} onClick={() => { setYear(year === y ? "" : y); setTargetSections([]); setTargetSubSections([]); setTargetGroups([]); setErrors(prev => ({ ...prev, year: undefined })); }} disabled={submitting} />)}
               </div>
-              {errors.year && <div className="ap-field-error">{errors.year}</div>}
+              {errors.year && <div className="na-field-error">{errors.year}</div>}
             </Field>
 
             {year && (
               <>
                 <Field label={isSpecialityYear ? "Speciality" : "Section"} hint="Optional — leave empty for all">
-                  <div className="ap-chip-group">
+                  <div className="na-chip-group">
                     {availableSections.map(s => <Chip key={s} label={s} selected={targetSections.includes(s)} onClick={() => handleSectionChange(s)} disabled={submitting} />)}
                   </div>
                 </Field>
@@ -699,9 +699,9 @@ const fileInputRef = useRef<HTMLInputElement | null>(null);
                 {isSpecialityYear && targetSections.length > 0 && (
                   <Field label="Section" hint="Optional — 2 per speciality">
                     {targetSections.map(spec => (
-                      <div key={spec} className="ap-subsection-row">
-                        <span className="ap-subsection-label">{spec}</span>
-                        <div className="ap-chip-group">
+                      <div key={spec} className="na-subsection-row">
+                        <span className="na-subsection-label">{spec}</span>
+                        <div className="na-chip-group">
                           {SPECIALITY_SUBSECTIONS.map(sub => {
                             const key = `${spec}-${sub}`;
                             return <Chip key={key} label={sub} selected={targetSubSections.includes(key)} onClick={() => handleSubSectionChange(key)} disabled={submitting} />;
@@ -714,8 +714,8 @@ const fileInputRef = useRef<HTMLInputElement | null>(null);
 
                 {showGroups && (
                   <Field label="Groups" hint={`Optional — ${isSpecialityYear ? "2 per section" : "4 per section"}`}>
-                    {availableGroups.length === 0 ? <p className="ap-field-error">Select a section to reveal groups.</p> : (
-                      <div className="ap-chip-group">
+                    {availableGroups.length === 0 ? <p className="na-field-error">Select a section to reveal groups.</p> : (
+                      <div className="na-chip-group">
                         {availableGroups.map(g => <Chip key={g} label={String(g)} selected={targetGroups.includes(g)} onClick={() => setTargetGroups(prev => prev.includes(g) ? prev.filter(p => p !== g) : [...prev, g])} disabled={submitting} />)}
                       </div>
                     )}
@@ -724,18 +724,18 @@ const fileInputRef = useRef<HTMLInputElement | null>(null);
               </>
             )}
 
-            <hr className="ap-divider" />
-            <p className="ap-form-section-title">Submission Settings</p>
+            <hr className="na-divider" />
+            <p className="na-form-section-title">Submission Settings</p>
 
             <Field label="Deadline" required>
-              <input type="datetime-local" className="ap-input" value={deadline} onChange={e => { setDeadline(e.target.value); setErrors(prev => ({ ...prev, deadline: undefined })); }} disabled={submitting} />
-              {errors.deadline && <div className="ap-field-error">{errors.deadline}</div>}
+              <input type="datetime-local" className="na-input" value={deadline} onChange={e => { setDeadline(e.target.value); setErrors(prev => ({ ...prev, deadline: undefined })); }} disabled={submitting} />
+              {errors.deadline && <div className="na-field-error">{errors.deadline}</div>}
             </Field>
 
             <Field label="Late submissions">
-              <div className="ap-toggle-row">
-                <input type="checkbox" id="allowLate" checked={allowLate} onChange={e => setAllowLate(e.target.checked)} disabled={submitting} className="ap-checkbox" />
-                <label htmlFor="allowLate" className="ap-toggle-label">Allow students to submit after the deadline</label>
+              <div className="na-toggle-row">
+                <input type="checkbox" id="allowLate" checked={allowLate} onChange={e => setAllowLate(e.target.checked)} disabled={submitting} className="na-checkbox" />
+                <label htmlFor="allowLate" className="na-toggle-label">Allow students to submit after the deadline</label>
               </div>
             </Field>
 
@@ -795,15 +795,15 @@ const fileInputRef = useRef<HTMLInputElement | null>(null);
 
             {/* Progress */}
             {submitting && (
-              <div className="ap-progress-wrap">
-                <span className="ap-progress-label">Creating assignment…</span>
-                <div className="ap-progress-track"><div className="ap-progress-fill" /></div>
+              <div className="na-progress-wrap">
+                <span className="na-progress-label">Creating assignment…</span>
+                <div className="na-progress-track"><div className="na-progress-fill" /></div>
               </div>
             )}
 
-            <div className="ap-actions">
-              <button type="button" className="btn-outline" disabled={submitting} onClick={() => router.back()}>Cancel</button>
-              <button type="submit" className="btn-primary" disabled={submitting}>{submitting ? "Creating…" : "+ Create Assignment"}</button>
+            <div className="na-actions">
+              <button type="button" className="na-btn-outline" disabled={submitting} onClick={() => router.back()}>Cancel</button>
+              <button type="submit" className="na-btn-primary" disabled={submitting}>{submitting ? "Creating…" : "+ Create Assignment"}</button>
             </div>
           </form>
 
