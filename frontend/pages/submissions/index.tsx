@@ -211,7 +211,7 @@ useEffect(() => {
                   onSubmissionTypeChange={setType}
                   onCourseTagChange={setCourse}
                   visibility={visibility}
-	                onVisibilityChange={setVisibility}
+	                onVisibilityChange={(v) => setVisibility(v as NonNullable<SubmissionListParams['visibility']> | '')}
                   onClear={handleClear}
                   hasActiveFilter={hasActiveFilter}
                   total={total}
