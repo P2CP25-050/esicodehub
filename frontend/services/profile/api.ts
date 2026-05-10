@@ -46,10 +46,6 @@ export interface ActivityItem {
   created_at: string; // ISO date string
 }
 
-export const triggerPasswordReset = (email: string) => {
-  return apiClient.post("/auth/forgot-password/", { email });
-};
-
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
 const getApiErrorMessage = (err: unknown, fallback: string): string => {
