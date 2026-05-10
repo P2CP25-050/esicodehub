@@ -658,7 +658,7 @@ function NewSubmissionForm() {
           {/* ── Sidebar Preview ── */}
           <SubmissionPreview
             title={title}
-            language={language}
+            language={language as any}
             type={typeLabel}
             courseTag={courseTag}
             fileCount={files.length}
