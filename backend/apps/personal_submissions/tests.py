@@ -256,7 +256,8 @@ class SubmissionCommentTests(APITestCase):
         )
 
         self.client.force_authenticate(user=self.commenter)
-        response = self.client.get('/api/submissions/{}/comments/'.format(self.public_submission.id))
+        response = self.client.get('/api/submissions/{}/comments/'.format(
+            self.public_submission.id))
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(response.data), 1)
@@ -283,7 +284,8 @@ class SubmissionCommentTests(APITestCase):
     def test_private_submission_comments_are_forbidden_for_non_owner(self):
         self.client.force_authenticate(user=self.commenter)
 
-        response = self.client.get('/api/submissions/{}/comments/'.format(self.private_submission.id))
+        response = self.client.get('/api/submissions/{}/comments/'.format(
+            self.private_submission.id))
 
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 

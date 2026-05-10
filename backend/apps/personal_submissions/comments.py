@@ -127,7 +127,8 @@ class SubmissionCommentListCreateView(APIView):
 
         # Notify submission owner when someone else comments.
         if submission.owner_id != request.user.id:
-            commenter_name = f"{request.user.first_name} {request.user.last_name}".strip() or request.user.email
+            commenter_name = f"{request.user.first_name} {request.user.last_name}".strip() or (
+                                                request.user.email)
             Notification.objects.create(
                 recipient=submission.owner,
                 type=Notification.Type.SUBMISSION_COMMENTED,

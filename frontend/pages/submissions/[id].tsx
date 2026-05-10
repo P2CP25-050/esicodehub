@@ -1567,9 +1567,6 @@ useEffect(() => {
                       Loading...
                     </div>
                   </div>
-                      Loading file...
-                    </div>
-                  </div>
                 )}
                 {selectedFileId == null ? (
                   <div className="flex h-full items-center justify-center text-center">
