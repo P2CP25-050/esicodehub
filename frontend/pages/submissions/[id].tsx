@@ -12,17 +12,22 @@ import dynamic from 'next/dynamic';
 import { useRouter } from 'next/router';
 import axios from 'axios';
 import type { EditorProps } from '@monaco-editor/react';
+import type { IDisposable, editor as MonacoEditorNS } from 'monaco-editor';
 
 import { ProtectedRoute } from '@/components/ProtectedRoute';
 import Header from '@/components/submissions/Header';
 import { useAuth } from '@/context/AuthContext';
 import type {
   PersonalSubmission,
+  SubmissionComment,
   PersonalSubmissionFile,
 } from '@/services/submissions/submissions.types';
 import {
+  createSubmissionComment,
+  deleteSubmissionComment,
   deleteSubmission,
   getFileContent,
+  listSubmissionComments,
   getSubmission,
   downloadSubmission,
 } from '@/services/submissions/submissions.api';
@@ -237,7 +242,46 @@ const formatFileSize = (value: number): string => {
   return `${mb.toFixed(1)} MB`;
 };
 
-// ---------- Design System Components (pure CSS classes) ----------
+const getInitials = (fullName: string): string => {
+  const parts = fullName
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2);
+  if (parts.length === 0) return 'U';
+  return parts.map((part) => part.charAt(0).toUpperCase()).join('');
+};
+
+const normalizeComments = (comments: SubmissionComment[]): SubmissionComment[] => {
+  return [...comments].sort((a, b) => {
+    if (a.line_number !== b.line_number) {
+      return a.line_number - b.line_number;
+    }
+    return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+  });
+};
+
+const getCommentAuthorName = (comment: SubmissionComment): string => {
+  if (comment.author_name?.trim()) return comment.author_name.trim();
+
+  const first = comment.author?.first_name?.trim() ?? '';
+  const last = comment.author?.last_name?.trim() ?? '';
+  const full = `${first} ${last}`.trim();
+  if (full) return full;
+
+  if (comment.author_email?.trim()) return comment.author_email.trim();
+  if (comment.author?.email?.trim()) return comment.author.email.trim();
+  return 'User';
+};
+
+const getCommentAuthorAvatar = (comment: SubmissionComment): string | null => {
+  return comment.author_avatar ?? comment.author?.avatar ?? null;
+};
+
+const getCommentAuthorEmail = (comment: SubmissionComment): string | null => {
+  return comment.author_email ?? comment.author?.email ?? null;
+};
+
 const Badge = ({ label }: { label: string }) => (
   <span className="detail-badge">{label}</span>
 );
@@ -371,6 +415,16 @@ function SubmissionDetailPage() {
   const [fileError, setFileError] = useState<string | null>(null);
   const [loadingFile, setLoadingFile] = useState<boolean>(false);
   const [isDeleting, setIsDeleting] = useState<boolean>(false);
+  const [comments, setComments] = useState<SubmissionComment[]>([]);
+  const [commentsLoading, setCommentsLoading] = useState<boolean>(false);
+  const [commentsError, setCommentsError] = useState<string | null>(null);
+  const [activeThreadLine, setActiveThreadLine] = useState<number | null>(null);
+  const [hoverCommentLine, setHoverCommentLine] = useState<number | null>(null);
+  const [activeThreadDraft, setActiveThreadDraft] = useState<string>('');
+  const [activeThreadTop, setActiveThreadTop] = useState<number | null>(null);
+  const [postingComment, setPostingComment] = useState<boolean>(false);
+  const [deletingCommentIds, setDeletingCommentIds] = useState<Set<number>>(new Set());
+  const [threadZoneVersion, setThreadZoneVersion] = useState(0);
   const [isDownloading, setIsDownloading] = useState<boolean>(false);
 
   const [expandedPaths, setExpandedPaths] = useState<Set<string>>(new Set<string>());
@@ -378,6 +432,12 @@ function SubmissionDetailPage() {
   const fileRequestIdRef = useRef(0);
   const fileContentCacheRef = useRef<Record<number, string>>({});
   const treeItemRefs = useRef<Map<string, HTMLButtonElement>>(new Map());
+  const editorRef = useRef<MonacoEditorNS.IStandaloneCodeEditor | null>(null);
+  const monacoRef = useRef<typeof import('monaco-editor') | null>(null);
+  const editorDisposablesRef = useRef<IDisposable[]>([]);
+  const commentDecorationIdsRef = useRef<string[]>([]);
+  const commentZoneIdRef = useRef<string | null>(null);
+  const commentDraftByLineRef = useRef<Record<number, string>>({});
 
   const submissionId = useMemo(() => {
     const raw = router.query.id;
@@ -408,6 +468,188 @@ function SubmissionDetailPage() {
     if (submission.visibility === 'private') return isOwner;
     return false;
   }, [submission, isOwner]);
+
+  const commentsByLine = useMemo(() => {
+    const map = new Map<number, SubmissionComment[]>();
+    comments.forEach((comment) => {
+      if (!map.has(comment.line_number)) {
+        map.set(comment.line_number, []);
+      }
+      map.get(comment.line_number)?.push(comment);
+    });
+    return map;
+  }, [comments]);
+
+  const commentLines = useMemo(() => {
+    return Array.from(commentsByLine.keys()).sort((a, b) => a - b);
+  }, [commentsByLine]);
+
+  const isOwnComment = useCallback(
+    (comment: SubmissionComment): boolean => {
+      if (!user?.email) return false;
+      const authorEmail = getCommentAuthorEmail(comment);
+      return Boolean(authorEmail && authorEmail === user.email);
+    },
+    [user?.email]
+  );
+
+  const clearThreadZone = useCallback(() => {
+    const editor = editorRef.current;
+    const zoneId = commentZoneIdRef.current;
+    if (!editor || !zoneId) return;
+
+    editor.changeViewZones((accessor) => {
+      accessor.removeZone(zoneId);
+    });
+    commentZoneIdRef.current = null;
+  }, []);
+
+  const updateThreadOverlayPosition = useCallback((lineNumber: number) => {
+    const editor = editorRef.current;
+    if (!editor) {
+      setActiveThreadTop(null);
+      return;
+    }
+
+    const visiblePosition = editor.getScrolledVisiblePosition({ lineNumber, column: 1 });
+    if (!visiblePosition) {
+      setActiveThreadTop(null);
+      return;
+    }
+
+    setActiveThreadTop(visiblePosition.top + visiblePosition.height + 12);
+  }, []);
+
+  const refreshCommentDecorations = useCallback(() => {
+    const editor = editorRef.current;
+    const monaco = monacoRef.current;
+
+    if (!editor || !monaco) return;
+
+    if (selectedFileId == null) {
+      commentDecorationIdsRef.current = editor.deltaDecorations(
+        commentDecorationIdsRef.current,
+        []
+      );
+      return;
+    }
+
+    const decorationLines = new Set<number>(commentLines);
+    if (hoverCommentLine != null && !decorationLines.has(hoverCommentLine)) {
+      decorationLines.add(hoverCommentLine);
+    }
+
+    const decorations = Array.from(decorationLines)
+      .sort((a, b) => a - b)
+      .map((lineNumber) => {
+        const hasComment = commentsByLine.has(lineNumber);
+        const isHoverLine = hoverCommentLine === lineNumber && !hasComment;
+
+        return {
+          range: new monaco.Range(lineNumber, 1, lineNumber, 1),
+          options: {
+            isWholeLine: true,
+            className:
+              activeThreadLine === lineNumber
+                ? 'submission-comment-line submission-comment-line-active'
+                : isHoverLine
+                  ? 'submission-comment-line submission-comment-line-hover'
+                  : 'submission-comment-line',
+            glyphMarginClassName: isHoverLine
+              ? 'submission-comment-hover-glyph'
+              : 'submission-comment-glyph',
+            glyphMarginHoverMessage: {
+              value: isHoverLine ? 'Add comment' : 'Open comment thread',
+            },
+          },
+        };
+      });
+
+    commentDecorationIdsRef.current = editor.deltaDecorations(
+      commentDecorationIdsRef.current,
+      decorations
+    );
+  }, [activeThreadLine, commentsByLine, commentLines, hoverCommentLine, selectedFileId]);
+
+  const openThreadAtLine = useCallback(
+    (lineNumber: number) => {
+      const editor = editorRef.current;
+      if (!editor || selectedFileId == null) return;
+
+      const model = editor.getModel();
+      const maxLine = Math.max(1, model?.getLineCount() ?? 1);
+      const safeLine = Math.min(Math.max(1, Math.floor(lineNumber)), maxLine);
+
+      editor.setPosition({ lineNumber: safeLine, column: 1 });
+      editor.revealLineInCenter(safeLine);
+
+      setActiveThreadDraft(commentDraftByLineRef.current[safeLine] ?? '');
+      setActiveThreadLine(safeLine);
+      setThreadZoneVersion((prev) => prev + 1);
+      updateThreadOverlayPosition(safeLine);
+    },
+    [selectedFileId, updateThreadOverlayPosition]
+  );
+
+  const addCommentAtActiveLine = useCallback(async () => {
+    if (!submissionId || activeThreadLine == null || !canView) return;
+
+    const body = activeThreadDraft.trim();
+    if (!body) {
+      setCommentsError('Comment body cannot be empty.');
+      return;
+    }
+
+    setCommentsError(null);
+    setPostingComment(true);
+
+    try {
+      const created = await createSubmissionComment(submissionId, {
+        line_number: activeThreadLine,
+        body,
+      });
+
+      commentDraftByLineRef.current[activeThreadLine] = '';
+      setActiveThreadDraft('');
+      setComments((prev) => normalizeComments([...prev, created]));
+      setThreadZoneVersion((prev) => prev + 1);
+    } catch (error) {
+      if (axios.isAxiosError(error) && error.response?.status === 403) {
+        setCommentsError('You are not allowed to comment on this submission.');
+      } else {
+        setCommentsError('Failed to post comment. Please try again.');
+      }
+    } finally {
+      setPostingComment(false);
+    }
+  }, [activeThreadDraft, activeThreadLine, submissionId, canView]);
+
+  const handleDeleteComment = useCallback(
+    async (commentId: number) => {
+      if (!submissionId) return;
+
+      setDeletingCommentIds((prev) => {
+        const next = new Set(prev);
+        next.add(commentId);
+        return next;
+      });
+
+      try {
+        await deleteSubmissionComment(submissionId, commentId);
+        setComments((prev) => prev.filter((comment) => comment.id !== commentId));
+        setThreadZoneVersion((prev) => prev + 1);
+      } catch {
+        setCommentsError('Failed to delete comment. Please try again.');
+      } finally {
+        setDeletingCommentIds((prev) => {
+          const next = new Set(prev);
+          next.delete(commentId);
+          return next;
+        });
+      }
+    },
+    [submissionId]
+  );
 
   const openFile = useCallback(
     async (file: PersonalSubmissionFile) => {
@@ -590,6 +832,42 @@ function SubmissionDetailPage() {
 
   // Reset on new submission
   useEffect(() => {
+    if (!submissionId || !canView) return;
+
+    let cancelled = false;
+
+    const loadComments = async () => {
+      setCommentsLoading(true);
+      setCommentsError(null);
+
+      try {
+        const data = await listSubmissionComments(submissionId);
+        if (cancelled) return;
+        setComments(normalizeComments(data));
+      } catch (error) {
+        if (cancelled) return;
+
+        if (axios.isAxiosError(error) && error.response?.status === 403) {
+          setCommentsError('Comments are not available for this submission.');
+        } else {
+          setCommentsError('Unable to load comments.');
+        }
+        setComments([]);
+      } finally {
+        if (!cancelled) {
+          setCommentsLoading(false);
+        }
+      }
+    };
+
+    void loadComments();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [canView, submissionId]);
+
+  useEffect(() => {
     if (!submission) return;
     setSelectedFileId(null);
     setActiveTreeItemKey(null);
@@ -598,6 +876,12 @@ function SubmissionDetailPage() {
     setEditorLanguage('plaintext');
     setFileError(null);
     setLoadingFile(false);
+    setComments([]);
+    setActiveThreadLine(null);
+    setHoverCommentLine(null);
+    setActiveThreadDraft('');
+    setActiveThreadTop(null);
+    setCommentsError(null);
     fileContentCacheRef.current = {};
     const initialExpanded = new Set<string>();
     const markTopLevelDirs = (nodes: TreeNode[]) => {
@@ -619,6 +903,14 @@ function SubmissionDetailPage() {
 
   // Sync active tree item with visible items
   useEffect(() => {
+    setActiveThreadLine(null);
+    setHoverCommentLine(null);
+    setActiveThreadDraft('');
+    setActiveThreadTop(null);
+    clearThreadZone();
+  }, [clearThreadZone, selectedFileId]);
+
+  useEffect(() => {
     if (visibleTreeItems.length === 0) {
       setActiveTreeItemKey(null);
       return;
@@ -634,7 +926,128 @@ function SubmissionDetailPage() {
     setActiveTreeItemKey(visibleTreeItems[0].key);
   }, [activeTreeItemKey, selectedFileId, visibleTreeItems]);
 
-  const navigateBack = useCallback(() => router.push('/submissions'), [router]);
+useEffect(() => {
+    refreshCommentDecorations();
+  }, [refreshCommentDecorations]);
+
+  useEffect(() => {
+    if (activeThreadLine == null) {
+      setActiveThreadTop(null);
+      clearThreadZone();
+      return;
+    }
+
+    const editor = editorRef.current;
+    if (!editor || selectedFileId == null) {
+      setActiveThreadTop(null);
+      clearThreadZone();
+      return;
+    }
+
+    const lineComments = commentsByLine.get(activeThreadLine) ?? [];
+    const heightInPx = Math.min(460, Math.max(170, 126 + lineComments.length * 84));
+
+    clearThreadZone();
+    editor.changeViewZones((accessor) => {
+      commentZoneIdRef.current = accessor.addZone({
+        afterLineNumber: activeThreadLine,
+        heightInPx,
+        domNode: document.createElement('div'),
+      });
+    });
+
+    updateThreadOverlayPosition(activeThreadLine);
+
+    const updatePosition = () => {
+      updateThreadOverlayPosition(activeThreadLine);
+    };
+
+    const scrollDisposable = editor.onDidScrollChange(updatePosition);
+    const layoutDisposable = editor.onDidLayoutChange(updatePosition);
+
+    return () => {
+      scrollDisposable.dispose();
+      layoutDisposable.dispose();
+      clearThreadZone();
+    };
+  }, [
+    activeThreadLine,
+    clearThreadZone,
+    commentsByLine,
+    selectedFileId,
+    threadZoneVersion,
+    updateThreadOverlayPosition,
+  ]);
+
+  useEffect(() => {
+    return () => {
+      clearThreadZone();
+      editorDisposablesRef.current.forEach((disposable) => disposable.dispose());
+      editorDisposablesRef.current = [];
+    };
+  }, [clearThreadZone]);
+
+  const handleEditorMount: EditorProps['onMount'] = useCallback(
+    (
+      editor: MonacoEditorNS.IStandaloneCodeEditor,
+      monaco: typeof import('monaco-editor')
+    ) => {
+      editorRef.current = editor;
+      monacoRef.current = monaco;
+
+      editorDisposablesRef.current.forEach((disposable) => disposable.dispose());
+      editorDisposablesRef.current = [];
+
+      const onMouseDown = editor.onMouseDown((event: MonacoEditorNS.IEditorMouseEvent) => {
+        if (selectedFileId == null) return;
+
+        const lineNumber = event.target.position?.lineNumber;
+        if (!lineNumber) return;
+
+        const targetType = event.target.type;
+        if (
+          targetType === monaco.editor.MouseTargetType.GUTTER_GLYPH_MARGIN ||
+          targetType === monaco.editor.MouseTargetType.GUTTER_LINE_NUMBERS
+        ) {
+          event.event.preventDefault();
+          event.event.stopPropagation();
+          window.setTimeout(() => {
+            openThreadAtLine(lineNumber);
+          }, 0);
+        }
+      });
+
+      const onMouseMove = editor.onMouseMove((event: MonacoEditorNS.IEditorMouseEvent) => {
+        if (selectedFileId == null) return;
+
+        const lineNumber = event.target.position?.lineNumber;
+        if (!lineNumber) {
+          setHoverCommentLine(null);
+          return;
+        }
+
+        setHoverCommentLine(lineNumber);
+      });
+
+      const onMouseLeave = editor.onMouseLeave(() => {
+        setHoverCommentLine(null);
+      });
+      
+      editorDisposablesRef.current.push(onMouseDown);
+      refreshCommentDecorations();
+      editorDisposablesRef.current.push(onMouseMove);
+      editorDisposablesRef.current.push(onMouseLeave);
+      
+      if (activeThreadLine != null) {
+        updateThreadOverlayPosition(activeThreadLine);
+      }
+    },
+    [activeThreadLine, openThreadAtLine, refreshCommentDecorations, selectedFileId, updateThreadOverlayPosition]
+  );
+
+  const navigateBack = useCallback(() => {
+    void router.push('/submissions');
+  }, [router]);
 
   // Inject global styles (same as new.tsx pattern)
   useEffect(() => {
@@ -900,14 +1313,114 @@ function SubmissionDetailPage() {
     );
   }
 
-  //  TYPESCRIPT GUARD: after all error/forbidden checks, submission must be non‑null
+// TYPESCRIPT GUARD: after all error/forbidden checks, submission must be non‑null
   if (!submission) return null;
 
-  const selectedFileMeta = submission.files?.find((file) => file.id === selectedFileId) ?? null;
+  const selectedFileMeta =
+    submission.files?.find((file) => file.id === selectedFileId) ?? null;
+  const activeThreadComments =
+    activeThreadLine != null ? commentsByLine.get(activeThreadLine) ?? [] : [];
+  const activeThreadHeight =
+    activeThreadLine != null
+      ? Math.min(320, Math.max(220, 120 + activeThreadComments.length * 56))
+      : 0;
 
   return (
     <>
-      <Head><title>{submission.title} - Submission - ESICodeHub</title></Head>
+      <Head>
+        <title>{submission.title} - Submission - ESICodeHub</title>
+      </Head>
+
+      <style jsx global>{`
+        .submission-comment-line {
+          background: linear-gradient(
+            90deg,
+            rgba(59, 130, 246, 0.12),
+            rgba(59, 130, 246, 0.04)
+          );
+        }
+
+        .submission-comment-line-active {
+          background: linear-gradient(
+            90deg,
+            rgba(37, 99, 235, 0.2),
+            rgba(37, 99, 235, 0.06)
+          );
+        }
+
+        .submission-comment-line-hover {
+          background: linear-gradient(
+            90deg,
+            rgba(37, 99, 235, 0.08),
+            rgba(37, 99, 235, 0.02)
+          );
+        }
+
+        .submission-comment-glyph {
+          margin-left: 3px;
+          width: 16px !important;
+          height: 16px !important;
+          border-radius: 999px;
+          border: 1px solid rgba(30, 64, 175, 0.9);
+          background: linear-gradient(180deg, #eff6ff 0%, #60a5fa 55%, #1d4ed8 100%);
+          position: relative;
+          box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.45) inset;
+        }
+
+        .submission-comment-glyph::before,
+        .submission-comment-glyph::after {
+          content: '';
+          position: absolute;
+          left: 50%;
+          top: 50%;
+          background: #ffffff;
+          border-radius: 999px;
+          transform: translate(-50%, -50%);
+        }
+
+        .submission-comment-glyph::before {
+          width: 8px;
+          height: 1.75px;
+        }
+
+        .submission-comment-glyph::after {
+          width: 1.75px;
+          height: 8px;
+        }
+
+        .submission-comment-hover-glyph {
+          margin-left: 3px;
+          width: 12px !important;
+          height: 12px !important;
+          position: relative;
+          border-radius: 999px;
+          border: 1px solid rgba(37, 99, 235, 0.55);
+          background: rgba(219, 234, 254, 0.9);
+          box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.7) inset;
+        }
+
+        .submission-comment-hover-glyph::before,
+        .submission-comment-hover-glyph::after {
+          content: '';
+          position: absolute;
+          left: 50%;
+          top: 50%;
+          background: #2563eb;
+          border-radius: 999px;
+          transform: translate(-50%, -50%);
+        }
+
+        .submission-comment-hover-glyph::before {
+          width: 6px;
+          height: 1.8px;
+        }
+
+        .submission-comment-hover-glyph::after {
+          width: 1.8px;
+          height: 6px;
+        }
+      `}</style>
+
       <div className="detail-page">
         <Header activePage="Submissions" />
         <div className="detail-container">
@@ -1019,21 +1532,39 @@ function SubmissionDetailPage() {
               </div>
             </div>
 
-            {/* Monaco editor */}
-            <div className="detail-card h-[52vh] overflow-hidden lg:h-[72vh] flex flex-col">
-              <div className="flex items-center justify-between border-b border-black/10 px-4 py-3">
+{/* Monaco editor */}
+            <div className="detail-card flex flex-col h-[52vh] overflow-visible lg:h-[72vh]">
+              <div className="flex items-center justify-between gap-3 border-b border-black/10 px-4 py-3">
                 <div className="min-w-0">
-                  <p className="truncate text-sm font-semibold font-mono">{selectedFilePath || 'Select a file'}</p>
-                  {selectedFileMeta && <p className="text-xs text-black/50">{formatFileSize(selectedFileMeta.file_size)}</p>}
+                  <p className="truncate text-sm font-semibold font-mono">
+                    {selectedFilePath || 'Select a file'}
+                  </p>
+                  {selectedFileMeta ? (
+                    <div className="flex flex-wrap items-center gap-2 text-xs text-black/50">
+                      <span>{formatFileSize(selectedFileMeta.file_size)}</span>
+                      <span aria-hidden="true">•</span>
+                      <span>
+                        {commentLines.length} commented line
+                        {commentLines.length === 1 ? '' : 's'}
+                      </span>
+                      {commentsLoading ? <span>(loading comments...)</span> : null}
+                    </div>
+                  ) : null}
                 </div>
-                {fileError && <p className="text-xs text-red-600">{fileError}</p>}
+                <div className="flex flex-col items-end">
+                  {fileError ? <p className="text-xs text-red-600">{fileError}</p> : null}
+                  {commentsError ? (
+                    <p className="text-xs text-red-600">{commentsError}</p>
+                  ) : null}
+                </div>
               </div>
-              <div className="relative flex-1">
+
+              <div className="relative flex-1 overflow-visible">
                 {loadingFile && (
                   <div className="detail-editor-loader">
                     <div className="detail-spinner">
                       <div className="detail-spinner-icon" />
-                      Loading file...
+                      Loading...
                     </div>
                   </div>
                 )}
@@ -1045,23 +1576,185 @@ function SubmissionDetailPage() {
                     </div>
                   </div>
                 ) : (
-                  <MonacoEditor
-                    height="100%"
-                    theme="vs-dark"
-                    language={editorLanguage}
-                    value={editorValue}
-                    options={{
-                      readOnly: true,
-                      minimap: { enabled: false },
-                      scrollBeyondLastLine: false,
-                      wordWrap: 'on',
-                      fontSize: 13,
-                      lineNumbersMinChars: 3,
-                      renderLineHighlight: 'all',
-                      automaticLayout: true,
-                    }}
-                  />
+                  <div className="h-full overflow-hidden rounded-b-2xl">
+                    <MonacoEditor
+                      height="100%"
+                      theme="vs-dark"
+                      onMount={handleEditorMount}
+                      language={editorLanguage}
+                      value={editorValue}
+                      options={{
+                        readOnly: true,
+                        glyphMargin: true,
+                        lineNumbers: 'on',
+                        minimap: { enabled: false },
+                        scrollBeyondLastLine: false,
+                        wordWrap: 'on',
+                        fontSize: 13,
+                        lineNumbersMinChars: 3,
+                        renderLineHighlight: 'all',
+                        automaticLayout: true,
+                      }}
+                    />
+                  </div>
                 )}
+
+                {activeThreadLine != null && activeThreadTop != null ? (
+                  <div
+                    className="absolute inset-x-3 z-20"
+                    style={{ top: activeThreadTop }}
+                  >
+                    <div
+                      className="flex flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl ring-1 ring-slate-200"
+                      style={{ height: `${activeThreadHeight}px` }}
+                    >
+                      <div className="flex shrink-0 items-center justify-between gap-3 border-b border-slate-200 bg-slate-50 px-3 py-2.5">
+                        <div>
+                          <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-500">
+                            Comment thread
+                          </p>
+                          <p className="mt-0.5 text-sm font-semibold text-slate-800">
+                            Line {activeThreadLine}
+                          </p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (activeThreadLine != null) {
+                              commentDraftByLineRef.current[activeThreadLine] = activeThreadDraft;
+                            }
+                            setActiveThreadLine(null);
+                            setActiveThreadDraft('');
+                            setActiveThreadTop(null);
+                            clearThreadZone();
+                          }}
+                          className="rounded-full border border-slate-300 bg-white px-2.5 py-1 text-xs font-semibold text-slate-600 transition-colors hover:border-slate-400 hover:text-slate-900"
+                        >
+                          Close
+                        </button>
+                      </div>
+
+                      <div className="min-h-0 flex-1 overflow-y-auto px-3 py-3">
+                        {commentsError ? (
+                          <p className="mb-2 text-sm text-rose-600">{commentsError}</p>
+                        ) : null}
+
+                        {activeThreadComments.length === 0 ? (
+                          <p className="mb-2 text-sm text-slate-500">
+                            No comments on this line yet.
+                          </p>
+                        ) : (
+                          <div className="space-y-2.5">
+                            {activeThreadComments.map((comment) => {
+                              const avatarUrl = getCommentAuthorAvatar(comment);
+                              const deleting = deletingCommentIds.has(comment.id);
+
+                              return (
+                                <article
+                                  key={comment.id}
+                                  className="rounded-xl border border-slate-200 bg-slate-50 px-2.5 py-2.5"
+                                >
+                                  <div className="flex items-start justify-between gap-2.5">
+                                    <div className="flex min-w-0 items-start gap-2.5">
+                                      {avatarUrl ? (
+                                        // eslint-disable-next-line @next/next/no-img-element
+                                        <img
+                                          src={avatarUrl}
+                                          alt={getCommentAuthorName(comment)}
+                                          className="h-7 w-7 rounded-full object-cover"
+                                        />
+                                      ) : (
+                                        <span className="flex h-7 w-7 items-center justify-center rounded-full bg-blue-100 text-[10px] font-bold text-blue-800">
+                                          {getInitials(getCommentAuthorName(comment))}
+                                        </span>
+                                      )}
+
+                                      <div className="min-w-0">
+                                        <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
+                                          <p className="text-sm font-semibold text-slate-900">
+                                            {getCommentAuthorName(comment)}
+                                          </p>
+                                          <p className="text-xs text-slate-500">
+                                            {timeAgo(comment.created_at)}
+                                          </p>
+                                        </div>
+                                        <p className="mt-1.5 whitespace-pre-wrap break-words text-sm leading-5 text-slate-700">
+                                          {comment.body}
+                                        </p>
+                                      </div>
+                                    </div>
+
+                                    {isOwnComment(comment) ? (
+                                      <button
+                                        type="button"
+                                        disabled={deleting}
+                                        onClick={() => {
+                                          void handleDeleteComment(comment.id);
+                                        }}
+                                        className="shrink-0 rounded-full border border-rose-200 bg-rose-50 px-2.5 py-1 text-[11px] font-semibold text-rose-600 transition-colors hover:border-rose-300 hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-60"
+                                      >
+                                        {deleting ? 'Deleting...' : 'Delete'}
+                                      </button>
+                                    ) : null}
+                                  </div>
+                                </article>
+                              );
+                            })}
+                          </div>
+                        )}
+
+                        {canView ? (
+                          <div className="mt-3 shrink-0 border-t border-slate-200 pt-3">
+                            <textarea
+                              value={activeThreadDraft}
+                              onChange={(event) => {
+                                const value = event.target.value;
+                                setActiveThreadDraft(value);
+                                if (activeThreadLine != null) {
+                                  commentDraftByLineRef.current[activeThreadLine] = value;
+                                }
+                              }}
+                              placeholder="Write a comment…"
+                              rows={2}
+                              className="h-16 w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 outline-none transition-colors placeholder:text-slate-400 focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
+                            />
+                            <div className="mt-2.5 flex items-center justify-end gap-2">
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  if (activeThreadLine != null) {
+                                    commentDraftByLineRef.current[activeThreadLine] = activeThreadDraft;
+                                  }
+                                  setActiveThreadLine(null);
+                                  setActiveThreadDraft('');
+                                  setActiveThreadTop(null);
+                                  clearThreadZone();
+                                }}
+                                className="rounded-full border border-slate-300 bg-white px-2.5 py-1 text-xs font-semibold text-slate-600 transition-colors hover:border-slate-400 hover:text-slate-900"
+                              >
+                                Cancel
+                              </button>
+                              <button
+                                type="button"
+                                disabled={postingComment}
+                                onClick={() => {
+                                  void addCommentAtActiveLine();
+                                }}
+                                className="rounded-full border border-blue-700 bg-blue-600 px-3.5 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
+                              >
+                                {postingComment ? 'Posting...' : 'Comment'}
+                              </button>
+                            </div>
+                          </div>
+                        ) : (
+                          <p className="mt-4 border-t border-slate-200 pt-4 text-sm italic text-slate-500">
+                            You do not have permission to comment on this submission.
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ) : null}
               </div>
             </div>
           </div>
