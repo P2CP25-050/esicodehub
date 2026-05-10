@@ -15,7 +15,7 @@ describe('submissions.api', () => {
 
   // ── listSubmissions ────────────────────────────────────────────────────────
 
-  it('calls GET /personal-submissions/', async () => {
+  it('calls GET /submissions/', async () => {
     (apiClient.get as jest.Mock).mockResolvedValue({
       data: { count: 1, next: null, previous: null, results: [] }
     });
@@ -23,13 +23,13 @@ describe('submissions.api', () => {
     const result = await submissionsApi.listSubmissions();
 
     expect(apiClient.get).toHaveBeenCalledWith(
-      '/personal-submissions/',
+      '/submissions/',
       { params: undefined }
     );
     expect(result.count).toBe(1);
   });
 
-  it('passes filter params to GET /personal-submissions/', async () => {
+  it('passes filter params to GET /submissions/', async () => {
     (apiClient.get as jest.Mock).mockResolvedValue({
       data: { count: 0, next: null, previous: null, results: [] }
     });
@@ -37,8 +37,18 @@ describe('submissions.api', () => {
     await submissionsApi.listSubmissions({ language: 'Python', page: 2 });
 
     expect(apiClient.get).toHaveBeenCalledWith(
-      '/personal-submissions/',
-      { params: { language: 'Python', type: undefined, course: undefined, search: undefined, page: 2 } }
+      '/submissions/',
+      {
+        params: {
+          language: 'Python',
+          type: undefined,
+          course: undefined,
+          search: undefined,
+          page: 2,
+          visibility: undefined,
+          mine: undefined,
+        }
+      }
     );
   });
 

@@ -142,6 +142,60 @@ class AssignmentSubmissionApiTests(APITestCase):
         mock_delete_directory.assert_called_once_with('assignments/old/prefix/')
 
 
+class AssignmentListSecurityTests(APITestCase):
+    def setUp(self):
+        self.subject = Subject.objects.create(name='Systems', code='SYS101')
+        self.professor_one = User.objects.create_user(
+            email='prof1@test.local',
+            password='testpass123',
+            first_name='Prof',
+            last_name='One',
+            role=User.Role.PROFESSOR,
+            is_active=True,
+            is_verified=True,
+        )
+        self.professor_two = User.objects.create_user(
+            email='prof2@test.local',
+            password='testpass123',
+            first_name='Prof',
+            last_name='Two',
+            role=User.Role.PROFESSOR,
+            is_active=True,
+            is_verified=True,
+        )
+        self.assignment_one = Assignment.objects.create(
+            professor=self.professor_one,
+            subject=self.subject,
+            title='HW1',
+            description='One',
+            target_year='2CP',
+            target_sections=['A'],
+            target_groups=[],
+            deadline=timezone.now() + timedelta(days=2),
+            allow_late=False,
+        )
+        Assignment.objects.create(
+            professor=self.professor_two,
+            subject=self.subject,
+            title='HW2',
+            description='Two',
+            target_year='2CP',
+            target_sections=['A'],
+            target_groups=[],
+            deadline=timezone.now() + timedelta(days=2),
+            allow_late=False,
+        )
+
+    def test_professor_only_sees_own_assignments(self):
+        self.client.force_authenticate(user=self.professor_one)
+
+        response = self.client.get(reverse('assignment-list-create'))
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['count'], 1)
+        self.assertEqual(response.data['results'][0]['id'], self.assignment_one.id)
+
+
 class SubmissionReviewApiTests(APITestCase):
     def setUp(self):
         self.subject = Subject.objects.create(name='Databases', code='DB101')

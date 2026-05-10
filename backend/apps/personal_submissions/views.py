@@ -2,7 +2,6 @@ import io
 import zipfile
 from django.db import transaction
 from django.http import HttpResponse
-from django.db.models import Q
 from django.shortcuts import get_object_or_404
 from pathlib import PurePosixPath
 from rest_framework import status, serializers
@@ -19,7 +18,7 @@ from .serializers import (
     PersonalSubmissionDetailSerializer,
     PersonalSubmissionListSerializer,
 )
-from .validators import validate_code_file
+from .validators import validate_code_file, validate_attachment_file
 
 # File size limits in bytes
 MAX_FILE_SIZE = 10 * 1024 * 1024    # 10MB per file
@@ -27,29 +26,44 @@ MAX_TOTAL_SIZE = 50 * 1024 * 1024   # 50MB per submission
 
 
 class PersonalSubmissionListCreateView(APIView):
-    """List public submissions and create new personal submissions."""
+    """List visible submissions and create new personal submissions."""
 
     permission_classes = [IsAuthenticated]
 
+    def get_queryset(self):
+        user = self.request.user
+        base_queryset = PersonalSubmission.objects.select_related(
+            'owner'
+        ).prefetch_related('files')
+        queryset = base_queryset.filter(
+            owner__role=user.role
+        ).exclude(
+            visibility=PersonalSubmission.Visibility.PRIVATE
+        )
+        own_queryset = base_queryset.filter(owner=user)
+        return (queryset | own_queryset).distinct()
+
     def get(self, request):
-        queryset = PersonalSubmission.objects.select_related('owner').prefetch_related(
-            'files'
-        )
-
-        queryset = queryset.filter(
-            Q(visibility=PersonalSubmission.Visibility.PUBLIC)
-            | Q(owner=request.user)
-        )
-
+        queryset = self.get_queryset()
         mine = request.query_params.get('mine')
         if mine and mine.strip().lower() in {'1', 'true', 'yes'}:
             queryset = queryset.filter(owner=request.user)
-
+        visibility = request.query_params.get('visibility')
+        if visibility:
+            visibility = visibility.strip().lower()
+            if visibility == PersonalSubmission.Visibility.PRIVATE:
+                queryset = queryset.filter(
+                    owner=request.user,
+                    visibility=PersonalSubmission.Visibility.PRIVATE
+                )
+            elif visibility == PersonalSubmission.Visibility.PUBLIC:
+                queryset = queryset.filter(
+                    visibility=PersonalSubmission.Visibility.PUBLIC
+                )
         language = request.query_params.get('language')
         submission_type = request.query_params.get('type')
         course = request.query_params.get('course')
         search = request.query_params.get('search')
-
         if language:
             queryset = queryset.filter(language__iexact=language.strip())
         if submission_type:
@@ -60,7 +74,6 @@ class PersonalSubmissionListCreateView(APIView):
             queryset = queryset.filter(course_tag__iexact=course.strip())
         if search:
             queryset = queryset.filter(title__icontains=search.strip())
-
         paginator = PageNumberPagination()
         page = paginator.paginate_queryset(queryset, request, view=self)
         serializer = PersonalSubmissionListSerializer(page, many=True)
@@ -69,14 +82,12 @@ class PersonalSubmissionListCreateView(APIView):
     def post(self, request):
         serializer = PersonalSubmissionCreateSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-
         submission = serializer.save(owner=request.user, gcs_prefix='')
         submission.gcs_prefix = PersonalSubmission.build_gcs_prefix(
             request.user.id,
             submission.id,
         )
         submission.save(update_fields=['gcs_prefix'])
-
         detail_serializer = PersonalSubmissionDetailSerializer(submission)
         return Response(detail_serializer.data, status=status.HTTP_201_CREATED)
 
@@ -217,6 +228,8 @@ class FileUploadView(APIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
+        is_other_submission = submission.language == 'other'
+
         # Validate each file before doing anything
         for file in files:
             # Check individual file size
@@ -228,7 +241,10 @@ class FileUploadView(APIView):
 
             # Check file extension and MIME type through the validator
             try:
-                validate_code_file(file)
+                if is_other_submission:
+                    validate_attachment_file(file)
+                else:
+                    validate_code_file(file)
             except serializers.ValidationError as e:
                 return Response(
                     {'detail': e.detail[0]},

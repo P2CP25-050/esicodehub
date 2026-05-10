@@ -18,7 +18,14 @@ export interface Assignment {
   is_open: boolean;
   has_submitted?: boolean;
   professor_name: string;
+  professor?: {
+    email: string;
+    first_name: string;
+    last_name: string;
+  };
   submission_count: number;
+  max_score?: number;
+  description_pdf?: string;
   created_at: string;
   updated_at: string;
 }

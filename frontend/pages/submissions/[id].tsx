@@ -29,6 +29,7 @@ import {
   getFileContent,
   listSubmissionComments,
   getSubmission,
+  downloadSubmission,
 } from '@/services/submissions/submissions.api';
 import { timeAgo } from '@/utils/time';
 
@@ -165,64 +166,31 @@ const languageFromFilename = (filename: string): string => {
   const ext = lower.includes('.') ? lower.split('.').pop() : '';
 
   switch (ext) {
-    case 'py':
-      return 'python';
-    case 'js':
-    case 'mjs':
-    case 'cjs':
-    case 'jsx':
-      return 'javascript';
-    case 'ts':
-    case 'mts':
-    case 'cts':
-    case 'tsx':
-      return 'typescript';
-    case 'c':
-    case 'h':
-      return 'c';
-    case 'cpp':
-    case 'cc':
-    case 'cxx':
-    case 'hpp':
-    case 'hh':
-    case 'hxx':
-      return 'cpp';
-    case 'java':
-      return 'java';
-    case 'json':
-      return 'json';
-    case 'md':
-      return 'markdown';
-    case 'html':
-      return 'html';
-    case 'css':
-      return 'css';
-    case 'sh':
-    case 'bash':
-      return 'shell';
-    case 'yml':
-    case 'yaml':
-      return 'yaml';
-    case 'xml':
-      return 'xml';
-    default:
-      return 'plaintext';
+    case 'py': return 'python';
+    case 'js': case 'mjs': case 'cjs': case 'jsx': return 'javascript';
+    case 'ts': case 'mts': case 'cts': case 'tsx': return 'typescript';
+    case 'c': case 'h': return 'c';
+    case 'cpp': case 'cc': case 'cxx': case 'hpp': case 'hh': case 'hxx': return 'cpp';
+    case 'java': return 'java';
+    case 'json': return 'json';
+    case 'md': return 'markdown';
+    case 'html': return 'html';
+    case 'css': return 'css';
+    case 'sh': case 'bash': return 'shell';
+    case 'yml': case 'yaml': return 'yaml';
+    case 'xml': return 'xml';
+    default: return 'plaintext';
   }
 };
 
 const flattenFiles = (nodes: TreeNode[]): TreeFileNode[] => {
   const out: TreeFileNode[] = [];
-
   const traverse = (items: TreeNode[]) => {
     items.forEach((item) => {
-      if (item.kind === 'file') {
-        out.push(item);
-      } else {
-        traverse(item.children);
-      }
+      if (item.kind === 'file') out.push(item);
+      else traverse(item.children);
     });
   };
-
   traverse(nodes);
   return out;
 };
@@ -235,17 +203,11 @@ const flattenVisibleTree = (
   expandedPaths: Set<string>
 ): VisibleTreeItem[] => {
   const out: VisibleTreeItem[] = [];
-
-  const visit = (
-    items: TreeNode[],
-    depth: number,
-    parentKey: string | null
-  ) => {
+  const visit = (items: TreeNode[], depth: number, parentKey: string | null) => {
     items.forEach((item) => {
       if (item.kind === 'dir') {
         const dirKey = getDirKey(item.fullPath);
         const isExpanded = expandedPaths.has(item.fullPath);
-
         out.push({
           key: dirKey,
           kind: 'dir',
@@ -254,13 +216,9 @@ const flattenVisibleTree = (
           parentKey,
           isExpanded,
         });
-
-        if (isExpanded) {
-          visit(item.children, depth + 1, dirKey);
-        }
+        if (isExpanded) visit(item.children, depth + 1, dirKey);
         return;
       }
-
       out.push({
         key: getFileKey(item.file.id),
         kind: 'file',
@@ -271,7 +229,6 @@ const flattenVisibleTree = (
       });
     });
   };
-
   visit(nodes, 0, null);
   return out;
 };
@@ -326,19 +283,17 @@ const getCommentAuthorEmail = (comment: SubmissionComment): string | null => {
 };
 
 const Badge = ({ label }: { label: string }) => (
-  <span className="inline-flex items-center rounded-full border border-slate-200 bg-white px-2.5 py-1 text-xs font-semibold text-slate-600 shadow-sm">
-    {label}
-  </span>
+  <span className="detail-badge">{label}</span>
 );
 
 const HeaderSkeleton = () => (
-  <div className="rounded-2xl border border-slate-200 bg-white/95 p-5 shadow-sm">
-    <div className="h-5 w-24 animate-pulse rounded bg-slate-200" />
-    <div className="mt-4 h-8 w-2/3 animate-pulse rounded bg-slate-200" />
+  <div className="detail-card animate-pulse p-5">
+    <div className="h-5 w-24 rounded bg-slate-200" />
+    <div className="mt-4 h-8 w-2/3 rounded bg-slate-200" />
     <div className="mt-3 flex gap-2">
-      <div className="h-6 w-20 animate-pulse rounded bg-slate-200" />
-      <div className="h-6 w-20 animate-pulse rounded bg-slate-200" />
-      <div className="h-6 w-20 animate-pulse rounded bg-slate-200" />
+      <div className="h-6 w-20 rounded bg-slate-200" />
+      <div className="h-6 w-20 rounded bg-slate-200" />
+      <div className="h-6 w-20 rounded bg-slate-200" />
     </div>
   </div>
 );
@@ -347,14 +302,14 @@ const BackButton = ({ onClick }: { onClick: () => void }) => (
   <button
     type="button"
     onClick={onClick}
-    className="group inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-slate-300 hover:bg-slate-50 hover:text-slate-900 hover:shadow"
+    className="detail-back-btn group"
   >
     <svg
       width="14"
       height="14"
       viewBox="0 0 16 16"
       fill="none"
-      className="text-slate-500 transition-transform duration-200 group-hover:-translate-x-0.5 group-hover:text-slate-700"
+      className="detail-back-icon"
       aria-hidden="true"
     >
       <path
@@ -405,15 +360,13 @@ const FileTree = memo(function FileTree({
               onClick={() => onToggleDir(node.fullPath)}
               onFocus={() => onItemFocus(itemKey)}
               onKeyDown={(event) => onItemKeyDown(itemKey, event)}
-              className="group flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm text-slate-600 transition-colors duration-150 hover:bg-slate-100 hover:text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-300"
+              className="detail-tree-btn"
               data-active={activeItemKey === itemKey}
               style={{ paddingLeft: 8 + depth * 14 }}
               aria-expanded={isExpanded}
             >
-              <span className="inline-flex h-4 w-4 items-center justify-center text-xs text-slate-400 group-hover:text-slate-700">
-                {isExpanded ? '▾' : '▸'}
-              </span>
-              <span className="truncate font-medium">{node.name}</span>
+              <span className="detail-tree-arrow">{isExpanded ? '▾' : '▸'}</span>
+              <span className="detail-tree-dirname">{node.name}</span>
             </button>
             {isExpanded ? <div>{renderNodes(node.children, depth + 1)}</div> : null}
           </div>
@@ -431,27 +384,20 @@ const FileTree = memo(function FileTree({
           onFocus={() => onItemFocus(itemKey)}
           onKeyDown={(event) => onItemKeyDown(itemKey, event)}
           title={node.fullPath}
-          className={
-            'w-full rounded-md px-2 py-1.5 text-left text-sm transition-colors ' +
-            (isActive
-              ? 'bg-slate-100 text-slate-900 ring-1 ring-inset ring-slate-300 shadow-sm'
-              : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900')
-          }
+          className={`detail-tree-file ${isActive ? 'detail-tree-file-active' : ''}`}
           data-active={activeItemKey === itemKey}
           style={{ paddingLeft: 8 + depth * 14 }}
         >
-          <span className="inline-flex max-w-full items-center gap-2">
-            <span className="text-slate-400">#</span>
-            <span className="truncate">{node.name}</span>
-          </span>
+          <span className="detail-tree-file-icon">#</span>
+          <span className="detail-tree-filename">{node.name}</span>
         </button>
       );
     });
   };
-
-  return <div className="space-y-0.5">{renderNodes(nodes)}</div>;
+  return <div className="detail-tree-container">{renderNodes(nodes)}</div>;
 });
 
+// ---------- Main Page Component ----------
 function SubmissionDetailPage() {
   const router = useRouter();
   const { user } = useAuth();
@@ -479,6 +425,7 @@ function SubmissionDetailPage() {
   const [postingComment, setPostingComment] = useState<boolean>(false);
   const [deletingCommentIds, setDeletingCommentIds] = useState<Set<number>>(new Set());
   const [threadZoneVersion, setThreadZoneVersion] = useState(0);
+  const [isDownloading, setIsDownloading] = useState<boolean>(false);
 
   const [expandedPaths, setExpandedPaths] = useState<Set<string>>(new Set<string>());
 
@@ -727,23 +674,15 @@ function SubmissionDetailPage() {
       setLoadingFile(true);
       try {
         const content = await getFileContent(submissionId, file.id);
-
         if (fileRequestIdRef.current !== requestId) return;
-
-        fileContentCacheRef.current = {
-          ...fileContentCacheRef.current,
-          [file.id]: content,
-        };
+        fileContentCacheRef.current = { ...fileContentCacheRef.current, [file.id]: content };
         setEditorValue(content);
       } catch {
         if (fileRequestIdRef.current !== requestId) return;
-
         setEditorValue('');
         setFileError('Unable to load this file content. Please try again.');
       } finally {
-        if (fileRequestIdRef.current === requestId) {
-          setLoadingFile(false);
-        }
+        if (fileRequestIdRef.current === requestId) setLoadingFile(false);
       }
     },
     [submissionId]
@@ -752,44 +691,28 @@ function SubmissionDetailPage() {
   const handleToggleDir = useCallback((fullPath: string) => {
     setExpandedPaths((prev) => {
       const next = new Set(prev);
-      if (next.has(fullPath)) {
-        next.delete(fullPath);
-      } else {
-        next.add(fullPath);
-      }
+      if (next.has(fullPath)) next.delete(fullPath);
+      else next.add(fullPath);
       return next;
     });
   }, []);
 
-  const registerTreeItemRef = useCallback(
-    (key: string, element: HTMLButtonElement | null) => {
-      if (element) {
-        treeItemRefs.current.set(key, element);
-      } else {
-        treeItemRefs.current.delete(key);
-      }
-    },
-    []
-  );
+  const registerTreeItemRef = useCallback((key: string, element: HTMLButtonElement | null) => {
+    if (element) treeItemRefs.current.set(key, element);
+    else treeItemRefs.current.delete(key);
+  }, []);
 
   const focusTreeItem = useCallback((key: string) => {
     setActiveTreeItemKey(key);
-    requestAnimationFrame(() => {
-      treeItemRefs.current.get(key)?.focus();
-    });
+    requestAnimationFrame(() => treeItemRefs.current.get(key)?.focus());
   }, []);
 
-  const handleTreeItemFocus = useCallback((key: string) => {
-    setActiveTreeItemKey(key);
-  }, []);
-
+  const handleTreeItemFocus = useCallback((key: string) => setActiveTreeItemKey(key), []);
   const handleTreeItemKeyDown = useCallback(
     (itemKey: string, event: ReactKeyboardEvent<HTMLButtonElement>) => {
       if (visibleTreeItems.length === 0) return;
-
       const currentIndex = visibleTreeItems.findIndex((item) => item.key === itemKey);
       if (currentIndex === -1) return;
-
       const currentItem = visibleTreeItems[currentIndex];
 
       if (event.key === 'ArrowDown') {
@@ -798,73 +721,68 @@ function SubmissionDetailPage() {
         if (nextItem) focusTreeItem(nextItem.key);
         return;
       }
-
       if (event.key === 'ArrowUp') {
         event.preventDefault();
         const previousItem = visibleTreeItems[currentIndex - 1];
         if (previousItem) focusTreeItem(previousItem.key);
         return;
       }
-
       if (event.key === 'ArrowRight') {
         event.preventDefault();
-
         if (currentItem.kind === 'dir') {
           if (!currentItem.isExpanded) {
             handleToggleDir(currentItem.fullPath);
             return;
           }
-
           const childCandidate = visibleTreeItems[currentIndex + 1];
-          if (
-            childCandidate &&
-            childCandidate.parentKey === currentItem.key &&
-            childCandidate.depth === currentItem.depth + 1
-          ) {
+          if (childCandidate && childCandidate.parentKey === currentItem.key && childCandidate.depth === currentItem.depth + 1) {
             focusTreeItem(childCandidate.key);
           }
         }
         return;
       }
-
       if (event.key === 'ArrowLeft') {
         event.preventDefault();
-
         if (currentItem.kind === 'dir' && currentItem.isExpanded) {
           handleToggleDir(currentItem.fullPath);
           return;
         }
-
-        if (currentItem.parentKey) {
-          focusTreeItem(currentItem.parentKey);
-        }
+        if (currentItem.parentKey) focusTreeItem(currentItem.parentKey);
         return;
       }
-
       if (event.key === 'Enter') {
         event.preventDefault();
-
-        if (currentItem.kind === 'dir') {
-          handleToggleDir(currentItem.fullPath);
-          return;
-        }
-
-        if (currentItem.file) {
-          void openFile(currentItem.file);
-        }
+        if (currentItem.kind === 'dir') handleToggleDir(currentItem.fullPath);
+        else if (currentItem.file) void openFile(currentItem.file);
       }
     },
     [focusTreeItem, handleToggleDir, openFile, visibleTreeItems]
   );
 
+  const handleDownload = useCallback(async () => {
+  if (!submissionId || isDownloading) return;
+  setIsDownloading(true);
+  try {
+    const blob = await downloadSubmission(submissionId);
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.download = submission?.title ?? `submission-${submissionId}`;
+    document.body.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
+    URL.revokeObjectURL(url);
+  } catch {
+    window.alert('Failed to download submission. Please try again.');
+  } finally {
+    setIsDownloading(false);
+  }
+}, [isDownloading, submissionId, submission?.title]);
+
   const handleDelete = useCallback(async () => {
     if (!submissionId || !isOwner || isDeleting) return;
-
-    const confirmed = window.confirm(
-      'Delete this submission? This action cannot be undone.'
-    );
+    const confirmed = window.confirm('Delete this submission? This action cannot be undone.');
     if (!confirmed) return;
-
     setIsDeleting(true);
     try {
       await deleteSubmission(submissionId);
@@ -875,37 +793,30 @@ function SubmissionDetailPage() {
     }
   }, [isDeleting, isOwner, router, submissionId]);
 
+  // Fetch submission
   useEffect(() => {
     if (!router.isReady) return;
-
     if (!submissionId) {
       setViewState('error');
-      setSubmission(null);
       setSubmissionError('Invalid submission id.');
       return;
     }
-
     let cancelled = false;
-
     const loadSubmission = async () => {
       setViewState('loading');
       setSubmissionError(null);
-
       try {
         const data = await getSubmission(submissionId);
         if (cancelled) return;
-
         setSubmission(data);
         setViewState('ready');
       } catch (error) {
         if (cancelled) return;
-
         if (axios.isAxiosError(error) && error.response?.status === 403) {
           setViewState('forbidden');
           setSubmission(null);
           return;
         }
-
         if (axios.isAxiosError(error) && error.response?.status === 404) {
           setSubmissionError('Submission not found.');
         } else {
@@ -915,14 +826,11 @@ function SubmissionDetailPage() {
         setViewState('error');
       }
     };
-
     loadSubmission();
-
-    return () => {
-      cancelled = true;
-    };
+    return () => { cancelled = true; };
   }, [router.isReady, submissionId]);
 
+  // Reset on new submission
   useEffect(() => {
     if (!submissionId || !canView) return;
 
@@ -961,7 +869,6 @@ function SubmissionDetailPage() {
 
   useEffect(() => {
     if (!submission) return;
-
     setSelectedFileId(null);
     setActiveTreeItemKey(null);
     setSelectedFilePath('');
@@ -976,29 +883,25 @@ function SubmissionDetailPage() {
     setActiveThreadTop(null);
     setCommentsError(null);
     fileContentCacheRef.current = {};
-
     const initialExpanded = new Set<string>();
-
     const markTopLevelDirs = (nodes: TreeNode[]) => {
       nodes.forEach((node) => {
-        if (node.kind === 'dir') {
-          initialExpanded.add(node.fullPath);
-        }
+        if (node.kind === 'dir') initialExpanded.add(node.fullPath);
       });
     };
-
     markTopLevelDirs(fileTree);
     setExpandedPaths(initialExpanded);
   }, [fileTree, submission]);
 
+  // Auto-select first file
   useEffect(() => {
     if (!submission || flatFiles.length === 0) return;
     if (selectedFileId != null) return;
-
     const firstFile = flatFiles[0];
     void openFile(firstFile.file);
   }, [flatFiles, openFile, selectedFileId, submission]);
 
+  // Sync active tree item with visible items
   useEffect(() => {
     setActiveThreadLine(null);
     setHoverCommentLine(null);
@@ -1012,25 +915,18 @@ function SubmissionDetailPage() {
       setActiveTreeItemKey(null);
       return;
     }
-
-    if (activeTreeItemKey) {
-      const exists = visibleTreeItems.some((item) => item.key === activeTreeItemKey);
-      if (exists) return;
-    }
-
+    if (activeTreeItemKey && visibleTreeItems.some((item) => item.key === activeTreeItemKey)) return;
     if (selectedFileId != null) {
       const selectedKey = getFileKey(selectedFileId);
-      const selectedVisible = visibleTreeItems.some((item) => item.key === selectedKey);
-      if (selectedVisible) {
+      if (visibleTreeItems.some((item) => item.key === selectedKey)) {
         setActiveTreeItemKey(selectedKey);
         return;
       }
     }
-
     setActiveTreeItemKey(visibleTreeItems[0].key);
   }, [activeTreeItemKey, selectedFileId, visibleTreeItems]);
 
-  useEffect(() => {
+useEffect(() => {
     refreshCommentDecorations();
   }, [refreshCommentDecorations]);
 
@@ -1121,7 +1017,6 @@ function SubmissionDetailPage() {
         }
       });
 
-
       const onMouseMove = editor.onMouseMove((event: MonacoEditorNS.IEditorMouseEvent) => {
         if (selectedFileId == null) return;
 
@@ -1137,10 +1032,12 @@ function SubmissionDetailPage() {
       const onMouseLeave = editor.onMouseLeave(() => {
         setHoverCommentLine(null);
       });
+      
       editorDisposablesRef.current.push(onMouseDown);
       refreshCommentDecorations();
       editorDisposablesRef.current.push(onMouseMove);
       editorDisposablesRef.current.push(onMouseLeave);
+      
       if (activeThreadLine != null) {
         updateThreadOverlayPosition(activeThreadLine);
       }
@@ -1152,73 +1049,272 @@ function SubmissionDetailPage() {
     void router.push('/submissions');
   }, [router]);
 
+  // Inject global styles (same as new.tsx pattern)
+  useEffect(() => {
+    if (typeof document !== "undefined") {
+      const id = "detail-page-styles";
+      if (!document.getElementById(id)) {
+        const style = document.createElement("style");
+        style.id = id;
+        style.textContent = `
+          @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500;600&display=swap');
+          :root {
+            --ink: #000000;
+            --paper: #ffffff;
+            --navy: #051650;
+            --rule: 1.5px solid #000;
+            --font-display: 'Playfair Display', Georgia, serif;
+            --font-mono: 'Space Mono', monospace;
+            --font-body: 'DM Sans', sans-serif;
+          }
+          .detail-page {
+            min-height: 100vh;
+            background: var(--paper);
+            font-family: var(--font-body);
+            color: var(--ink);
+            position: relative;
+          }
+          .detail-page::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            right: 0;
+            width: 340px;
+            height: 100vh;
+            background: var(--navy);
+            clip-path: polygon(60px 0, 100% 0, 100% 100%, 0 100%);
+            z-index: 0;
+            pointer-events: none;
+          }
+          .detail-container {
+            max-width: 1180px;
+            margin: 0 auto;
+            padding: 40px 28px 80px;
+            position: relative;
+            z-index: 1;
+          }
+          .detail-card {
+            background: var(--paper);
+            border: var(--rule);
+            border-top: 4px solid var(--navy);
+            padding: 32px;
+            position: relative;
+          }
+          .detail-card::after {
+            content: '';
+            position: absolute;
+            bottom: -1px;
+            right: -1px;
+            width: 24px;
+            height: 24px;
+            border-bottom: 4px solid var(--navy);
+            border-right: 4px solid var(--navy);
+          }
+          .detail-back-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            border-radius: 6px;
+            border: 1.5px solid rgba(0,0,0,0.15);
+            background: white;
+            padding: 8px 16px;
+            font-family: var(--font-mono);
+            font-size: 12px;
+            font-weight: 700;
+            color: black;
+            transition: all 0.2s;
+            cursor: pointer;
+          }
+          .detail-back-btn:hover {
+            transform: translateY(-2px);
+            border-color: rgba(0,0,0,0.3);
+            box-shadow: 3px 3px 0 #051650;
+          }
+          .detail-back-icon {
+            color: rgba(0,0,0,0.5);
+            transition: transform 0.2s;
+          }
+          .detail-back-btn:hover .detail-back-icon {
+            transform: translateX(-2px);
+          }
+          .detail-badge {
+            display: inline-flex;
+            align-items: center;
+            border-radius: 999px;
+            border: 1px solid rgba(0,0,0,0.1);
+            background: white;
+            padding: 0.25rem 0.75rem;
+            font-family: var(--font-mono);
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: var(--navy);
+          }
+          .detail-tree-container {
+            display: flex;
+            flex-direction: column;
+            gap: 0.125rem;
+          }
+          .detail-tree-btn {
+            display: flex;
+            width: 100%;
+            align-items: center;
+            gap: 8px;
+            border-radius: 6px;
+            padding: 6px 8px;
+            text-align: left;
+            font-size: 0.875rem;
+            color: rgba(0,0,0,0.7);
+            transition: all 0.15s;
+            background: transparent;
+            border: none;
+            cursor: pointer;
+          }
+          .detail-tree-btn:hover {
+            background: rgba(0,0,0,0.05);
+            color: black;
+          }
+          .detail-tree-arrow {
+            display: inline-flex;
+            height: 16px;
+            width: 16px;
+            align-items: center;
+            justify-content: center;
+            font-size: 10px;
+            color: rgba(0,0,0,0.4);
+          }
+          .detail-tree-dirname {
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            font-family: var(--font-mono);
+            font-weight: 500;
+          }
+          .detail-tree-file {
+            width: 100%;
+            border-radius: 6px;
+            padding: 6px 8px;
+            text-align: left;
+            font-size: 0.875rem;
+            transition: all 0.15s;
+            color: rgba(0,0,0,0.7);
+            background: transparent;
+            border: none;
+            cursor: pointer;
+          }
+          .detail-tree-file:hover {
+            background: rgba(0,0,0,0.05);
+            color: black;
+          }
+          .detail-tree-file-active {
+            background: rgba(0,0,0,0.05);
+            color: black;
+            box-shadow: inset 0 0 0 1px rgba(0,0,0,0.2);
+          }
+          .detail-tree-file-icon {
+            margin-right: 8px;
+            color: rgba(0,0,0,0.4);
+          }
+          .detail-tree-filename {
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            font-family: var(--font-mono);
+          }
+          .detail-editor-loader {
+            position: absolute;
+            inset: 0;
+            z-index: 10;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(255,255,255,0.75);
+            backdrop-filter: blur(1px);
+          }
+          .detail-spinner {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            border-radius: 6px;
+            border: 1px solid rgba(0,0,0,0.15);
+            background: white;
+            padding: 6px 12px;
+            font-size: 0.875rem;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+          }
+          .detail-spinner-icon {
+            height: 16px;
+            width: 16px;
+            animation: spin 1s linear infinite;
+            border-radius: 999px;
+            border: 2px solid rgba(0,0,0,0.2);
+            border-top-color: #051650;
+          }
+          @keyframes spin {
+            to { transform: rotate(360deg); }
+          }
+          @media (max-width: 900px) {
+            .detail-page::before { display: none; }
+            .detail-card { padding: 20px; }
+            .detail-container { padding: 20px 16px; }
+          }
+        `;
+        document.head.appendChild(style);
+      }
+    }
+  }, []);
+
+  // Render loading state
   if (viewState === 'loading' || viewState === 'idle') {
     return (
-      <div className="min-h-screen bg-linear-to-b from-white via-slate-50 to-white">
+      <div className="detail-page">
         <Header activePage="Submissions" />
-        <div className="mx-auto max-w-7xl space-y-4 px-4 py-6 sm:px-6 lg:px-8">
+        <div className="detail-container space-y-4">
           <HeaderSkeleton />
           <div className="grid gap-4 lg:grid-cols-[320px_minmax(0,1fr)]">
-            <div className="h-130 animate-pulse rounded-2xl border border-slate-200 bg-white" />
-            <div className="h-130 animate-pulse rounded-2xl border border-slate-200 bg-white" />
+            <div className="detail-card h-130 animate-pulse" />
+            <div className="detail-card h-130 animate-pulse" />
           </div>
         </div>
       </div>
     );
   }
 
-  if (viewState === 'forbidden') {
+  if (viewState === 'forbidden' || (viewState === 'error' && !submission)) {
     return (
-      <div className="min-h-screen bg-linear-to-b from-white via-slate-50 to-white text-slate-900">
+      <div className="detail-page">
         <Header activePage="Submissions" />
-        <div className="px-4 py-10 sm:px-6 lg:px-8">
-          <div className="mx-auto max-w-3xl rounded-3xl border border-slate-200 bg-white/95 p-8 shadow-sm">
+        <div className="detail-container">
+          <div className="detail-card max-w-3xl mx-auto">
             <BackButton onClick={navigateBack} />
-            <h1 className="mt-6 text-3xl font-semibold tracking-tight text-slate-900">403</h1>
-            <p className="mt-2 text-sm text-slate-600">
-            You do not have permission to view this submission.
+            <h1 className="mt-6 text-3xl font-(--font-display) text-black">403</h1>
+            <p className="mt-2 text-sm text-black/70">
+              {viewState === 'forbidden'
+                ? 'You do not have permission to view this submission.'
+                : submissionError ?? 'Unknown error.'}
             </p>
           </div>
         </div>
       </div>
     );
   }
-
-  if (viewState === 'error' || !submission) {
-    return (
-      <div className="min-h-screen bg-linear-to-b from-white via-slate-50 to-white text-slate-900">
-        <Header activePage="Submissions" />
-        <div className="px-4 py-10 sm:px-6 lg:px-8">
-          <div className="mx-auto max-w-3xl rounded-3xl border border-slate-200 bg-white/95 p-8 shadow-sm">
-            <BackButton onClick={navigateBack} />
-            <h1 className="mt-6 text-2xl font-semibold tracking-tight text-slate-900">
-              Unable to load submission
-            </h1>
-            <p className="mt-2 text-sm text-slate-600">{submissionError ?? 'Unknown error.'}</p>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-
 
   if (!canView) {
     return (
-      <div className="min-h-screen bg-linear-to-b from-white via-slate-50 to-white text-slate-900">
+      <div className="detail-page">
         <Header activePage="Submissions" />
-        <div className="px-4 py-10 sm:px-6 lg:px-8">
-          <div className="mx-auto max-w-3xl rounded-3xl border border-slate-200 bg-white/95 p-8 shadow-sm">
+        <div className="detail-container">
+          <div className="detail-card max-w-3xl mx-auto">
             <BackButton onClick={navigateBack} />
-            <h1 className="mt-6 text-3xl font-semibold tracking-tight text-slate-900">403</h1>
-            <p className="mt-2 text-sm text-slate-600">
-              This submission is private and can only be viewed by its owner.
-            </p>
+            <h1 className="mt-6 text-3xl font-(--font-display) text-black">403</h1>
+            <p className="mt-2 text-sm text-black/70">This submission is private and can only be viewed by its owner.</p>
           </div>
         </div>
       </div>
     );
   }
+
+// TYPESCRIPT GUARD: after all error/forbidden checks, submission must be non‑null
+  if (!submission) return null;
 
   const selectedFileMeta =
     submission.files?.find((file) => file.id === selectedFileId) ?? null;
@@ -1325,38 +1421,71 @@ function SubmissionDetailPage() {
         }
       `}</style>
 
-      <div className="min-h-screen bg-linear-to-b from-white via-slate-50 to-white text-slate-900">
+      <div className="detail-page">
         <Header activePage="Submissions" />
-        <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
-          <header className="rounded-3xl border border-slate-200 bg-white/95 p-6 shadow-sm transition-shadow duration-300 hover:shadow-md">
+        <div className="detail-container">
+          {/* Header card */}
+          <div className="detail-card mb-5">
             <div className="flex flex-col gap-4">
               <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
                 <div className="min-w-0">
                   <BackButton onClick={navigateBack} />
-
-                  <h1 className="mt-4 truncate text-2xl font-semibold tracking-tight text-slate-900 sm:text-3xl">
-                    {submission.title}
-                  </h1>
-
-                  <div className="mt-3 flex flex-wrap items-center gap-2">
+                  <div className="mt-4 flex items-center gap-3">
+                    <h1 className="text-2xl font-(--font-display) tracking-tight sm:text-3xl">{submission.title}</h1>
+                    <button
+                      type="button"
+                      onClick={handleDownload}
+                      disabled={isDownloading}
+                      title="Download submission"
+                      className="shrink-0 inline-flex items-center justify-center w-8 h-8 rounded border border-black/20 bg-white text-black/60 hover:text-[#051650] hover:border-[#051650] hover:bg-[#051650]/5 disabled:opacity-40 disabled:cursor-not-allowed transition-colors duration-150"
+                      aria-label="Download submission"
+                    >
+                      {isDownloading ? (
+                        <svg
+                          width="14"
+                          height="14"
+                          viewBox="0 0 14 14"
+                          fill="none"
+                          className="animate-spin"
+                          aria-hidden="true"
+                        >
+                          <circle cx="7" cy="7" r="5.5" stroke="currentColor" strokeWidth="1.75" strokeDasharray="20 14" strokeLinecap="round" />
+                        </svg>
+                      ) : (
+                        <svg
+                          width="14"
+                          height="14"
+                          viewBox="0 0 16 16"
+                          fill="none"
+                          aria-hidden="true"
+                        >
+                          <path
+                            d="M8 2v8m0 0-3-3m3 3 3-3M2 12h12"
+                            stroke="currentColor"
+                            strokeWidth="1.75"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          />
+                        </svg>
+                      )}
+                    </button>
+                  </div>
+                  <div className="mt-3 flex flex-wrap gap-2">
                     <Badge label={submission.language} />
                     <Badge label={submission.submission_type} />
                     <Badge label={submission.visibility} />
                     <Badge label={timeAgo(submission.created_at)} />
-                    {submission.owner ? (
-                      <Badge
-                        label={`${submission.owner.first_name} ${submission.owner.last_name}`}
-                      />
-                    ) : null}
+                    {submission.owner && (
+                      <Badge label={`${submission.owner.first_name} ${submission.owner.last_name}`} />
+                    )}
                   </div>
                 </div>
-
-                {isOwner ? (
-                  <div className="flex shrink-0 items-center gap-2">
+                {isOwner && (
+                  <div className="flex shrink-0 gap-2">
                     <button
                       type="button"
                       onClick={() => router.push(`/submissions/${submission.id}/edit`)}
-                      className="rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition-all duration-200 hover:-translate-y-0.5 hover:border-slate-400 hover:bg-slate-50 hover:text-slate-900"
+                      className="detail-back-btn"
                     >
                       Edit
                     </button>
@@ -1364,30 +1493,27 @@ function SubmissionDetailPage() {
                       type="button"
                       onClick={handleDelete}
                       disabled={isDeleting}
-                      className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-2 text-sm font-semibold text-rose-600 transition-all duration-200 hover:-translate-y-0.5 hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-60"
+                      className="detail-back-btn border-red-500! text-red-600! hover:bg-red-50!"
                     >
                       {isDeleting ? 'Deleting...' : 'Delete'}
                     </button>
                   </div>
-                ) : null}
+                )}
               </div>
-
-              {submission.description ? (
-                <p className="max-w-4xl text-sm leading-7 text-slate-600">{submission.description}</p>
-              ) : null}
+              {submission.description && <p className="max-w-4xl text-sm leading-7 text-black/70">{submission.description}</p>}
             </div>
-          </header>
+          </div>
 
-          <div className="mt-5 grid gap-5 lg:grid-cols-[320px_minmax(0,1fr)]">
-            <aside className="h-[44vh] min-h-80 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition-shadow duration-300 hover:shadow-md lg:h-[72vh]">
-              <div className="border-b border-slate-200 px-4 py-3">
-                <h2 className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">
-                  Explorer
-                </h2>
+          {/* Two‑column layout */}
+          <div className="grid gap-5 lg:grid-cols-[320px_minmax(0,1fr)]">
+            {/* File tree */}
+            <div className="detail-card h-[44vh] overflow-hidden lg:h-[72vh] flex flex-col">
+              <div className="border-b border-black/10 px-4 py-3">
+                <h2 className="text-xs font-mono font-bold uppercase tracking-[0.14em] text-[#051650]">Explorer</h2>
               </div>
-              <div className="h-[calc(44vh-53px)] overflow-y-auto px-2 py-2 lg:h-[calc(72vh-53px)]">
-                {(submission.files?.length ?? 0) === 0 ? (
-                  <div className="rounded-lg border border-dashed border-slate-300 bg-slate-50 px-3 py-6 text-center text-sm text-slate-500">
+              <div className="flex-1 overflow-y-auto px-2 py-2">
+                {submission.files?.length === 0 ? (
+                  <div className="rounded-md border border-black/10 bg-black/5 px-3 py-6 text-center text-sm text-black/50">
                     No files attached to this submission.
                   </div>
                 ) : (
@@ -1404,16 +1530,17 @@ function SubmissionDetailPage() {
                   />
                 )}
               </div>
-            </aside>
+            </div>
 
-            <section className="h-[52vh] min-h-90 overflow-visible rounded-2xl border border-slate-200 bg-white shadow-sm transition-shadow duration-300 hover:shadow-md lg:h-[72vh]">
-              <div className="flex items-center justify-between gap-3 border-b border-slate-200 px-4 py-3">
+{/* Monaco editor */}
+            <div className="detail-card flex flex-col h-[52vh] overflow-visible lg:h-[72vh]">
+              <div className="flex items-center justify-between gap-3 border-b border-black/10 px-4 py-3">
                 <div className="min-w-0">
-                  <p className="truncate text-sm font-semibold text-slate-800">
+                  <p className="truncate text-sm font-semibold font-mono">
                     {selectedFilePath || 'Select a file'}
                   </p>
                   {selectedFileMeta ? (
-                    <div className="flex flex-wrap items-center gap-2 text-xs text-slate-500">
+                    <div className="flex flex-wrap items-center gap-2 text-xs text-black/50">
                       <span>{formatFileSize(selectedFileMeta.file_size)}</span>
                       <span aria-hidden="true">•</span>
                       <span>
@@ -1425,30 +1552,30 @@ function SubmissionDetailPage() {
                   ) : null}
                 </div>
                 <div className="flex flex-col items-end">
-                  {fileError ? <p className="text-xs text-rose-600">{fileError}</p> : null}
+                  {fileError ? <p className="text-xs text-red-600">{fileError}</p> : null}
                   {commentsError ? (
-                    <p className="text-xs text-rose-600">{commentsError}</p>
+                    <p className="text-xs text-red-600">{commentsError}</p>
                   ) : null}
                 </div>
               </div>
 
-              <div className="relative h-[calc(52vh-57px)] overflow-visible lg:h-[calc(72vh-57px)]">
-                {loadingFile ? (
-                  <div className="absolute inset-0 z-10 flex items-center justify-center bg-white/75 backdrop-blur-[1px]">
-                    <div className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm">
-                      <span className="h-4 w-4 animate-spin rounded-full border-2 border-slate-300 border-t-slate-700" />
+              <div className="relative flex-1 overflow-visible">
+                {loadingFile && (
+                  <div className="detail-editor-loader">
+                    <div className="detail-spinner">
+                      <div className="detail-spinner-icon" />
+                      Loading...
+                    </div>
+                  </div>
                       Loading file...
                     </div>
                   </div>
-                ) : null}
-
+                )}
                 {selectedFileId == null ? (
-                  <div className="flex h-full items-center justify-center px-4 text-center">
+                  <div className="flex h-full items-center justify-center text-center">
                     <div>
-                      <p className="text-base font-semibold text-slate-700">No file selected</p>
-                      <p className="mt-1 text-sm text-slate-500">
-                        Choose a file from the explorer to preview its source code.
-                      </p>
+                      <p className="text-base font-semibold">No file selected</p>
+                      <p className="mt-1 text-sm text-black/50">Choose a file from the explorer to preview its source code.</p>
                     </div>
                   </div>
                 ) : (
@@ -1632,7 +1759,7 @@ function SubmissionDetailPage() {
                   </div>
                 ) : null}
               </div>
-            </section>
+            </div>
           </div>
         </div>
       </div>

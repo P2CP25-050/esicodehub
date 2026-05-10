@@ -8,6 +8,7 @@ import {
 } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
+import dynamic from 'next/dynamic';
 import axios from 'axios';
 
 import Header from '@/components/submissions/Header';
@@ -15,6 +16,7 @@ import Head from 'next/head';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
 import { useAuth } from '@/context/AuthContext';
 import {
+  downloadSubmissionsZip,
   getAssignment,
   getMySubmission,
   getSubmissions,
@@ -26,6 +28,10 @@ import type {
   AssignmentSubmission,
 } from '@/services/assignments';
 import { timeAgo } from '@/utils/time';
+
+const PdfViewer = dynamic(() => import('@/components/pdf/PdfViewer'), {
+  ssr: false,
+});
 
 const formatDateTime = (value: string): string => {
   const date = new Date(value);
@@ -62,6 +68,8 @@ const getErrorMessage = (error: unknown, fallback: string): string => {
   if (axios.isAxiosError(error)) {
     const detail = error.response?.data?.detail;
     if (typeof detail === 'string' && detail.trim()) return detail;
+    const message = error.response?.data?.error;
+    if (typeof message === 'string' && message.trim()) return message;
     if (typeof error.message === 'string' && error.message.trim()) return error.message;
   }
 
@@ -70,6 +78,64 @@ const getErrorMessage = (error: unknown, fallback: string): string => {
   }
 
   return fallback;
+};
+
+const getDownloadErrorMessage = async (
+  error: unknown,
+  fallback: string
+): Promise<string> => {
+  if (axios.isAxiosError(error)) {
+    const payload = error.response?.data;
+    if (payload instanceof Blob) {
+      try {
+        const text = await payload.text();
+        const parsed = JSON.parse(text) as { detail?: unknown; error?: unknown };
+        if (typeof parsed.detail === 'string' && parsed.detail.trim()) {
+          return parsed.detail;
+        }
+        if (typeof parsed.error === 'string' && parsed.error.trim()) {
+          return parsed.error;
+        }
+      } catch {
+        return fallback;
+      }
+    }
+  }
+
+  return getErrorMessage(error, fallback);
+};
+
+const resolveAssignmentPdfUrl = (value?: string | null): string | null => {
+  if (!value) return null;
+  if (/^https?:\/\//i.test(value)) return value;
+
+  try {
+    const apiBase = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
+    const base = new URL(apiBase.endsWith('/') ? apiBase : `${apiBase}/`);
+
+    if (value.startsWith('/api/')) {
+      return `${base.protocol}//${base.host}${value}`;
+    }
+
+    if (value.startsWith('/assignments/')) {
+      return new URL(value.slice(1), base).toString();
+    }
+
+    if (value.startsWith('/')) {
+      return new URL(value, `${base.protocol}//${base.host}`).toString();
+    }
+
+    return new URL(value, base).toString();
+  } catch {
+    return null;
+  }
+};
+
+const getAssignmentPdfViewerUrl = (assignmentId?: number): string | null => {
+  if (!assignmentId) return null;
+  const apiBase = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
+  const normalizedBase = apiBase.endsWith('/') ? apiBase.slice(0, -1) : apiBase;
+  return `${normalizedBase}/assignments/${assignmentId}/description-pdf/`;
 };
 
 const getCountdown = (deadlineValue: string): string => {
@@ -182,6 +248,8 @@ function AssignmentDetailPageContent() {
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [showUploadZone, setShowUploadZone] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [downloadingSubmissions, setDownloadingSubmissions] = useState(false);
+  const [showPdfViewer, setShowPdfViewer] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [toast, setToast] = useState<{ type: 'success' | 'error' | 'info'; message: string } | null>(null);
   const [fileInputKey, setFileInputKey] = useState(0);
@@ -207,8 +275,15 @@ function AssignmentDetailPageContent() {
   const isCreator = Boolean(
     assignment &&
       user &&
-      `${user.first_name} ${user.last_name}`.trim() === assignment.professor_name.trim()
+      user.role === 'professor' &&
+      ((assignment.professor?.email &&
+        assignment.professor.email.toLowerCase() === user.email.toLowerCase()) ||
+        `${user.first_name} ${user.last_name}`.trim() ===
+          assignment.professor_name.trim())
   );
+  const canEditAssignment = isCreator;
+  const descriptionPdfUrl = resolveAssignmentPdfUrl(assignment?.description_pdf);
+  const descriptionPdfViewerUrl = getAssignmentPdfViewerUrl(assignment?.id);
   const deadlineBadge = assignment ? getDeadlineBadge(assignment) : null;
   const canSubmit = Boolean(assignment?.is_open);
   const hasSubmission = Boolean(mySubmission);
@@ -569,6 +644,34 @@ function AssignmentDetailPageContent() {
     void router.push(`/assignments/${assignmentId}/plagiarism`);
   };
 
+  const handleDownloadSubmissions = async () => {
+    if (!assignmentId) return;
+    setDownloadingSubmissions(true);
+
+    try {
+      const { blob, filename } = await downloadSubmissionsZip(assignmentId);
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.setTimeout(() => window.URL.revokeObjectURL(url), 1000);
+    } catch (error: unknown) {
+      const message = await getDownloadErrorMessage(
+        error,
+        'Failed to download submissions.'
+      );
+      setToast({
+        type: 'error',
+        message,
+      });
+    } finally {
+      setDownloadingSubmissions(false);
+    }
+  };
+
   if (!router.isReady || loadingAssignment || (loadingRoleData && !initialDataLoaded)) {
     return <LoadingSkeleton />;
   }
@@ -707,7 +810,7 @@ function AssignmentDetailPageContent() {
                         Run Plagiarism Check
                       </button>
                     )}
-                    {isCreator && (
+                    {canEditAssignment && (
                       <Link
                         href={`/assignments/${assignment.id}/edit`}
                         className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50"
@@ -732,6 +835,39 @@ function AssignmentDetailPageContent() {
               {assignment.description && (
                 <div className="mt-6 rounded-2xl bg-slate-50 p-4 text-sm leading-6 text-slate-700">
                   {assignment.description}
+                </div>
+              )}
+
+              {assignment.description_pdf && (
+                <div className="mt-6 rounded-2xl border border-blue-200 bg-blue-50 p-4">
+                  <div className="flex flex-wrap items-center gap-3">
+                    <p className="text-sm font-semibold text-blue-900">📄 Assignment PDF description</p>
+                    {descriptionPdfUrl ? (
+                      <div className="flex flex-wrap items-center gap-2">
+                        <a
+                          href={descriptionPdfUrl}
+                          onClick={(event) => {
+                            event.preventDefault();
+                            setShowPdfViewer(true);
+                          }}
+                          className="rounded-lg border border-blue-300 bg-white px-3 py-1 text-xs font-semibold text-blue-700 transition-colors hover:bg-blue-100"
+                        >
+                          PDF Viewer
+                        </a>
+                        <a
+                          href={descriptionPdfUrl}
+                          download
+                          className="rounded-lg border border-blue-300 bg-white px-3 py-1 text-xs font-semibold text-blue-700 transition-colors hover:bg-blue-100"
+                        >
+                          Download PDF
+                        </a>
+                      </div>
+                    ) : (
+                      <p className="text-xs text-blue-800">
+                        PDF uploaded. Signed access link is unavailable in this response.
+                      </p>
+                    )}
+                  </div>
                 </div>
               )}
 
@@ -1020,6 +1156,24 @@ function AssignmentDetailPageContent() {
                     <h2 className="text-xl font-bold text-[#0d1b2a]">Submissions ({assignment.submission_count})</h2>
                     <p className="mt-1 text-sm text-slate-500">Review student submissions for this assignment.</p>
                   </div>
+                  {isCreator && (
+                    <button
+                      type="button"
+                      onClick={handleDownloadSubmissions}
+                      disabled={downloadingSubmissions}
+                      className={
+                        'inline-flex items-center gap-2 rounded-xl px-4 py-2 text-xs font-bold transition-colors ' +
+                        (downloadingSubmissions
+                          ? 'cursor-not-allowed bg-slate-200 text-slate-500'
+                          : 'bg-blue-600 text-white hover:bg-blue-700')
+                      }
+                    >
+                      {downloadingSubmissions && (
+                        <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white" />
+                      )}
+                      {downloadingSubmissions ? 'Generating ZIP...' : 'Download all submissions'}
+                    </button>
+                  )}
                 </div>
 
                 <div className="mt-5">
@@ -1156,6 +1310,14 @@ function AssignmentDetailPageContent() {
           )}
         </div>
       </main>
+
+      <PdfViewer
+        open={showPdfViewer}
+        pdfUrl={descriptionPdfViewerUrl}
+        title="Assignment PDF Description"
+        onClose={() => setShowPdfViewer(false)}
+      />
+
     </div>
   );
 }

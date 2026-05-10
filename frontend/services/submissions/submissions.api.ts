@@ -29,16 +29,16 @@ export const listSubmissions = async (
   const requestParams = params
     ? {
         language: params.language,
-        // Backend list endpoint expects `type` and `course` query params.
-        type: params.type ,
-        course: params.course ,
+        type: params.type,
+        course: params.course,
         search: params.search,
         page: params.page,
+        visibility: params.visibility,
+        mine: params.mine,
       }
     : undefined;
-
   const res = await apiClient.get<PaginatedResponse<PersonalSubmission>>(
-    '/personal-submissions/',
+    '/submissions/',
     { params: requestParams }
   );
   return res.data;
@@ -221,4 +221,13 @@ export const deleteSubmissionComment = async (
   commentId: number
 ): Promise<void> => {
   await apiClient.delete(`/submissions/${submissionId}/comments/${commentId}/`);
+};
+
+
+export const downloadSubmission = async (id: number): Promise<Blob> => {
+  const res = await apiClient.get(
+    `/personal-submissions/${id}/download/`,
+    { responseType: 'blob' }
+  );
+  return res.data;
 };

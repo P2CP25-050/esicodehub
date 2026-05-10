@@ -210,6 +210,7 @@ function ForumContent() {
   const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [voteMap, setVoteMap] = useState<Record<number, number>>({});
+  const [userVoteMap, setUserVoteMap] = useState<Record<number, 1 | -1 | null>>({});
   const seed = useRef(Date.now());
 
   const fetchPage1 = useCallback(async () => {
@@ -227,7 +228,16 @@ function ForumContent() {
       if (ordering === "newest") items = seededShuffle(items, seed.current);
       setQuestions(items);
       setNextPage(getPageFromUrl(res.next));
-      setVoteMap({});
+      // Seed the vote map from the API-supplied user_vote so the UI reflects
+      // votes the user already cast on previous visits.
+      const initialVotes: Record<number, number> = {};
+      items.forEach((q) => {
+        if (q.user_vote != null) initialVotes[q.id] = q.vote_score;
+      });
+      setVoteMap(initialVotes);
+      const initialUserVotes: Record<number, 1 | -1 | null> = {};
+      items.forEach((q) => { initialUserVotes[q.id] = q.user_vote ?? null; });
+      setUserVoteMap(initialUserVotes);
     } catch {
       setError("Failed to load questions. Please try again.");
     } finally {
@@ -252,6 +262,12 @@ function ForumContent() {
       });
       setQuestions((p) => [...p, ...res.results]);
       setNextPage(getPageFromUrl(res.next));
+      // Seed userVoteMap for the newly appended items
+      setUserVoteMap((p) => {
+        const patch: Record<number, 1 | -1 | null> = {};
+        res.results.forEach((q) => { patch[q.id] = q.user_vote ?? null; });
+        return { ...p, ...patch };
+      });
     } catch {
       // silent fail
     } finally {
@@ -260,13 +276,24 @@ function ForumContent() {
   };
 
   const handleVote = async (q: QuestionListItem, value: 1 | -1) => {
+    const prevUserVote = userVoteMap[q.id] ?? q.user_vote ?? null;
+    // Switching direction directly is blocked — must toggle off first.
+    if (prevUserVote !== null && prevUserVote !== value) return;
+    const nextUserVote: 1 | -1 | null = prevUserVote === value ? null : value;
     const base = voteMap[q.id] ?? q.vote_score;
-    setVoteMap((p) => ({ ...p, [q.id]: base + value }));
+    const delta = (nextUserVote ?? 0) - (prevUserVote ?? 0);
+    setVoteMap((p) => ({ ...p, [q.id]: base + delta }));
+    setUserVoteMap((p) => ({ ...p, [q.id]: nextUserVote }));
     try {
       const updated = await voteQuestion(q.id, value);
       setVoteMap((p) => ({ ...p, [q.id]: updated.vote_score }));
+      if ("user_vote" in updated) {
+        setUserVoteMap((p) => ({ ...p, [q.id]: (updated as { user_vote?: 1 | -1 | null }).user_vote ?? value }));
+      }
     } catch {
+      // Roll back on error
       setVoteMap((p) => ({ ...p, [q.id]: base }));
+      setUserVoteMap((p) => ({ ...p, [q.id]: prevUserVote }));
     }
   };
 
@@ -356,6 +383,7 @@ function ForumContent() {
             <QuestionFeed
               questions={questions}
               voteMap={voteMap}
+              userVoteMap={userVoteMap}
               loading={loading}
               loadingMore={loadingMore}
               hasNextPage={nextPage !== null}
