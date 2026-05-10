@@ -55,8 +55,6 @@ GS_BUCKET_NAME = os.getenv('GCS_BUCKET_NAME')
 
 
 CELERY_BROKER_URL = os.getenv('REDIS_URL')
-CELERY_BROKER_USE_SSL = True
-CELERY_REDIS_BACKEND_USE_SSL = True
 
 
 SECURE_SSL_REDIRECT = False  # Cloud Run handles HTTPS termination
@@ -70,5 +68,24 @@ FRONTEND_URL = os.getenv('FRONTEND_URL', 'https://esicodehub.tech')
 BACKEND_URL = 'https://api.esicodehub.tech'
 ADMIN_EMAIL = os.getenv('ADMIN_EMAIL')
 
-SECURE_HSTS_SECONDS = 31536000
-SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+        },
+    },
+    'root': {
+        'handlers': ['console'],
+        'level': 'WARNING',
+    },
+    'loggers': {
+        'django.request': {
+            'handlers': ['console'],
+            'level': 'ERROR',
+            'propagate': False,
+        },
+    },
+}

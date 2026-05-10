@@ -70,7 +70,18 @@ def _create_and_send_verification(user):
     """Generate a 6-digit code, save EmailVerification, and send email."""
     code = EmailVerification.generate_code()
     EmailVerification.objects.create(user=user, code=code)
-    send_verification_email.delay(user.email, code)
+    try:
+        send_verification_email.delay(user.email, code)
+    except Exception:
+        from django.core.mail import send_mail
+        from django.conf import settings
+        send_mail(
+            subject='Your ESIcodeHub verification code',
+            message=f'Your verification code is: {code}\n\nExpires in 15 minutes.',
+            from_email=settings.DEFAULT_FROM_EMAIL,
+            recipient_list=[user.email],
+            fail_silently=True,
+        )
 
 
 @api_view(['POST'])
