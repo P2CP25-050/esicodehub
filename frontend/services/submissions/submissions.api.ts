@@ -181,3 +181,10 @@ export const getFileContent = async (
   );
   return res.data;
 };
+export const downloadSubmission = async (id: number): Promise<Blob> => {
+  const res = await apiClient.get(
+    `/personal-submissions/${id}/download/`,
+    { responseType: 'blob' }
+  );
+  return res.data;
+};

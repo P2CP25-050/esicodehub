@@ -24,6 +24,7 @@ import {
   deleteSubmission,
   getFileContent,
   getSubmission,
+  downloadSubmission,
 } from '@/services/submissions/submissions.api';
 import { timeAgo } from '@/utils/time';
 
@@ -370,6 +371,7 @@ function SubmissionDetailPage() {
   const [fileError, setFileError] = useState<string | null>(null);
   const [loadingFile, setLoadingFile] = useState<boolean>(false);
   const [isDeleting, setIsDeleting] = useState<boolean>(false);
+  const [isDownloading, setIsDownloading] = useState<boolean>(false);
 
   const [expandedPaths, setExpandedPaths] = useState<Set<string>>(new Set<string>());
 
@@ -514,6 +516,26 @@ function SubmissionDetailPage() {
     },
     [focusTreeItem, handleToggleDir, openFile, visibleTreeItems]
   );
+
+  const handleDownload = useCallback(async () => {
+  if (!submissionId || isDownloading) return;
+  setIsDownloading(true);
+  try {
+    const blob = await downloadSubmission(submissionId);
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.download = submission?.title ?? `submission-${submissionId}`;
+    document.body.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
+    URL.revokeObjectURL(url);
+  } catch {
+    window.alert('Failed to download submission. Please try again.');
+  } finally {
+    setIsDownloading(false);
+  }
+}, [isDownloading, submissionId, submission?.title]);
 
   const handleDelete = useCallback(async () => {
     if (!submissionId || !isOwner || isDeleting) return;
@@ -895,7 +917,46 @@ function SubmissionDetailPage() {
               <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
                 <div className="min-w-0">
                   <BackButton onClick={navigateBack} />
-                  <h1 className="mt-4 text-2xl font-(--font-display) tracking-tight sm:text-3xl">{submission.title}</h1>
+                  <div className="mt-4 flex items-center gap-3">
+                    <h1 className="text-2xl font-(--font-display) tracking-tight sm:text-3xl">{submission.title}</h1>
+                    <button
+                      type="button"
+                      onClick={handleDownload}
+                      disabled={isDownloading}
+                      title="Download submission"
+                      className="shrink-0 inline-flex items-center justify-center w-8 h-8 rounded border border-black/20 bg-white text-black/60 hover:text-[#051650] hover:border-[#051650] hover:bg-[#051650]/5 disabled:opacity-40 disabled:cursor-not-allowed transition-colors duration-150"
+                      aria-label="Download submission"
+                    >
+                      {isDownloading ? (
+                        <svg
+                          width="14"
+                          height="14"
+                          viewBox="0 0 14 14"
+                          fill="none"
+                          className="animate-spin"
+                          aria-hidden="true"
+                        >
+                          <circle cx="7" cy="7" r="5.5" stroke="currentColor" strokeWidth="1.75" strokeDasharray="20 14" strokeLinecap="round" />
+                        </svg>
+                      ) : (
+                        <svg
+                          width="14"
+                          height="14"
+                          viewBox="0 0 16 16"
+                          fill="none"
+                          aria-hidden="true"
+                        >
+                          <path
+                            d="M8 2v8m0 0-3-3m3 3 3-3M2 12h12"
+                            stroke="currentColor"
+                            strokeWidth="1.75"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          />
+                        </svg>
+                      )}
+                    </button>
+                  </div>
                   <div className="mt-3 flex flex-wrap gap-2">
                     <Badge label={submission.language} />
                     <Badge label={submission.submission_type} />
