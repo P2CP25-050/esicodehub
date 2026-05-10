@@ -27,7 +27,7 @@ export default function SubmissionsPage() {
 
   const [type,           setType]           = useState('');
   const [course,         setCourse]         = useState('');
-  const [visibility, setVisibility] = useState<SubmissionListParams['visibility'] | ''>('');
+  const [visibility, setVisibility] = useState<NonNullable<SubmissionListParams['visibility']> | ''>('');
 
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const searchRef = useRef(search);
