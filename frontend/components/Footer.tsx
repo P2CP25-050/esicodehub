@@ -44,7 +44,7 @@ export default function Footer() {
         page_url: typeof window !== 'undefined' ? window.location.pathname : '',
       });
       setDone(true);
-    } catch (err: unkown) {
+    } catch (err: unknown) {
       let msg = 'Failed to submit report. Please try again.';
 
       if (isAxiosError(err)) {
