@@ -552,21 +552,10 @@ function NotFoundPage() {
 function PublicProfilePage() {
   const router = useRouter();
 
-  /**
-   * router.isReady is false on the very first render in Next.js — router.query
-   * is an empty object until the router has hydrated. Without this guard,
-   * school_id is undefined on first render, the useEffect bails out immediately,
-   * and the page stays on the loading skeleton forever (or worse, shows 404).
-   *
-   * [...school_id] catch-all: query.school_id arrives as string[].
-   * Student IDs like "23/0145" are split by Next.js into ["23","0145"] —
-   * we join them back with "/" to reconstruct the real ID.
-   * Professor IDs have no slash so the array has one element; join is a no-op.
-   */
-  const rawSegments = router.isReady ? router.query.school_id : undefined;
-  const school_id   = rawSegments
-    ? (Array.isArray(rawSegments) ? rawSegments.join("/") : rawSegments)
-    : undefined;
+  // Wait for router hydration, then normalize dynamic route param.
+  // Accept string[] defensively in case any caller passes catch-all style query.
+  const rawId = router.isReady ? router.query.public_id : undefined;
+  const public_id = Array.isArray(rawId) ? rawId.join("/") : rawId;
 
   const { user } = useAuth();
 
@@ -576,11 +565,11 @@ function PublicProfilePage() {
   const [activeTab,  setActiveTab] = useState<TabId>("submissions");
   const [showReport, setShowReport] = useState(false);
 
-  const isOwner = !!user && !!school_id && user.school_id === school_id;
+  const isOwner = !!user && !!profile && user.email === profile.email;
 
   useEffect(() => {
     if (!router.isReady) return;
-    if (!school_id) {
+    if (!public_id) {
       setNotFound(true);
       setLoading(false);
       return;
@@ -593,7 +582,7 @@ function PublicProfilePage() {
 
     (async () => {
       try {
-        const { data } = await apiClient.get<PublicProfile>(`/profiles/${school_id}/`);
+        const { data } = await apiClient.get<PublicProfile>(`/profiles/${public_id}/`);
         if (!cancelled) setProfile(data);
       } catch (err: unknown) {
         if (!cancelled) {
@@ -606,13 +595,13 @@ function PublicProfilePage() {
     })();
 
     return () => { cancelled = true; };
-  }, [router.isReady, school_id]);
+  }, [router.isReady, public_id]);
 
   if (loading)            return <ProfileSkeleton />;
   if (notFound || !profile) return <NotFoundPage />;
 
   const {
-    first_name, last_name, email, role, joined_at,
+    first_name, last_name, email, role, school_id, joined_at,
     bio, avatar, study_year, section, group,
     stats, recent_activity,
   } = profile;
@@ -718,11 +707,14 @@ function PublicProfilePage() {
                 <RoleBadge role={role} />
               </div>
 
-              {/* Student ID — students only, professors never */}
+              {/* Student details are displayed, but profile lookup stays keyed by public_id. */}
               {isStudent && school_id && (
                 <div className="pub-field">
                   <label className="pub-field-label">Student ID</label>
-                  <p className="pub-field-value" style={{ fontFamily: "'Space Mono', monospace", fontSize: 13, letterSpacing: 1 }}>
+                  <p
+                    className="pub-field-value"
+                    style={{ fontFamily: "'Space Mono', monospace", fontSize: 13, letterSpacing: 1 }}
+                  >
                     {school_id}
                   </p>
                 </div>

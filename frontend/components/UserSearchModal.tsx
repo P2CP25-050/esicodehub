@@ -18,7 +18,8 @@ import apiClient from "@/lib/axios";
  */
 export interface SearchUser {
   school_id: string;
-  name: string;         // get_name() → "{first_name} {last_name}"
+  public_id: string;
+  name: string;
   role: "student" | "professor";
   study_year: string | null;
 }
@@ -191,8 +192,8 @@ export default function UserSearchModal({ isOpen, onClose }: UserSearchModalProp
 
   const navigate = useCallback((user: SearchUser) => {
     router.push({
-      pathname: '/profile/[...school_id]',
-      query: { school_id: user.school_id.split('/') },
+      pathname: '/profile/[public_id]',
+      query: { public_id: user.public_id },
     });
     onClose();
   }, [router, onClose]);
