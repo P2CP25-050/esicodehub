@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect } from 'react';
 import Head from 'next/head';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -6,29 +6,9 @@ import { useRouter } from 'next/router';
 import { useAuth } from '@/context/AuthContext';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
 
-// ─── Static code snippet for hero mockup ─────────────────────────────────────
-const CODE_LINES = [
-  { tokens: [{ t: 'kw', v: 'def ' }, { t: 'fn', v: 'merge_sort' }, { t: 'tx', v: '(arr):' }] },
-  { tokens: [{ t: 'tx', v: '    ' }, { t: 'kw', v: 'if ' }, { t: 'fn', v: 'len' }, { t: 'tx', v: '(arr) <= ' }, { t: 'nu', v: '1' }, { t: 'tx', v: ':' }] },
-  { tokens: [{ t: 'tx', v: '        ' }, { t: 'kw', v: 'return ' }, { t: 'tx', v: 'arr' }] },
-  { tokens: [{ t: 'tx', v: '    mid = ' }, { t: 'fn', v: 'len' }, { t: 'tx', v: '(arr) // ' }, { t: 'nu', v: '2' }] },
-  { tokens: [{ t: 'tx', v: '    left  = ' }, { t: 'fn', v: 'merge_sort' }, { t: 'tx', v: '(arr[:mid])' }] },
-  { tokens: [{ t: 'tx', v: '    right = ' }, { t: 'fn', v: 'merge_sort' }, { t: 'tx', v: '(arr[mid:])' }] },
-  { tokens: [{ t: 'kw', v: '    return ' }, { t: 'fn', v: 'merge' }, { t: 'tx', v: '(left, right)' }] },
-  { tokens: [] },
-  { tokens: [{ t: 'cm', v: '# ✓ Submitted · Prof. Amrani · 3 comments' }] },
-];
-
-const TOKEN_COLORS: Record<string, string> = {
-  kw: '#818cf8', fn: '#34d399', nu: '#c084fc',
-  cm: '#475569', tx: '#cbd5e1',
-};
-
 export default function LandingPage() {
   const router = useRouter();
   const { isAuthenticated, isLoading } = useAuth();
-
-  const featuresRef = useRef<HTMLElement>(null);
 
   // Auth redirect
   useEffect(() => {
@@ -36,10 +16,6 @@ export default function LandingPage() {
       void router.replace('/home');
     }
   }, [isAuthenticated, isLoading, router]);
-
-  const scrollToFeatures = () => {
-    featuresRef.current?.scrollIntoView({ behavior: 'smooth' });
-  };
 
   // Prevent rendering the landing UI while session state is unresolved
   // or while redirecting authenticated users to home.
@@ -51,831 +27,911 @@ export default function LandingPage() {
     <>
       <Head>
         <title>Home — ESICodeHub</title>
-        <meta name="description" content="ESICodeHub helps ESI students and professors manage assignments, share code submissions, discuss questions, and review plagiarism reports." />
+        <meta name="description" content="ESICodeHub is the academic code platform built for ESI engineers. Manage assignments, detect plagiarism, and collaborate with precision." />
       </Head>
 
       <style jsx global>{`
-        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-        html { scroll-behavior: smooth; }
-        body { font-family: 'Outfit', sans-serif; background: #0d1b2a; color: #e2e8f0; overflow-x: hidden; }
-
-        @keyframes fadeUp {
-          from { opacity: 0; transform: translateY(24px); }
-          to   { opacity: 1; transform: translateY(0); }
+        * {
+          margin: 0;
+          padding: 0;
+          box-sizing: border-box;
         }
+
+        html {
+          scroll-behavior: smooth;
+        }
+
+        body {
+          font-family: 'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+          background: #0a0e27;
+          color: #e2e8f0;
+          line-height: 1.6;
+        }
+
+        @keyframes fadeInUp {
+          from {
+            opacity: 0;
+            transform: translateY(30px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+
         @keyframes fadeIn {
-          from { opacity: 0; }
-          to   { opacity: 1; }
-        }
-        @keyframes gridPulse {
-          0%, 100% { opacity: .045; }
-          50%       { opacity: .08; }
-        }
-        @keyframes floatCode {
-          0%, 100% { transform: translateY(0px) rotate(-1deg); }
-          50%       { transform: translateY(-12px) rotate(-1deg); }
-        }
-        @keyframes scanline {
-          0%   { top: -2px; }
-          100% { top: 100%; }
-        }
-        @keyframes blink {
-          0%, 100% { opacity: 1; }
-          50%       { opacity: 0; }
-        }
-        @keyframes slideIn {
-          from { opacity: 0; transform: translateX(-16px); }
-          to   { opacity: 1; transform: translateX(0); }
+          from {
+            opacity: 0;
+          }
+          to {
+            opacity: 1;
+          }
         }
 
-        .reveal {
-          opacity: 0;
-          transform: translateY(28px);
-          transition: opacity .65s ease, transform .65s ease;
+        .container {
+          max-width: 1280px;
+          margin: 0 auto;
+          padding: 0 20px;
         }
-        .reveal.visible {
-          opacity: 1;
-          transform: translateY(0);
-        }
-
-        .hero-grid {
-          position: absolute;
-          inset: 0;
-          background-image:
-            linear-gradient(rgba(59,130,246,.055) 1px, transparent 1px),
-            linear-gradient(90deg, rgba(59,130,246,.055) 1px, transparent 1px);
-          background-size: 52px 52px;
-          animation: gridPulse 6s ease-in-out infinite;
-        }
-
-        .noise {
-          position: absolute;
-          inset: 0;
-          background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='.035'/%3E%3C/svg%3E");
-          pointer-events: none;
-        }
-
-        .code-window {
-          animation: floatCode 7s ease-in-out infinite;
-        }
-        .code-window::after {
-          content: '';
-          position: absolute;
-          left: 0; right: 0; height: 2px;
-          background: linear-gradient(90deg, transparent, rgba(99,102,241,.7), transparent);
-          animation: scanline 4s linear infinite;
-        }
-
-        .cursor-blink {
-          display: inline-block;
-          width: 2px;
-          height: 1em;
-          background: #60a5fa;
-          margin-left: 2px;
-          vertical-align: text-bottom;
-          animation: blink 1s step-end infinite;
-        }
-
-        .feature-card:hover .feature-icon-wrap {
-          transform: scale(1.1) rotate(-4deg);
-        }
-
-        .problem-card {
-          transition: transform .25s ease, box-shadow .25s ease;
-        }
-        .problem-card:hover {
-          transform: translateY(-4px);
-          box-shadow: 0 20px 60px rgba(0,0,0,.3);
-        }
-
-        .nav-link {
-          position: relative;
-          color: #94a3b8;
-          font-size: .875rem;
-          font-weight: 500;
-          text-decoration: none;
-          transition: color .2s;
-        }
-        .nav-link::after {
-          content: '';
-          position: absolute;
-          bottom: -2px; left: 0; right: 100%;
-          height: 1.5px;
-          background: #60a5fa;
-          transition: right .25s ease;
-        }
-        .nav-link:hover { color: #e2e8f0; }
-        .nav-link:hover::after { right: 0; }
 
         .btn-primary {
           display: inline-flex;
           align-items: center;
+          justify-content: center;
           gap: 8px;
-          padding: .75rem 1.75rem;
-          background: #2563eb;
+          padding: 12px 28px;
+          background: #4f46e5;
           color: #fff;
-          font-weight: 700;
-          font-size: .9375rem;
-          border-radius: 10px;
+          font-weight: 600;
+          font-size: 0.95rem;
           border: none;
+          border-radius: 10px;
           cursor: pointer;
           text-decoration: none;
-          transition: background .2s, transform .2s, box-shadow .2s;
-          box-shadow: 0 0 0 0 rgba(59,130,246,0);
+          transition: all 0.2s ease;
         }
+
         .btn-primary:hover {
-          background: #1d4ed8;
+          background: #4338ca;
           transform: translateY(-2px);
-          box-shadow: 0 8px 28px rgba(59,130,246,.45);
+          box-shadow: 0 10px 30px rgba(79, 70, 229, 0.3);
         }
 
         .btn-secondary {
           display: inline-flex;
           align-items: center;
+          justify-content: center;
           gap: 8px;
-          padding: .75rem 1.75rem;
+          padding: 12px 28px;
           background: transparent;
-          color: #94a3b8;
+          color: #e2e8f0;
           font-weight: 600;
-          font-size: .9375rem;
+          font-size: 0.95rem;
+          border: 1.5px solid #475569;
           border-radius: 10px;
-          border: 1.5px solid rgba(148,163,184,.25);
           cursor: pointer;
           text-decoration: none;
-          transition: all .2s;
+          transition: all 0.2s ease;
         }
+
         .btn-secondary:hover {
-          color: #e2e8f0;
-          border-color: rgba(148,163,184,.55);
-          transform: translateY(-2px);
-        }
-
-        .nav-links {
-          display: flex;
-          align-items: center;
-          gap: 32px;
-        }
-
-        .nav-mobile-auth {
-          display: none;
-        }
-
-        .hero-content-grid {
-          display: grid;
-          grid-template-columns: 1fr 1fr;
-          gap: 4rem;
-          align-items: center;
-          width: 100%;
-          padding-top: 3rem;
-          padding-bottom: 4rem;
-        }
-
-        .hero-title {
-          font-family: 'Outfit', sans-serif;
-          font-size: clamp(2.8rem, 4.5vw, 4rem);
-          font-weight: 400;
-          line-height: 1.1;
-          letter-spacing: -.02em;
+          border-color: #94a3b8;
           color: #f1f5f9;
-          margin-bottom: 1.25rem;
-          animation: fadeUp .6s ease .08s both;
-          text-wrap: balance;
-        }
-
-        .hero-subtitle {
-          font-size: 1.1rem;
-          color: #64748b;
-          line-height: 1.75;
-          max-width: 460px;
-          margin-bottom: 2rem;
-          animation: fadeUp .6s ease .16s both;
-        }
-
-        .hero-ctas {
-          display: flex;
-          gap: 1rem;
-          flex-wrap: wrap;
-          margin-bottom: 2.5rem;
-          animation: fadeUp .6s ease .24s both;
-        }
-
-        .problem-grid {
-          display: grid;
-          grid-template-columns: repeat(3, 1fr);
-          gap: 1.5rem;
-        }
-
-        .solution-grid {
-          background: linear-gradient(135deg, #0f172a, #1e293b);
-          border: 1px solid rgba(59,130,246,.2);
-          border-radius: 20px;
-          padding: 2.5rem 3rem;
-          display: grid;
-          grid-template-columns: 1fr 1fr;
-          gap: 3rem;
-          align-items: center;
-        }
-
-        .how-grid {
-          display: grid;
-          grid-template-columns: repeat(3, minmax(0, 1fr));
-          gap: 1.2rem;
-        }
-
-        .how-step {
-          background: rgba(255,255,255,.03);
-          border: 1px solid rgba(255,255,255,.08);
-          border-radius: 14px;
-          padding: 1.4rem;
-        }
-
-        .features-grid {
-          display: grid;
-          grid-template-columns: repeat(2, 1fr);
-          gap: 1.5rem;
-        }
-
-        @media (max-width: 900px) {
-          .hero-content-grid {
-            grid-template-columns: 1fr;
-            gap: 2rem;
-            padding-top: 1.5rem;
-          }
-          .hero-visual {
-            order: 2;
-          }
-          .problem-grid {
-            grid-template-columns: 1fr;
-          }
-          .solution-grid {
-            grid-template-columns: 1fr;
-            padding: 2rem;
-            gap: 1.5rem;
-          }
-        }
-
-        @media (max-width: 640px) {
-          .nav-links {
-            display: none;
-          }
-          .nav-mobile-auth {
-            display: inline-flex;
-            padding: .45rem 1.1rem;
-            font-size: .84rem;
-          }
-          .hero-title {
-            font-size: clamp(2rem, 9.5vw, 2.45rem);
-            line-height: 1.08;
-          }
-          .hero-subtitle {
-            font-size: .97rem;
-            line-height: 1.6;
-            max-width: none;
-          }
-          .hero-ctas {
-            flex-direction: column;
-            margin-bottom: 1.8rem;
-          }
-          .hero-ctas > * {
-            width: 100%;
-            justify-content: center;
-          }
-          .floating-badge {
-            display: none;
-          }
-          .how-grid {
-            grid-template-columns: 1fr;
-          }
-          .features-grid {
-            grid-template-columns: 1fr;
-          }
-        }
-
-        @media (max-width: 400px) {
-          .mobile-shell {
-            padding-left: 1rem !important;
-            padding-right: 1rem !important;
-          }
-          .hero-title {
-            font-size: 1.95rem;
-          }
+          transform: translateY(-2px);
         }
       `}</style>
 
-      <div style={{ minHeight: '100vh', background: '#0d1b2a' }}>
-
-        {/* ════════════════ NAV ════════════════ */}
+      <div style={{ background: '#0a0e27', minHeight: '100vh', color: '#e2e8f0' }}>
+        {/* ═══════════════════════════════════════════════════════════════════════════════ */}
+        {/* NAVIGATION */}
+        {/* ═══════════════════════════════════════════════════════════════════════════════ */}
         <nav style={{
-          position: 'fixed', top: 0, left: 0, right: 0, zIndex: 100,
-          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          padding: '0 max(1.5rem, calc(50% - 680px))',
-          height: 64,
-          borderBottom: '1px solid rgba(255,255,255,.06)',
-          background: 'rgba(13,27,42,.85)',
-          backdropFilter: 'blur(16px)',
-        }} className="mobile-shell">
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <div style={{ width: 32, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <Image
-                src="/esicodehub-logo.png"
-                alt="ESICodeHub Logo"
-                width={32}
-                height={32}
-                style={{ objectFit: 'contain' }}
-                priority
-              />
-            </div>
-            <span style={{ fontFamily: "'JetBrains Mono', monospace", fontWeight: 700, fontSize: '.9rem', color: '#e2e8f0' }}>
-              ESICodeHub
-            </span>
-          </div>
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          zIndex: 50,
+          background: 'rgba(10, 14, 39, 0.95)',
+          backdropFilter: 'blur(10px)',
+          borderBottom: '1px solid rgba(148, 163, 184, 0.1)',
+        }}>
+          <div className="container" style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            height: '70px',
+          }}>
+            {/* Logo */}
+            <Link href="/" style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '10px',
+              textDecoration: 'none',
+              color: '#f1f5f9',
+              fontWeight: 700,
+              fontSize: '1.2rem',
+            }}>
+              <div style={{ width: '32px', height: '32px', position: 'relative' }}>
+                <Image
+                  src="/esicodehub-logo.png"
+                  alt="ESICodeHub"
+                  fill
+                  style={{ objectFit: 'contain' }}
+                  priority
+                />
+              </div>
+              EsiCodeHub
+            </Link>
 
-          <div className="nav-links">
-            <a href="#features" className="nav-link">Features</a>
-            <Link href="/register" className="nav-link">Sign up</Link>
-            <Link href="/login" className="btn-primary" style={{ padding: '.45rem 1.25rem', fontSize: '.875rem' }}>
-              Sign in
+            {/* Nav Links */}
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '40px',
+            }}>
+              <a href="#features" style={{
+                color: '#94a3b8',
+                textDecoration: 'none',
+                fontSize: '0.9rem',
+                fontWeight: 500,
+                transition: 'color 0.2s',
+              }} onMouseEnter={(e) => e.currentTarget.style.color = '#e2e8f0'} onMouseLeave={(e) => e.currentTarget.style.color = '#94a3b8'}>
+                Features
+              </a>
+              <a href="#" onClick={(e) => e.preventDefault()} style={{
+                color: '#94a3b8',
+                textDecoration: 'none',
+                fontSize: '0.9rem',
+                fontWeight: 500,
+                transition: 'color 0.2s',
+                cursor: 'pointer',
+              }} onMouseEnter={(e) => e.currentTarget.style.color = '#e2e8f0'} onMouseLeave={(e) => e.currentTarget.style.color = '#94a3b8'}>
+                Solutions
+              </a>
+              <a href="#" onClick={(e) => e.preventDefault()} style={{
+                color: '#94a3b8',
+                textDecoration: 'none',
+                fontSize: '0.9rem',
+                fontWeight: 500,
+                transition: 'color 0.2s',
+                cursor: 'pointer',
+              }} onMouseEnter={(e) => e.currentTarget.style.color = '#e2e8f0'} onMouseLeave={(e) => e.currentTarget.style.color = '#94a3b8'}>
+                Resources
+              </a>
+            </div>
+
+            {/* CTA Button */}
+            <Link href="/login" className="btn-primary" style={{
+              padding: '10px 24px',
+              fontSize: '0.9rem',
+            }}>
+              Get Started
             </Link>
           </div>
-
-          <Link href="/login" className="btn-primary nav-mobile-auth">
-            Sign in
-          </Link>
         </nav>
 
-        {/* ════════════════ HERO ════════════════ */}
+        {/* ═══════════════════════════════════════════════════════════════════════════════ */}
+        {/* HERO SECTION */}
+        {/* ═══════════════════════════════════════════════════════════════════════════════ */}
         <section style={{
-          minHeight: '100vh',
-          display: 'flex', alignItems: 'center',
-          padding: '0 max(1.5rem, calc(50% - 680px))',
-          paddingTop: 64,
+          paddingTop: '140px',
+          paddingBottom: '100px',
+          background: 'linear-gradient(135deg, #0a0e27 0%, #1a1f3a 50%, #0a0e27 100%)',
           position: 'relative',
           overflow: 'hidden',
-          background: 'linear-gradient(160deg, #0d1b2a 0%, #0f2035 60%, #0d1b2a 100%)',
-        }} className="mobile-shell">
-          <div className="hero-grid" />
-          <div className="noise" />
+        }}>
+          {/* Background decorations */}
+          <div style={{
+            position: 'absolute',
+            top: '20%',
+            left: '10%',
+            width: '400px',
+            height: '400px',
+            background: 'radial-gradient(circle, rgba(79, 70, 229, 0.1) 0%, transparent 70%)',
+            borderRadius: '50%',
+            pointerEvents: 'none',
+            filter: 'blur(40px)',
+          }} />
+          <div style={{
+            position: 'absolute',
+            bottom: '10%',
+            right: '5%',
+            width: '300px',
+            height: '300px',
+            background: 'radial-gradient(circle, rgba(59, 130, 246, 0.08) 0%, transparent 70%)',
+            borderRadius: '50%',
+            pointerEvents: 'none',
+            filter: 'blur(40px)',
+          }} />
 
-          {/* Radial glows */}
-          <div style={{ position: 'absolute', top: '15%', left: '5%', width: 500, height: 500, background: 'radial-gradient(circle, rgba(37,99,235,.12) 0%, transparent 65%)', pointerEvents: 'none' }} />
-          <div style={{ position: 'absolute', bottom: '10%', right: '10%', width: 400, height: 400, background: 'radial-gradient(circle, rgba(79,70,229,.1) 0%, transparent 65%)', pointerEvents: 'none' }} />
+          <div className="container" style={{
+            position: 'relative',
+            zIndex: 1,
+          }}>
+            {/* Badge */}
+            <div style={{
+              textAlign: 'center',
+              marginBottom: '30px',
+              animation: 'fadeInUp 0.6s ease',
+            }}>
+              <span style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '8px',
+                fontSize: '0.75rem',
+                letterSpacing: '0.15em',
+                textTransform: 'uppercase',
+                color: '#4f46e5',
+                fontWeight: 600,
+              }}>
+                ● BUILT FOR ESI ENGINEERS
+              </span>
+            </div>
 
-          <div className="hero-content-grid">
+            {/* Title */}
+            <h1 style={{
+              fontSize: 'clamp(2.5rem, 6vw, 3.5rem)',
+              fontWeight: 700,
+              textAlign: 'center',
+              marginBottom: '20px',
+              lineHeight: 1.2,
+              animation: 'fadeInUp 0.6s ease 0.1s both',
+            }}>
+              The academic code platform<br />
+              <span style={{ color: '#4f46e5' }}>for the next generation of</span><br />
+              engineers.
+            </h1>
 
-            {/* Left — copy */}
-            <div>
-              {/* ESI badge */}
+            {/* Subtitle */}
+            <p style={{
+              fontSize: '1.1rem',
+              color: '#94a3b8',
+              textAlign: 'center',
+              maxWidth: '700px',
+              margin: '0 auto 40px',
+              lineHeight: 1.7,
+              animation: 'fadeInUp 0.6s ease 0.2s both',
+            }}>
+              Manage assignments, automate plagiarism detection, and deliver high-quality feedback — all in one centralized platform built for ESI university.
+            </p>
+
+            {/* CTAs */}
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '16px',
+              flexWrap: 'wrap',
+              marginBottom: '60px',
+              animation: 'fadeInUp 0.6s ease 0.3s both',
+            }}>
+              <Link href="/login" className="btn-primary">
+                Get Started
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                  <path d="M3.75 2h3.5a.75.75 0 0 1 0 1.5h-3.5a.25.25 0 0 0-.25.25v8.5c0 .138.112.25.25.25h8.5a.25.25 0 0 0 .25-.25v-3.5a.75.75 0 0 1 1.5 0v3.5A1.75 1.75 0 0 1 12.25 14h-8.5A1.75 1.75 0 0 1 2 12.25v-8.5C2 2.784 2.784 2 3.75 2Zm6.854-1h4.146a.25.25 0 0 1 .25.25v4.146a.25.25 0 0 1-.427.177L13.03 4.03 9.28 7.78a.751.751 0 0 1-1.042-.018.751.751 0 0 1-.018-1.042l3.75-3.75-1.543-1.543A.25.25 0 0 1 10.604 1Z" />
+                </svg>
+              </Link>
+              <button onClick={() => document.getElementById('features')?.scrollIntoView({ behavior: 'smooth' })} className="btn-secondary">
+                Explore Features
+              </button>
+            </div>
+
+            {/* Hero Image - Using image.png */}
+            <div style={{
+              position: 'relative',
+              borderRadius: '16px',
+              overflow: 'hidden',
+              boxShadow: '0 0 60px rgba(79, 70, 229, 0.2)',
+              animation: 'fadeIn 0.8s ease 0.4s both',
+              border: '1px solid rgba(79, 70, 229, 0.2)',
+            }}>
               <div style={{
-                display: 'inline-flex', alignItems: 'center', gap: 8,
-                background: 'rgba(37,99,235,.1)', border: '1px solid rgba(37,99,235,.3)',
-                borderRadius: 100, padding: '5px 14px 5px 8px',
-                fontFamily: "'JetBrains Mono', monospace", fontSize: '.72rem', color: '#60a5fa',
-                marginBottom: '1.5rem',
-                animation: 'fadeUp .5s ease both',
-              }}>
-                <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#3b82f6', display: 'inline-block', boxShadow: '0 0 8px #3b82f6' }} />
-                  École Supérieure d&apos;Informatique · Algiers
-              </div>
-
-              {/* Headline */}
-              <h1 className="hero-title">
-                The academic code workspace<br />
-                <em style={{ fontStyle: 'italic', color: '#93c5fd' }}>built for ESI.</em>
-              </h1>
-
-              {/* Subheadline */}
-              <p className="hero-subtitle">
-                Use one ESI-only platform to share personal code submissions, submit coursework, ask technical questions in the forum, and follow professor feedback and plagiarism checks.
-                Access is limited to{' '}
-                <span style={{ color: '#94a3b8', fontWeight: 600 }}>@esi.dz</span> accounts.
-              </p>
-
-              {/* CTAs */}
-              <div className="hero-ctas">
-                <Link href="/login" className="btn-primary">
-                  Sign in with ESI email
-                  <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
-                    <path d="M3.75 2h3.5a.75.75 0 0 1 0 1.5h-3.5a.25.25 0 0 0-.25.25v8.5c0 .138.112.25.25.25h8.5a.25.25 0 0 0 .25-.25v-3.5a.75.75 0 0 1 1.5 0v3.5A1.75 1.75 0 0 1 12.25 14h-8.5A1.75 1.75 0 0 1 2 12.25v-8.5C2 2.784 2.784 2 3.75 2Zm6.854-1h4.146a.25.25 0 0 1 .25.25v4.146a.25.25 0 0 1-.427.177L13.03 4.03 9.28 7.78a.751.751 0 0 1-1.042-.018.751.751 0 0 1-.018-1.042l3.75-3.75-1.543-1.543A.25.25 0 0 1 10.604 1Z"/>
-                  </svg>
-                </Link>
-                <button onClick={scrollToFeatures} className="btn-secondary">
-                  Learn more
-                  <svg width="13" height="13" viewBox="0 0 16 16" fill="currentColor">
-                    <path d="M8 2a.75.75 0 0 1 .75.75v8.69l3.22-3.22a.749.749 0 1 1 1.06 1.06l-4.5 4.5a.749.749 0 0 1-1.06 0l-4.5-4.5a.749.749 0 1 1 1.06-1.06l3.22 3.22V2.75A.75.75 0 0 1 8 2Z"/>
-                  </svg>
-                </button>
-              </div>
-
-              {/* Trust signals */}
-              <div style={{ display: 'flex', gap: '1.5rem', flexWrap: 'wrap', animation: 'fadeUp .6s ease .32s both' }}>
-                {[
-                  { icon: '🔒', label: '@esi.dz only' },
-                  { icon: '📚', label: 'Assignments + submissions' },
-                  { icon: '🛡️', label: 'Professor plagiarism reports' },
-                ].map(item => (
-                  <div key={item.label} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: '.8125rem', color: '#475569' }}>
-                    <span>{item.icon}</span>
-                    <span>{item.label}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Right — code mockup */}
-            <div className="hero-visual" style={{ animation: 'fadeIn .8s ease .3s both', position: 'relative' }}>
-              <div className="code-window" style={{
-                background: 'rgba(9,15,32,.96)',
-                border: '1px solid rgba(59,130,246,.2)',
-                borderRadius: 14,
-                overflow: 'hidden',
-                boxShadow: '0 0 0 1px rgba(59,130,246,.06), 0 32px 80px rgba(0,0,0,.6), 0 0 60px rgba(59,130,246,.08)',
                 position: 'relative',
+                width: '100%',
+                aspectRatio: '16 / 9',
               }}>
-                {/* Titlebar */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '12px 16px', borderBottom: '1px solid rgba(59,130,246,.08)', background: 'rgba(6,12,26,.8)' }}>
-                  {['#ff5f57','#febc2e','#28c840'].map(c => <div key={c} style={{ width: 11, height: 11, borderRadius: '50%', background: c }} />)}
-                  <span style={{ marginLeft: 10, fontFamily: "'JetBrains Mono', monospace", fontSize: '.7rem', color: '#334155' }}>
-                    merge_sort.py — ESICodeHub
-                  </span>
-                </div>
-
-                {/* Code body */}
-                <div style={{ padding: '1.25rem 1.5rem', fontFamily: "'JetBrains Mono', monospace", fontSize: '.78rem', lineHeight: 1.9 }}>
-                  {CODE_LINES.map((line, li) => (
-                    <div key={li} style={{ display: 'flex', alignItems: 'baseline' }}>
-                      <span style={{ width: 28, color: '#1e3a5f', fontSize: '.7rem', userSelect: 'none', flexShrink: 0 }}>{li + 1}</span>
-                      <span>
-                        {line.tokens.map((tok, ti) => (
-                          <span key={ti} style={{ color: TOKEN_COLORS[tok.t] ?? '#cbd5e1' }}>{tok.v}</span>
-                        ))}
-                        {li === CODE_LINES.length - 1 && <span className="cursor-blink" />}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-
-                {/* Status bar */}
-                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 16px', background: 'rgba(6,12,26,.7)', borderTop: '1px solid rgba(59,130,246,.06)', fontFamily: "'JetBrains Mono', monospace", fontSize: '.65rem', color: '#1e3a5f' }}>
-                  <span>Python · UTF-8</span>
-                  <span style={{ color: '#22c55e' }}>● Reviewed · Grade: 17/20</span>
-                </div>
-              </div>
-
-              {/* Floating badges */}
-              <div className="floating-badge" style={{
-                position: 'absolute', top: -16, right: -16,
-                background: 'rgba(34,197,94,.12)', border: '1px solid rgba(34,197,94,.3)',
-                borderRadius: 10, padding: '8px 14px',
-                fontFamily: "'JetBrains Mono', monospace", fontSize: '.72rem', color: '#4ade80',
-                backdropFilter: 'blur(8px)',
-                animation: 'slideIn .5s ease .6s both',
-              }}>
-                ✓ Submitted on time
-              </div>
-              <div className="floating-badge" style={{
-                position: 'absolute', bottom: 40, left: -20,
-                background: 'rgba(99,102,241,.12)', border: '1px solid rgba(99,102,241,.3)',
-                borderRadius: 10, padding: '8px 14px',
-                fontFamily: "'JetBrains Mono', monospace", fontSize: '.72rem', color: '#a5b4fc',
-                backdropFilter: 'blur(8px)',
-                animation: 'slideIn .5s ease .75s both',
-              }}>
-                3 inline comments
+                <Image
+                  src="/image.png"
+                  alt="ESICodeHub Dashboard"
+                  fill
+                  style={{
+                    objectFit: 'cover',
+                  }}
+                  priority
+                />
               </div>
             </div>
           </div>
         </section>
 
-        {/* ════════════════ HOW IT WORKS ════════════════ */}
+        {/* ═══════════════════════════════════════════════════════════════════════════════ */}
+        {/* TRUSTED BY SECTION */}
+        {/* ═══════════════════════════════════════════════════════════════════════════════ */}
         <section style={{
-          padding: '3.5rem max(1.5rem, calc(50% - 680px))',
-          borderTop: '1px solid rgba(255,255,255,.06)',
-          borderBottom: '1px solid rgba(255,255,255,.06)',
-          background: 'rgba(255,255,255,.02)',
-        }} className="mobile-shell">
-          <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
-            <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '.72rem', color: '#3b82f6', letterSpacing: '.15em', textTransform: 'uppercase', marginBottom: 12 }}>
-              {'// how it works'}
-            </div>
-            <h2 style={{ fontFamily: "'Outfit', sans-serif", fontSize: 'clamp(1.45rem, 3.6vw, 2.1rem)', fontWeight: 400, color: '#f1f5f9', lineHeight: 1.25 }}>
-              Understand ESICodeHub in three steps
-            </h2>
-          </div>
+          paddingTop: '80px',
+          paddingBottom: '80px',
+          background: '#0a0e27',
+          borderTop: '1px solid rgba(148, 163, 184, 0.1)',
+          borderBottom: '1px solid rgba(148, 163, 184, 0.1)',
+        }}>
+          <div className="container">
+            <p style={{
+              textAlign: 'center',
+              fontSize: '0.75rem',
+              letterSpacing: '0.15em',
+              textTransform: 'uppercase',
+              color: '#64748b',
+              marginBottom: '50px',
+              fontWeight: 600,
+            }}>
+              TRUSTED BY ESI STUDENTS AND FACULTY
+            </p>
 
-          <div className="how-grid">
-            {[
-              {
-                n: '1',
-                title: 'Sign in with your ESI email',
-                body: 'Access is limited to @esi.dz accounts so coursework and discussions stay inside the school community.',
-              },
-              {
-                n: '2',
-                title: 'Share code or submit assignments',
-                body: 'Create personal submissions, upload assignment files before deadlines, and organize work by language and course.',
-              },
-              {
-                n: '3',
-                title: 'Get feedback and track progress',
-                body: 'Read professor reviews, follow assignment status, and use forum discussions to solve technical blockers faster.',
-              },
-            ].map((step) => (
-              <article key={step.n} className="how-step">
-                <div style={{
-                  width: 30,
-                  height: 30,
-                  borderRadius: '50%',
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  fontFamily: "'JetBrains Mono', monospace",
-                  fontSize: '.86rem',
-                  color: '#93c5fd',
-                  border: '1px solid rgba(147,197,253,.4)',
-                  background: 'rgba(59,130,246,.12)',
-                  marginBottom: 12,
-                }}>
-                  {step.n}
-                </div>
-                <h3 style={{ color: '#f1f5f9', fontSize: '.98rem', marginBottom: 8 }}>{step.title}</h3>
-                <p style={{ color: '#64748b', fontSize: '.88rem', lineHeight: 1.65 }}>{step.body}</p>
-              </article>
-            ))}
-          </div>
-        </section>
-
-        {/* ════════════════ PROBLEM / SOLUTION ════════════════ */}
-        <section style={{
-          padding: '6rem max(1.5rem, calc(50% - 680px))',
-          background: '#f8fafc',
-        }} className="mobile-shell">
-          <div style={{ textAlign: 'center', marginBottom: '3.5rem' }}>
-            <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '.72rem', color: '#3b82f6', letterSpacing: '.15em', textTransform: 'uppercase', marginBottom: 12 }}>
-                {'// why it exists'}
-            </div>
-            <h2 style={{ fontFamily: "'Instrument Serif', serif", fontSize: 'clamp(1.9rem, 3vw, 2.75rem)', fontWeight: 400, color: '#0f172a', lineHeight: 1.2 }}>
-              The problem with code at ESI
-            </h2>
-          </div>
-
-          <div className="problem-grid">
-            {[
-              {
-                icon: (
-                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
-                    <line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
-                  </svg>
-                ),
-                color: '#ef4444',
-                title: 'No visibility',
-                body: "Without a central workflow, submissions and feedback get scattered across tools and become difficult to track throughout the semester.",
-              },
-              {
-                icon: (
-                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <circle cx="12" cy="12" r="10"/>
-                    <path d="M8 12s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/>
-                  </svg>
-                ),
-                color: '#f59e0b',
-                title: 'AI-generated code',
-                body: 'Manual plagiarism checks are slow. Professors need one place to run checks and inspect similarity reports per assignment.',
-              },
-              {
-                icon: (
-                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
-                    <circle cx="9" cy="7" r="4"/>
-                    <path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/>
-                  </svg>
-                ),
-                color: '#3b82f6',
-                title: 'Isolated students',
-                body: 'Students still need a course-focused space to ask questions, share context, and get help without leaving the academic environment.',
-              },
-            ].map(card => (
-              <div key={card.title} className="problem-card" style={{
-                background: '#fff',
-                border: '1px solid #e2e8f0',
-                borderRadius: 16,
-                padding: '2rem',
-                borderTop: `3px solid ${card.color}`,
-              }}>
-                <div style={{ color: card.color, marginBottom: 16 }}>{card.icon}</div>
-                <h3 style={{ fontWeight: 700, fontSize: '1rem', color: '#0f172a', marginBottom: 10 }}>{card.title}</h3>
-                <p style={{ fontSize: '.875rem', color: '#64748b', lineHeight: 1.7 }}>{card.body}</p>
-              </div>
-            ))}
-          </div>
-
-          {/* Arrow pointing down to solution */}
-          <div style={{ textAlign: 'center', margin: '2.5rem 0' }}>
-            <div style={{ display: 'inline-flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
-              <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '.75rem', color: '#94a3b8', letterSpacing: '.1em' }}>ESICodeHub solves this</span>
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M12 5v14M5 12l7 7 7-7"/>
-              </svg>
-            </div>
-          </div>
-
-          {/* Solution card */}
-          <div className="solution-grid">
-            <div>
-              <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '.72rem', color: '#3b82f6', letterSpacing: '.15em', textTransform: 'uppercase', marginBottom: 12 }}>
-                  {'// the solution'}
-              </div>
-              <h3 style={{ fontFamily: "'Outfit', sans-serif", fontSize: '1.75rem', fontWeight: 400, color: '#f1f5f9', lineHeight: 1.3, marginBottom: 16 }}>
-                A supervised academic code platform, built exclusively for ESI.
-              </h3>
-              <p style={{ color: '#64748b', fontSize: '.9rem', lineHeight: 1.75 }}>
-                ESICodeHub centralizes assignment submissions, plagiarism reporting, professor feedback, and forum discussions in one interface used by ESI students and professors.
-              </p>
-            </div>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+              gap: '40px',
+              textAlign: 'center',
+            }}>
               {[
-                { label: 'Structured submissions', icon: '📋' },
-                { label: 'Plagiarism reports', icon: '🔍' },
-                { label: 'Professor reviews', icon: '✏️' },
-                { label: 'Forum Q&A', icon: '💬' },
-              ].map(item => (
+                { icon: '🏫', label: 'ESI Department' },
+                { icon: '🖥️', label: 'CS Labs' },
+                { icon: '👨‍💻', label: 'Developer Club' },
+                { icon: '🤖', label: 'AI Research Lab' },
+              ].map((item) => (
                 <div key={item.label} style={{
-                  background: 'rgba(255,255,255,.04)',
-                  border: '1px solid rgba(255,255,255,.07)',
-                  borderRadius: 12,
-                  padding: '1rem',
-                  textAlign: 'center',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  gap: '12px',
                 }}>
-                  <div style={{ fontSize: '1.5rem', marginBottom: 8 }}>{item.icon}</div>
-                  <div style={{ fontSize: '.8rem', color: '#94a3b8', lineHeight: 1.4 }}>{item.label}</div>
+                  <span style={{ fontSize: '2.5rem' }}>{item.icon}</span>
+                  <span style={{ color: '#94a3b8', fontWeight: 500 }}>{item.label}</span>
                 </div>
               ))}
             </div>
           </div>
         </section>
 
-        {/* ════════════════ FEATURES ════════════════ */}
-        <section ref={featuresRef as React.RefObject<HTMLElement>} id="features" style={{
-          padding: '6rem max(1.5rem, calc(50% - 680px))',
-          background: '#0d1b2a',
-        }} className="mobile-shell">
-          <div style={{ textAlign: 'center', marginBottom: '3.5rem' }}>
-            <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '.72rem', color: '#3b82f6', letterSpacing: '.15em', textTransform: 'uppercase', marginBottom: 12 }}>
-                {'// features'}
-            </div>
-            <h2 style={{ fontFamily: "'Outfit', sans-serif", fontSize: 'clamp(1.9rem, 3vw, 2.75rem)', fontWeight: 400, color: '#f1f5f9', lineHeight: 1.2 }}>
-                Everything you need, nothing you don&apos;t
-            </h2>
-          </div>
-
-          <div className="features-grid">
-            {[
-              {
-                icon: (
-                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/>
-                  </svg>
-                ),
-                color: '#3b82f6', colorBg: 'rgba(59,130,246,.1)',
-                title: 'Code Sharing',
-                desc: 'Create personal code submissions with title, language, and files. Mark each submission as public or private, then browse shared public submissions.',
-                tag: 'For everyone',
-              },
-              {
-                icon: (
-                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-                    <polyline points="14 2 14 8 20 8"/>
-                    <line x1="16" y1="13" x2="8" y2="13"/>
-                    <line x1="16" y1="17" x2="8" y2="17"/>
-                  </svg>
-                ),
-                color: '#10b981', colorBg: 'rgba(16,185,129,.1)',
-                title: 'Assignment Submissions',
-                desc: 'Professors publish assignments with deadlines, languages, and class targeting (year, section, group). Students upload files, and late status is tracked per submission.',
-                tag: 'Students + Professors',
-              },
-              {
-                icon: (
-                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
-                    <line x1="11" y1="8" x2="11" y2="14"/><line x1="8" y1="11" x2="14" y2="11"/>
-                  </svg>
-                ),
-                color: '#f59e0b', colorBg: 'rgba(245,158,11,.1)',
-                title: 'Plagiarism Detection',
-                desc: 'Professors can run plagiarism checks for each assignment and inspect similarity matches in the generated report view.',
-                tag: 'For professors',
-              },
-              {
-                icon: (
-                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
-                  </svg>
-                ),
-                color: '#8b5cf6', colorBg: 'rgba(139,92,246,.1)',
-                title: 'Peer Review',
-                desc: 'Students can get peer help in the forum through questions and answers, while professors review assignment code with comments and grades.',
-                tag: 'Forum + assignments',
-              },
-            ].map(feat => (
-              <div key={feat.title} className="feature-card" style={{
-                background: 'rgba(255,255,255,.03)',
-                border: '1px solid rgba(255,255,255,.07)',
-                borderRadius: 16,
-                padding: '2rem',
-                transition: 'border-color .25s, background .25s',
-                cursor: 'default',
-              }}
-                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = 'rgba(59,130,246,.3)'; (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,.05)'; }}
-                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = 'rgba(255,255,255,.07)'; (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,.03)'; }}
-              >
-                <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 16 }}>
-                  <div className="feature-icon-wrap" style={{
-                    width: 48, height: 48, borderRadius: 12,
-                    background: feat.colorBg,
-                    color: feat.color,
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    transition: 'transform .25s ease',
-                    flexShrink: 0,
-                  }}>
-                    {feat.icon}
-                  </div>
-                  <span style={{
-                    fontFamily: "'JetBrains Mono', monospace",
-                    fontSize: '.65rem', color: '#475569',
-                    background: 'rgba(255,255,255,.04)',
-                    border: '1px solid rgba(255,255,255,.07)',
-                    borderRadius: 6, padding: '3px 8px',
-                  }}>
-                    {feat.tag}
-                  </span>
-                </div>
-                <h3 style={{ fontWeight: 700, fontSize: '1.05rem', color: '#f1f5f9', marginBottom: 10 }}>{feat.title}</h3>
-                <p style={{ fontSize: '.875rem', color: '#475569', lineHeight: 1.7 }}>{feat.desc}</p>
-              </div>
-            ))}
-          </div>
-        </section>
-
-        {/* ════════════════ TRUST STRIP ════════════════ */}
-        <div style={{
-          borderTop: '1px solid rgba(255,255,255,.06)',
-          borderBottom: '1px solid rgba(255,255,255,.06)',
-          background: 'rgba(255,255,255,.015)',
-          padding: '1.25rem max(1.5rem, calc(50% - 680px))',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          gap: '2.5rem', flexWrap: 'wrap',
-        }} className="mobile-shell">
-          {[
-            'Restricted to @esi.dz accounts',
-            'Built by ESI students',
-            'Used by students and professors',
-          ].map((item, i) => (
-            <div key={item} style={{ display: 'flex', alignItems: 'center', gap: i > 0 ? '2.5rem' : 0 }}>
-              {i > 0 && <span style={{ color: '#1e3a5f', fontSize: '.75rem' }}>·</span>}
-              <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '.75rem', color: '#334155', letterSpacing: '.05em' }}>
-                {item}
-              </span>
-            </div>
-          ))}
-        </div>
-
-        {/* ════════════════ CTA SECTION ════════════════ */}
-        <section style={{
-          padding: '6rem max(1.5rem, calc(50% - 680px))',
-          background: '#0d1b2a',
-          textAlign: 'center',
-        }} className="mobile-shell">
-          <div style={{
-            maxWidth: 600, margin: '0 auto',
-            background: 'linear-gradient(135deg, rgba(37,99,235,.08), rgba(79,70,229,.08))',
-            border: '1px solid rgba(59,130,246,.18)',
-            borderRadius: 24,
-            padding: '3.5rem 2.5rem',
-            position: 'relative',
-            overflow: 'hidden',
-          }}>
-            <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(ellipse at 50% 0%, rgba(59,130,246,.12), transparent 65%)', pointerEvents: 'none' }} />
-            <div style={{ position: 'relative' }}>
-              <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '.72rem', color: '#3b82f6', letterSpacing: '.15em', textTransform: 'uppercase', marginBottom: 16 }}>
-                  {'// ready to start?'}
-              </div>
-              <h2 style={{ fontFamily: "'Outfit', sans-serif", fontSize: 'clamp(1.75rem, 3vw, 2.5rem)', fontWeight: 400, color: '#f1f5f9', lineHeight: 1.2, marginBottom: 14 }}>
-                Join the ESI academic<br />code community
+        {/* ═══════════════════════════════════════════════════════════════════════════════ */}
+        {/* FEATURES SECTION */}
+        {/* ═══════════════════════════════════════════════════════════════════════════════ */}
+        <section id="features" style={{
+          paddingTop: '100px',
+          paddingBottom: '100px',
+          background: '#0a0e27',
+        }}>
+          <div className="container">
+            <div style={{ textAlign: 'center', marginBottom: '60px' }}>
+              <h2 style={{
+                fontSize: 'clamp(1.8rem, 4vw, 2.5rem)',
+                fontWeight: 700,
+                marginBottom: '20px',
+                lineHeight: 1.2,
+              }}>
+                Precision tools for academic excellence.
               </h2>
-              <p style={{ color: '#475569', fontSize: '.9375rem', lineHeight: 1.7, marginBottom: '2rem', maxWidth: 420, margin: '0 auto 2rem' }}>
-                Sign in with your ESI email to access submissions, assignments, and collaboration tools designed for your academic environment.
+              <p style={{
+                color: '#94a3b8',
+                fontSize: '1.05rem',
+                maxWidth: '600px',
+                margin: '0 auto',
+              }}>
+                Engineered to streamline the entire coding assignment lifecycle from deployment to grading.
               </p>
-              <Link href="/login" className="btn-primary" style={{ fontSize: '1rem', padding: '.85rem 2.25rem' }}>
-                Sign in with ESI email →
-              </Link>
+            </div>
+
+            {/* Features Grid */}
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(2, 1fr)',
+              gap: '28px',
+            }}>
+              {/* Plagiarism Detection */}
+              <div style={{
+                background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.04) 0%, rgba(255, 255, 255, 0.01) 100%)',
+                border: '1px solid rgba(79, 70, 229, 0.4)',
+                borderRadius: '18px',
+                padding: '28px',
+                transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                cursor: 'pointer',
+                display: 'flex',
+                flexDirection: 'column',
+                height: '100%',
+                boxShadow: '0 4px 6px rgba(0, 0, 0, 0.07), inset 0 1px 0 rgba(255, 255, 255, 0.1)',
+              }} onMouseEnter={(e) => {
+                e.currentTarget.style.background = 'linear-gradient(135deg, rgba(255, 255, 255, 0.06) 0%, rgba(255, 255, 255, 0.02) 100%)';
+                e.currentTarget.style.borderColor = 'rgba(79, 70, 229, 0.6)';
+                e.currentTarget.style.transform = 'translateY(-4px)';
+                e.currentTarget.style.boxShadow = '0 16px 32px rgba(79, 70, 229, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.1)';
+              }} onMouseLeave={(e) => {
+                e.currentTarget.style.background = 'linear-gradient(135deg, rgba(255, 255, 255, 0.04) 0%, rgba(255, 255, 255, 0.01) 100%)';
+                e.currentTarget.style.borderColor = 'rgba(79, 70, 229, 0.4)';
+                e.currentTarget.style.transform = 'translateY(0)';
+                e.currentTarget.style.boxShadow = '0 4px 6px rgba(0, 0, 0, 0.07), inset 0 1px 0 rgba(255, 255, 255, 0.1)';
+              }}>
+                <div style={{ fontSize: '2.5rem', marginBottom: '14px' }}>🔍</div>
+                <h3 style={{ fontSize: '1.25rem', marginBottom: '10px', fontWeight: 600, color: '#f1f5f9' }}>
+                  Plagiarism Intelligence
+                </h3>
+                <p style={{
+                  color: '#94a3b8',
+                  fontSize: '0.94rem',
+                  lineHeight: 1.65,
+                  marginBottom: '24px',
+                  flex: 1,
+                }}>
+                  Our AI-based similarity engine analyzes logic patterns, not just text, ensuring integrity with 98%+ accuracy.
+                </p>
+                <div style={{
+                  position: 'relative',
+                  width: '100%',
+                  height: '280px',
+                  background: '#0a0e27',
+                  borderRadius: '12px',
+                  overflow: 'hidden',
+                  border: '1px solid rgba(79, 70, 229, 0.2)',
+                  boxShadow: 'inset 0 2px 8px rgba(0, 0, 0, 0.4)',
+                }}>
+                  <Image
+                    src="/plagiarism-detection.png"
+                    alt="Plagiarism Detection"
+                    fill
+                    style={{ objectFit: 'contain', padding: '12px' }}
+                  />
+                </div>
+              </div>
+
+              {/* Automation */}
+              <div style={{
+                background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.04) 0%, rgba(255, 255, 255, 0.01) 100%)',
+                border: '1px solid rgba(79, 70, 229, 0.4)',
+                borderRadius: '18px',
+                padding: '28px',
+                transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                cursor: 'pointer',
+                display: 'flex',
+                flexDirection: 'column',
+                height: '100%',
+                boxShadow: '0 4px 6px rgba(0, 0, 0, 0.07), inset 0 1px 0 rgba(255, 255, 255, 0.1)',
+              }} onMouseEnter={(e) => {
+                e.currentTarget.style.background = 'linear-gradient(135deg, rgba(255, 255, 255, 0.06) 0%, rgba(255, 255, 255, 0.02) 100%)';
+                e.currentTarget.style.borderColor = 'rgba(79, 70, 229, 0.6)';
+                e.currentTarget.style.transform = 'translateY(-4px)';
+                e.currentTarget.style.boxShadow = '0 16px 32px rgba(79, 70, 229, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.1)';
+              }} onMouseLeave={(e) => {
+                e.currentTarget.style.background = 'linear-gradient(135deg, rgba(255, 255, 255, 0.04) 0%, rgba(255, 255, 255, 0.01) 100%)';
+                e.currentTarget.style.borderColor = 'rgba(79, 70, 229, 0.4)';
+                e.currentTarget.style.transform = 'translateY(0)';
+                e.currentTarget.style.boxShadow = '0 4px 6px rgba(0, 0, 0, 0.07), inset 0 1px 0 rgba(255, 255, 255, 0.1)';
+              }}>
+                <div style={{ fontSize: '2.5rem', marginBottom: '14px' }}>⚡</div>
+                <h3 style={{ fontSize: '1.25rem', marginBottom: '10px', fontWeight: 600, color: '#f1f5f9' }}>
+                  Automation
+                </h3>
+                <p style={{
+                  color: '#94a3b8',
+                  fontSize: '0.94rem',
+                  lineHeight: 1.65,
+                  marginBottom: '24px',
+                  flex: 1,
+                }}>
+                  Automated deadline handling, environment setup, and submission packaging for students.
+                </p>
+                <div style={{
+                  background: 'linear-gradient(135deg, #1a1f3a 0%, #0a0e27 100%)',
+                  borderRadius: '12px',
+                  height: '280px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  border: '1px solid rgba(79, 70, 229, 0.2)',
+                  color: '#94a3b8',
+                  fontSize: '0.95rem',
+                  flexDirection: 'column',
+                  gap: '16px',
+                  padding: '20px',
+                  textAlign: 'center',
+                  boxShadow: 'inset 0 2px 8px rgba(0, 0, 0, 0.4)',
+                }}>
+                  <span style={{ fontSize: '3rem' }}>⚙️</span>
+                  <span style={{ fontWeight: 500 }}>Streamlined submission workflow</span>
+                </div>
+              </div>
+
+              {/* Inline Review */}
+              <div style={{
+                background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.04) 0%, rgba(255, 255, 255, 0.01) 100%)',
+                border: '1px solid rgba(79, 70, 229, 0.4)',
+                borderRadius: '18px',
+                padding: '28px',
+                transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                cursor: 'pointer',
+                display: 'flex',
+                flexDirection: 'column',
+                height: '100%',
+                boxShadow: '0 4px 6px rgba(0, 0, 0, 0.07), inset 0 1px 0 rgba(255, 255, 255, 0.1)',
+              }} onMouseEnter={(e) => {
+                e.currentTarget.style.background = 'linear-gradient(135deg, rgba(255, 255, 255, 0.06) 0%, rgba(255, 255, 255, 0.02) 100%)';
+                e.currentTarget.style.borderColor = 'rgba(79, 70, 229, 0.6)';
+                e.currentTarget.style.transform = 'translateY(-4px)';
+                e.currentTarget.style.boxShadow = '0 16px 32px rgba(79, 70, 229, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.1)';
+              }} onMouseLeave={(e) => {
+                e.currentTarget.style.background = 'linear-gradient(135deg, rgba(255, 255, 255, 0.04) 0%, rgba(255, 255, 255, 0.01) 100%)';
+                e.currentTarget.style.borderColor = 'rgba(79, 70, 229, 0.4)';
+                e.currentTarget.style.transform = 'translateY(0)';
+                e.currentTarget.style.boxShadow = '0 4px 6px rgba(0, 0, 0, 0.07), inset 0 1px 0 rgba(255, 255, 255, 0.1)';
+              }}>
+                <div style={{ fontSize: '2.5rem', marginBottom: '14px' }}>📝</div>
+                <h3 style={{ fontSize: '1.25rem', marginBottom: '10px', fontWeight: 600, color: '#f1f5f9' }}>
+                  Inline Review
+                </h3>
+                <p style={{
+                  color: '#94a3b8',
+                  fontSize: '0.94rem',
+                  lineHeight: 1.65,
+                  marginBottom: '24px',
+                  flex: 1,
+                }}>
+                  Provide meaningful feedback directly on code snippets with automated grading assistants.
+                </p>
+                <div style={{
+                  background: 'linear-gradient(135deg, #1a1f3a 0%, #0a0e27 100%)',
+                  borderRadius: '12px',
+                  height: '280px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  border: '1px solid rgba(79, 70, 229, 0.2)',
+                  color: '#94a3b8',
+                  fontSize: '0.95rem',
+                  flexDirection: 'column',
+                  gap: '16px',
+                  padding: '20px',
+                  textAlign: 'center',
+                  boxShadow: 'inset 0 2px 8px rgba(0, 0, 0, 0.4)',
+                }}>
+                  <span style={{ fontSize: '3rem' }}>💬</span>
+                  <span style={{ fontWeight: 500 }}>Real-time code feedback system</span>
+                </div>
+              </div>
+
+              {/* Professor Dashboards */}
+              <div style={{
+                background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.04) 0%, rgba(255, 255, 255, 0.01) 100%)',
+                border: '1px solid rgba(79, 70, 229, 0.4)',
+                borderRadius: '18px',
+                padding: '28px',
+                transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                cursor: 'pointer',
+                display: 'flex',
+                flexDirection: 'column',
+                height: '100%',
+                boxShadow: '0 4px 6px rgba(0, 0, 0, 0.07), inset 0 1px 0 rgba(255, 255, 255, 0.1)',
+              }} onMouseEnter={(e) => {
+                e.currentTarget.style.background = 'linear-gradient(135deg, rgba(255, 255, 255, 0.06) 0%, rgba(255, 255, 255, 0.02) 100%)';
+                e.currentTarget.style.borderColor = 'rgba(79, 70, 229, 0.6)';
+                e.currentTarget.style.transform = 'translateY(-4px)';
+                e.currentTarget.style.boxShadow = '0 16px 32px rgba(79, 70, 229, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.1)';
+              }} onMouseLeave={(e) => {
+                e.currentTarget.style.background = 'linear-gradient(135deg, rgba(255, 255, 255, 0.04) 0%, rgba(255, 255, 255, 0.01) 100%)';
+                e.currentTarget.style.borderColor = 'rgba(79, 70, 229, 0.4)';
+                e.currentTarget.style.transform = 'translateY(0)';
+                e.currentTarget.style.boxShadow = '0 4px 6px rgba(0, 0, 0, 0.07), inset 0 1px 0 rgba(255, 255, 255, 0.1)';
+              }}>
+                <div style={{ fontSize: '2.5rem', marginBottom: '14px' }}>📊</div>
+                <h3 style={{ fontSize: '1.25rem', marginBottom: '10px', fontWeight: 600, color: '#f1f5f9' }}>
+                  Professor Dashboards
+                </h3>
+                <p style={{
+                  color: '#94a3b8',
+                  fontSize: '0.94rem',
+                  lineHeight: 1.65,
+                  marginBottom: '24px',
+                  flex: 1,
+                }}>
+                  Real-time analytics on class performance, difficult topics, and submission trends to optimize curriculum.
+                </p>
+                <div style={{
+                  position: 'relative',
+                  width: '100%',
+                  height: '280px',
+                  background: '#0a0e27',
+                  borderRadius: '12px',
+                  overflow: 'hidden',
+                  border: '1px solid rgba(79, 70, 229, 0.2)',
+                  boxShadow: 'inset 0 2px 8px rgba(0, 0, 0, 0.4)',
+                }}>
+                  <Image
+                    src="/analytics-dashboard.png"
+                    alt="Analytics Dashboard"
+                    fill
+                    style={{ objectFit: 'contain', padding: '12px' }}
+                  />
+                </div>
+              </div>
             </div>
           </div>
         </section>
 
+        {/* ═══════════════════════════════════════════════════════════════════════════════ */}
+        {/* STATS SECTION */}
+        {/* ═══════════════════════════════════════════════════════════════════════════════ */}
+        <section style={{
+          paddingTop: '80px',
+          paddingBottom: '80px',
+          background: 'linear-gradient(135deg, #0a0e27 0%, #1a1f3a 50%, #0a0e27 100%)',
+        }}>
+          <div className="container">
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+              gap: '40px',
+              textAlign: 'center',
+            }}>
+              <div>
+                <div style={{
+                  fontSize: '3rem',
+                  fontWeight: 700,
+                  color: '#4f46e5',
+                  marginBottom: '10px',
+                }}>
+                  1,200+
+                </div>
+                <div style={{ color: '#94a3b8', fontSize: '1rem' }}>
+                  Active Students
+                </div>
+              </div>
+              <div>
+                <div style={{
+                  fontSize: '3rem',
+                  fontWeight: 700,
+                  color: '#10b981',
+                  marginBottom: '10px',
+                }}>
+                  18k+
+                </div>
+                <div style={{ color: '#94a3b8', fontSize: '1rem' }}>
+                  Submissions
+                </div>
+              </div>
+              <div>
+                <div style={{
+                  fontSize: '3rem',
+                  fontWeight: 700,
+                  color: '#a78bfa',
+                  marginBottom: '10px',
+                }}>
+                  98%
+                </div>
+                <div style={{ color: '#94a3b8', fontSize: '1rem' }}>
+                  Detection Accuracy
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
 
+        {/* ═══════════════════════════════════════════════════════════════════════════════ */}
+        {/* CTA SECTION */}
+        {/* ═══════════════════════════════════════════════════════════════════════════════ */}
+        <section style={{
+          paddingTop: '100px',
+          paddingBottom: '100px',
+          background: '#0a0e27',
+          textAlign: 'center',
+        }}>
+          <div className="container">
+            <h2 style={{
+              fontSize: 'clamp(2rem, 5vw, 3rem)',
+              fontWeight: 700,
+              marginBottom: '30px',
+              lineHeight: 1.2,
+            }}>
+              Join the ESI academic<br />
+              community today.
+            </h2>
 
+            <Link href="/login" className="btn-primary" style={{
+              display: 'inline-flex',
+              padding: '14px 32px',
+              fontSize: '1rem',
+              marginBottom: '20px',
+            }}>
+              Get Started with ESI Email @
+            </Link>
+
+            <p style={{
+              color: '#64748b',
+              fontSize: '0.95rem',
+            }}>
+              Restricted to @esi.dz accounts.
+            </p>
+          </div>
+        </section>
+
+        {/* ═══════════════════════════════════════════════════════════════════════════════ */}
+        {/* FOOTER */}
+        {/* ═══════════════════════════════════════════════════════════════════════════════ */}
+        <footer style={{
+          background: '#050812',
+          borderTop: '1px solid rgba(148, 163, 184, 0.1)',
+          paddingTop: '60px',
+          paddingBottom: '40px',
+        }}>
+          <div className="container">
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+              gap: '40px',
+              marginBottom: '40px',
+            }}>
+              {/* Brand */}
+              <div>
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '10px',
+                  marginBottom: '12px',
+                }}>
+                  <div style={{ width: '24px', height: '24px', position: 'relative' }}>
+                    <Image
+                      src="/esicodehub-logo.png"
+                      alt="ESICodeHub"
+                      fill
+                      style={{ objectFit: 'contain' }}
+                    />
+                  </div>
+                  <span style={{ fontWeight: 700 }}>EsiCodeHub</span>
+                </div>
+                <p style={{
+                  color: '#64748b',
+                  fontSize: '0.9rem',
+                  lineHeight: 1.6,
+                }}>
+                  The definitive orchestration platform for higher education at ESI. Built for the next-fidelity developer.
+                </p>
+              </div>
+
+              {/* Product */}
+              <div>
+                <h4 style={{ fontWeight: 600, marginBottom: '16px', color: '#e2e8f0' }}>
+                  Product
+                </h4>
+                <ul style={{ listStyle: 'none' }}>
+                  <li style={{ marginBottom: '10px' }}>
+                    <a href="#" onClick={(e) => e.preventDefault()} style={{
+                      color: '#94a3b8',
+                      textDecoration: 'none',
+                      fontSize: '0.9rem',
+                      transition: 'color 0.2s',
+                      cursor: 'pointer',
+                    }} onMouseEnter={(e) => e.currentTarget.style.color = '#e2e8f0'} onMouseLeave={(e) => e.currentTarget.style.color = '#94a3b8'}>
+                      Dashboard
+                    </a>
+                  </li>
+                  <li style={{ marginBottom: '10px' }}>
+                    <a href="#" onClick={(e) => e.preventDefault()} style={{
+                      color: '#94a3b8',
+                      textDecoration: 'none',
+                      fontSize: '0.9rem',
+                      transition: 'color 0.2s',
+                      cursor: 'pointer',
+                    }} onMouseEnter={(e) => e.currentTarget.style.color = '#e2e8f0'} onMouseLeave={(e) => e.currentTarget.style.color = '#94a3b8'}>
+                      Detection
+                    </a>
+                  </li>
+                  <li>
+                    <a href="#" onClick={(e) => e.preventDefault()} style={{
+                      color: '#94a3b8',
+                      textDecoration: 'none',
+                      fontSize: '0.9rem',
+                      transition: 'color 0.2s',
+                      cursor: 'pointer',
+                    }} onMouseEnter={(e) => e.currentTarget.style.color = '#e2e8f0'} onMouseLeave={(e) => e.currentTarget.style.color = '#94a3b8'}>
+                      API
+                    </a>
+                  </li>
+                </ul>
+              </div>
+
+              {/* Company */}
+              <div>
+                <h4 style={{ fontWeight: 600, marginBottom: '16px', color: '#e2e8f0' }}>
+                  Company
+                </h4>
+                <ul style={{ listStyle: 'none' }}>
+                  <li style={{ marginBottom: '10px' }}>
+                    <a href="#" onClick={(e) => e.preventDefault()} style={{
+                      color: '#94a3b8',
+                      textDecoration: 'none',
+                      fontSize: '0.9rem',
+                      transition: 'color 0.2s',
+                      cursor: 'pointer',
+                    }} onMouseEnter={(e) => e.currentTarget.style.color = '#e2e8f0'} onMouseLeave={(e) => e.currentTarget.style.color = '#94a3b8'}>
+                      About ESI
+                    </a>
+                  </li>
+                  <li style={{ marginBottom: '10px' }}>
+                    <a href="#" onClick={(e) => e.preventDefault()} style={{
+                      color: '#94a3b8',
+                      textDecoration: 'none',
+                      fontSize: '0.9rem',
+                      transition: 'color 0.2s',
+                      cursor: 'pointer',
+                    }} onMouseEnter={(e) => e.currentTarget.style.color = '#e2e8f0'} onMouseLeave={(e) => e.currentTarget.style.color = '#94a3b8'}>
+                      CS Department
+                    </a>
+                  </li>
+                  <li>
+                    <a href="#" onClick={(e) => e.preventDefault()} style={{
+                      color: '#94a3b8',
+                      textDecoration: 'none',
+                      fontSize: '0.9rem',
+                      transition: 'color 0.2s',
+                      cursor: 'pointer',
+                    }} onMouseEnter={(e) => e.currentTarget.style.color = '#e2e8f0'} onMouseLeave={(e) => e.currentTarget.style.color = '#94a3b8'}>
+                      Contact
+                    </a>
+                  </li>
+                </ul>
+              </div>
+
+              {/* Legal */}
+              <div>
+                <h4 style={{ fontWeight: 600, marginBottom: '16px', color: '#e2e8f0' }}>
+                  Legal
+                </h4>
+                <ul style={{ listStyle: 'none' }}>
+                  <li style={{ marginBottom: '10px' }}>
+                    <a href="#" onClick={(e) => e.preventDefault()} style={{
+                      color: '#94a3b8',
+                      textDecoration: 'none',
+                      fontSize: '0.9rem',
+                      transition: 'color 0.2s',
+                      cursor: 'pointer',
+                    }} onMouseEnter={(e) => e.currentTarget.style.color = '#e2e8f0'} onMouseLeave={(e) => e.currentTarget.style.color = '#94a3b8'}>
+                      Privacy Policy
+                    </a>
+                  </li>
+                  <li style={{ marginBottom: '10px' }}>
+                    <a href="#" onClick={(e) => e.preventDefault()} style={{
+                      color: '#94a3b8',
+                      textDecoration: 'none',
+                      fontSize: '0.9rem',
+                      transition: 'color 0.2s',
+                      cursor: 'pointer',
+                    }} onMouseEnter={(e) => e.currentTarget.style.color = '#e2e8f0'} onMouseLeave={(e) => e.currentTarget.style.color = '#94a3b8'}>
+                      Terms of Service
+                    </a>
+                  </li>
+                  <li>
+                    <a href="#" onClick={(e) => e.preventDefault()} style={{
+                      color: '#94a3b8',
+                      textDecoration: 'none',
+                      fontSize: '0.9rem',
+                      transition: 'color 0.2s',
+                      cursor: 'pointer',
+                    }} onMouseEnter={(e) => e.currentTarget.style.color = '#e2e8f0'} onMouseLeave={(e) => e.currentTarget.style.color = '#94a3b8'}>
+                      University Terms
+                    </a>
+                  </li>
+                </ul>
+              </div>
+            </div>
+
+            {/* Copyright */}
+            <div style={{
+              borderTop: '1px solid rgba(148, 163, 184, 0.1)',
+              paddingTop: '30px',
+              textAlign: 'center',
+              color: '#64748b',
+              fontSize: '0.85rem',
+            }}>
+              © 2026 EsiCodeHub. Built for ESI university. Restricted to @esi.dz accounts.
+            </div>
+          </div>
+        </footer>
       </div>
     </>
   );
