@@ -88,7 +88,7 @@ export default function LandingPage() {
         }
         .step-title {
           font-family: 'Playfair Display', Georgia, serif;
-          font-size: clamp(1.9rem, 2.6vw, 2.4rem);
+          font-size: clamp(1.2rem, 1.9vw, 1.6rem);
           line-height: 1.15;
           font-weight: 800;
           color: #f5f7ff;
@@ -230,9 +230,8 @@ export default function LandingPage() {
         {/* FEATURES */}
         <section id="features" style={{ paddingTop: '100px', paddingBottom: '100px' }}>
           <div className="container">
-            <div style={{ marginBottom: '48px' }}>
-              
-              <h2 style={{ fontSize: 'clamp(1.8rem, 3.5vw, 2.4rem)', fontWeight: 700, lineHeight: 1.2 }}>Everything you need</h2>
+            <div style={{ marginBottom: '48px', textAlign: 'center' }}>
+              <h2 style={{ fontSize: 'clamp(1.7rem, 2.8vw, 2.7rem)', fontWeight: 900, lineHeight: 1.15, color: '#eef3ff', fontFamily: "'Playfair Display', Georgia, serif" }}>Everything you need</h2>
             </div>
             <div className="features-bento" style={{ display: 'grid', gridTemplateColumns: '1fr 1.65fr', gap: '14px' }}>
               <div className="feature-card bento-left" style={{ gridRow: '1 / 3', padding: '28px', display: 'flex', flexDirection: 'column' }}>
@@ -281,9 +280,8 @@ export default function LandingPage() {
         {/* WHY IT EXISTS */}
         <section id="why-it-exists" style={{ paddingTop: '84px', paddingBottom: '84px' }}>
           <div className="container">
-            <div style={{ marginBottom: '34px' }}>
-             
-              <h2 style={{ fontSize: 'clamp(1.45rem, 2.6vw, 2rem)', fontWeight: 700, lineHeight: 1.25 }}>The problem with code at ESI</h2>
+            <div style={{ marginBottom: '34px', textAlign: 'center' }}>
+              <h2 style={{ fontSize: 'clamp(1.7rem, 2.8vw, 2.7rem)', fontWeight: 900, lineHeight: 1.15, color: '#eef3ff', fontFamily: "'Playfair Display', Georgia, serif" }}>The problem with code at ESI</h2>
             </div>
             <div className="problems-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '14px', marginBottom: '44px' }}>
               {([
@@ -326,8 +324,17 @@ export default function LandingPage() {
           </div>
         </section>
 
+        {/* THE SOLUTION HEADER */}
+        <div id="solution-anchor" style={{ paddingTop: '84px' }}>
+          <div className="container">
+            <div style={{ marginBottom: '26px', textAlign: 'center' }}>
+              <h2 style={{ fontSize: 'clamp(1.7rem, 2.8vw, 2.7rem)', fontWeight: 900, lineHeight: 1.15, color: '#eef3ff', fontFamily: "'Playfair Display', Georgia, serif" }}>The Solution</h2>
+            </div>
+          </div>
+        </div>
+
         {/* THE SOLUTION */}
-        <section style={{ paddingTop: '84px', paddingBottom: '84px' }}>
+        <section id="solution" style={{ paddingBottom: '84px' }}>
           <div className="container">
             <div style={{
               background: 'linear-gradient(150deg, rgba(8,17,49,0.96) 0%, rgba(5,11,33,0.96) 100%)',
@@ -341,7 +348,7 @@ export default function LandingPage() {
               <div className="solution-inner" style={{ display: 'grid', gridTemplateColumns: '1.05fr 1fr', gap: '30px', alignItems: 'center', position: 'relative', zIndex: 1 }}>
                 <div>
                   
-                  <h2 style={{ fontSize: 'clamp(1.9rem, 3.2vw, 3.1rem)', lineHeight: 1.15, marginBottom: '18px', fontWeight: 900, color: '#eef3ff', fontFamily: "'Playfair Display', Georgia, serif", maxWidth: '22ch' }}>
+                  <h2 style={{ fontSize: 'clamp(1.6rem, 2.8vw, 2.7rem)', lineHeight: 1.15, marginBottom: '18px', fontWeight: 900, color: '#eef3ff', fontFamily: "'Playfair Display', Georgia, serif", maxWidth: '22ch' }}>
                     A supervised academic code platform, built exclusively for ESI.
                   </h2>
                   <p style={{ fontSize: '0.92rem', lineHeight: 1.75, color: '#9aa9c6', maxWidth: '52ch' }}>
@@ -366,16 +373,25 @@ export default function LandingPage() {
           </div>
         </section>
 
-        {/* HOW IT WORKS */}
-        <section id="how-it-works" style={{ paddingTop: '96px', paddingBottom: '112px', background: 'rgba(255,255,255,0.01)' }}>
+        {/* HOW IT WORKS HEADER */}
+        <div style={{ paddingTop: '96px' }}>
           <div className="container">
             <div className="space-y-4" style={{ textAlign: 'center', marginBottom: '40px' }}>
-             
-              <h2 style={{ fontSize: '1.25rem', fontWeight: 800, lineHeight: 1.2 }}>How it works</h2>
-              <h3 style={{ fontSize: 'clamp(1.8rem, 3.5vw, 2.5rem)', fontWeight: 900, lineHeight: 1.2, fontFamily: "'Playfair Display', Georgia, serif" }}>Understand ESICodeHub in three steps</h3>
+              <h2 style={{ fontSize: 'clamp(1.7rem, 2.8vw, 2.7rem)', fontWeight: 900, lineHeight: 1.15, color: '#eef3ff', fontFamily: "'Playfair Display', Georgia, serif", maxWidth: '22ch', margin: '0 auto' }}>
+                How it works
+              </h2>
+            </div>
+          </div>
+        </div>
+
+        {/* HOW IT WORKS */}
+        <section id="how-it-works" style={{ paddingBottom: '112px', background: 'rgba(255,255,255,0.01)' }}>
+          <div className="container">
+            <div className="space-y-4" style={{ textAlign: 'center', marginBottom: '40px' }}>
+              <h3 style={{ fontSize: 'clamp(1.2rem, 2.7vw, 1.9rem)', fontWeight: 900, lineHeight: 1.2, fontFamily: "'Playfair Display', Georgia, serif" }}>Understand ESICodeHub in three steps</h3>
               <p style={{ color: '#64748b', fontSize: '0.9rem', maxWidth: '520px', margin: '0 auto' }}>Three steps to technical mastery through a supervised academic environment.</p>
             </div>
-            <div className="how-steps-grid" style={{ marginTop: '54px' }}>
+            <div className="how-steps-grid" style={{ marginTop: '58px' }}>
               {([
                 { num: '01', title: 'Sign in with your ESI email', desc: 'Access is limited to @esi.dz accounts so coursework and discussions stay inside the school community.' },
                 { num: '02', title: 'Share code or submit assignments', desc: 'Create personal submissions, upload assignment files before deadlines, and organize work by language and course.' },
@@ -425,7 +441,7 @@ export default function LandingPage() {
               <div>
                 <h5 style={{ fontSize: '0.72rem', letterSpacing: '0.1em', textTransform: 'uppercase', color: '#64748b', fontWeight: 600, marginBottom: '18px' }}>PLATFORM</h5>
                 <ul style={{ listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                  {([{ label: 'Features', href: '#features' }, { label: 'Solution', href: '#why-it-exists' }] as { label: string; href: string }[]).map((item) => (
+                  {([{ label: 'Features', href: '#features' }, { label: 'Solution', href: '#solution-anchor' }] as { label: string; href: string }[]).map((item) => (
                     <li key={item.label}><a href={item.href} style={{ color: '#64748b', textDecoration: 'none', fontSize: '0.9rem', transition: 'color 0.2s' }} onMouseEnter={(e) => { e.currentTarget.style.color = '#e2e8f0'; }} onMouseLeave={(e) => { e.currentTarget.style.color = '#64748b'; }}>{item.label}</a></li>
                   ))}
                 </ul>
