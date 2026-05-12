@@ -30,6 +30,14 @@ const ASSIGNMENT_LANGUAGES: string[] = [
 
 const ASSIGNMENT_TYPES = ["lab", "project", "homework", "exam", "quiz", "report"];
 
+const PREVIEW_ICONS: Record<string, string> = {
+  subject: "SB",
+  year: "YR",
+  target: "TG",
+  deadline: "DL",
+  late: "LT",
+};
+
 function getGroupsForSection(sectionIndex: number): number[] {
   const base = sectionIndex * 4 + 1;
   return [base, base + 1, base + 2, base + 3];
@@ -69,6 +77,35 @@ function validate(fields: { subject: string; title: string; year: string; langua
   if (!fields.deadline) errors.deadline = "Deadline is required.";
   else if (new Date(fields.deadline) <= new Date()) errors.deadline = "Deadline must be in the future.";
   return errors;
+}
+
+function formatAssignmentTypeLabel(value: string): string {
+  if (!value) return "Assignment type";
+  return value.charAt(0).toUpperCase() + value.slice(1);
+}
+
+function formatDeadlineLabel(value: string): string {
+  if (!value) return "No deadline set";
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return "Invalid date";
+  return new Intl.DateTimeFormat("en", {
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  }).format(parsed);
+}
+
+function formatDeadlineMeta(value: string): string {
+  if (!value) return "Students will see the due date here.";
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return "Check the deadline format.";
+  return new Intl.DateTimeFormat("en", {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  }).format(parsed);
 }
 
 const PAGE_CSS = `
@@ -262,6 +299,78 @@ const PAGE_CSS = `
     cursor: not-allowed;
   }
 
+  .na-language-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 12px;
+  }
+  .na-language-card {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+    min-height: 96px;
+    padding: 16px 18px;
+    border: 1px solid #d6e0f5;
+    border-radius: 18px;
+    background: linear-gradient(180deg, #ffffff 0%, #f5f9ff 100%);
+    box-shadow: 0 8px 18px rgba(5, 22, 80, 0.06);
+    text-align: left;
+    cursor: pointer;
+    transition: border-color 0.18s ease, box-shadow 0.18s ease, transform 0.18s ease, background 0.18s ease;
+  }
+  .na-language-card:hover:not(:disabled) {
+    border-color: #7fa4f5;
+    box-shadow: 0 14px 28px rgba(5, 22, 80, 0.1);
+    transform: translateY(-2px);
+  }
+  .na-language-card.selected {
+    border-color: #0f4fd6;
+    background: linear-gradient(180deg, #eff5ff 0%, #dbeafe 100%);
+    box-shadow: 0 16px 32px rgba(15, 79, 214, 0.18);
+  }
+  .na-language-card:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+    transform: none;
+  }
+  .na-language-topline {
+    display: flex;
+    width: 100%;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+  }
+  .na-language-name {
+    font-size: 15px;
+    font-weight: 700;
+    color: #0f172a;
+  }
+  .na-language-indicator {
+    width: 18px;
+    height: 18px;
+    border-radius: 999px;
+    border: 1.5px solid #93a7cf;
+    background: #fff;
+    box-shadow: inset 0 0 0 4px #fff;
+    transition: background 0.18s ease, border-color 0.18s ease;
+    flex-shrink: 0;
+  }
+  .na-language-card.selected .na-language-indicator {
+    background: #0f4fd6;
+    border-color: #0f4fd6;
+  }
+  .na-language-hint {
+    font-size: 12px;
+    color: #5b6b88;
+    line-height: 1.4;
+  }
+  .na-language-caption {
+    margin-top: 10px;
+    font-size: 12px;
+    color: #5b6b88;
+  }
+
   /* Subsection row */
   .na-subsection-row {
     display: flex;
@@ -379,36 +488,253 @@ const PAGE_CSS = `
     text-transform: uppercase; cursor: pointer;
   }
   .na-btn-outline:hover { box-shadow: 2px 2px 0 var(--ink); }
-  .ap-field-error {
-    font-family: var(--font-mono); font-size: 11px; color: var(--red); margin-top: 6px;
+  .na-field-error {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: #b42318;
+    margin-top: 6px;
   }
-  .ap-error-banner {
-    display: flex; align-items: center; justify-content: space-between;
-    margin-bottom: 24px; padding: 14px 18px; background: #fff0f0;
-    border: 1.5px solid var(--red); border-left: 5px solid var(--red); color: var(--red);
+  .na-error-banner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 24px;
+    padding: 14px 18px;
+    background: #fff3f2;
+    border: 1.5px solid #f04438;
+    border-left: 5px solid #f04438;
+    color: #b42318;
   }
-  .ap-progress-wrap { margin: 16px 0 4px; padding: 12px 14px; background: var(--surface-2); border: 1px solid var(--border-soft); }
-  .ap-progress-label { font-family: var(--font-mono); font-size: 11px; text-transform: uppercase; color: var(--navy); margin-bottom: 8px; }
-  .ap-progress-track { height: 3px; background: var(--border-soft); }
-  .ap-progress-fill { height: 100%; background: var(--navy); animation: ap-progress 1.4s ease-in-out infinite; }
+  .na-progress-wrap {
+    margin: 16px 0 4px;
+    padding: 12px 14px;
+    background: #f8fbff;
+    border: 1px solid #dbe7ff;
+  }
+  .na-progress-label {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    text-transform: uppercase;
+    color: var(--navy);
+    margin-bottom: 8px;
+    display: inline-block;
+  }
+  .na-progress-track { height: 3px; background: #dbe7ff; }
+  .na-progress-fill { height: 100%; background: var(--navy); animation: ap-progress 1.4s ease-in-out infinite; }
   @keyframes ap-progress { 0% { width: 20%; } 50% { width: 70%; } 100% { width: 20%; } }
-  .ap-preview-card {
-    background: var(--surface); border: var(--rule); border-top: 4px solid var(--navy);
-    padding: 24px; position: sticky; top: 24px;
+  .na-preview-card {
+    position: sticky;
+    top: 24px;
+    overflow: hidden;
+    border-radius: 28px;
+    border: 1px solid rgba(255, 255, 255, 0.45);
+    background:
+      radial-gradient(circle at top right, rgba(96, 165, 250, 0.26), transparent 34%),
+      linear-gradient(180deg, #0f3b91 0%, #0a235d 100%);
+    color: #f8fbff;
+    box-shadow: 0 24px 60px rgba(5, 22, 80, 0.28);
   }
-  .ap-preview-title {
-    font-family: var(--font-display); font-size: 18px; font-weight: 700;
-    color: var(--ink); margin: 0 0 20px; padding-bottom: 14px; border-bottom: var(--rule);
+  .na-preview-inner {
+    padding: 26px;
+    backdrop-filter: blur(12px);
   }
-  .ap-preview-item { display: flex; gap: 12px; margin-bottom: 14px; font-size: 13px; line-height: 1.5; }
-  .ap-preview-label {
-    font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.1em;
-    text-transform: uppercase; color: var(--text-muted); font-weight: 700; width: 80px;
+  .na-preview-eyebrow {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 10px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.12);
+    font-family: var(--font-mono);
+    font-size: 10px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+  }
+  .na-preview-title {
+    margin: 18px 0 8px;
+    font-family: var(--font-display);
+    font-size: 30px;
+    line-height: 1.05;
+    color: #ffffff;
+  }
+  .na-preview-subtitle {
+    margin: 0;
+    color: rgba(232, 241, 255, 0.84);
+    font-size: 14px;
+    line-height: 1.6;
+  }
+  .na-preview-hero {
+    margin-top: 22px;
+    display: grid;
+    gap: 14px;
+  }
+  .na-preview-highlight {
+    padding: 18px;
+    border-radius: 22px;
+    background: rgba(255, 255, 255, 0.12);
+    border: 1px solid rgba(255, 255, 255, 0.14);
+  }
+  .na-preview-highlight-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 10px;
+  }
+  .na-preview-highlight-label {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: rgba(232, 241, 255, 0.72);
+  }
+  .na-preview-highlight-value {
+    margin: 0;
+    font-size: 18px;
+    font-weight: 700;
+    color: #ffffff;
+  }
+  .na-preview-highlight-meta {
+    margin: 2px 0 0;
+    font-size: 13px;
+    color: rgba(232, 241, 255, 0.76);
+  }
+  .na-preview-type-badge {
+    display: inline-flex;
+    align-items: center;
+    border-radius: 999px;
+    background: rgba(147, 197, 253, 0.18);
+    border: 1px solid rgba(191, 219, 254, 0.24);
+    padding: 8px 12px;
+    font-family: var(--font-mono);
+    font-size: 10px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: #dbeafe;
+  }
+  .na-preview-meta-grid {
+    margin-top: 22px;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+  }
+  .na-preview-mini-card {
+    padding: 16px;
+    border-radius: 20px;
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    min-height: 106px;
+  }
+  .na-preview-mini-top {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 12px;
+  }
+  .na-preview-icon {
+    width: 34px;
+    height: 34px;
+    border-radius: 12px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(255, 255, 255, 0.14);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    font-family: var(--font-mono);
+    font-size: 10px;
+    letter-spacing: 0.08em;
+    color: #dbeafe;
+    flex-shrink: 0;
+  }
+  .na-preview-mini-label {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: rgba(232, 241, 255, 0.7);
+  }
+  .na-preview-mini-value {
+    margin: 0;
+    font-size: 15px;
+    font-weight: 700;
+    color: #ffffff;
+    line-height: 1.4;
+  }
+  .na-preview-mini-detail {
+    margin: 6px 0 0;
+    font-size: 13px;
+    color: rgba(232, 241, 255, 0.72);
+    line-height: 1.5;
+  }
+  .na-preview-divider {
+    margin: 22px 0 18px;
+    border: none;
+    border-top: 1px solid rgba(255, 255, 255, 0.14);
+  }
+  .na-preview-section-heading {
+    margin: 0 0 12px;
+    font-family: var(--font-mono);
+    font-size: 10px;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: rgba(232, 241, 255, 0.68);
+  }
+  .na-preview-language-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+  .na-preview-language-pill {
+    display: inline-flex;
+    align-items: center;
+    border-radius: 999px;
+    padding: 8px 12px;
+    background: rgba(255, 255, 255, 0.12);
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    color: #ffffff;
+    font-family: var(--font-mono);
+    font-size: 10px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+  }
+  .na-preview-language-pill.empty {
+    color: rgba(232, 241, 255, 0.7);
+  }
+  @media (max-width: 1024px) {
+    .na-layout { grid-template-columns: 1fr; }
+    .na-preview-card {
+      position: static;
+      order: -1;
+    }
   }
   @media (max-width: 900px) {
-    .ap-layout { grid-template-columns: 1fr; }
-    .ap-page-title { font-size: 30px; }
-    .ap-page::before { display: none; }
+    .na-page-title { font-size: 30px; }
+    .na-page::before { display: none; }
+  }
+  @media (max-width: 640px) {
+    .na-container {
+      padding: 28px 18px 56px;
+    }
+    .na-form-card {
+      padding: 24px 18px;
+    }
+    .na-preview-inner {
+      padding: 20px;
+    }
+    .na-preview-title {
+      font-size: 24px;
+    }
+    .na-preview-meta-grid {
+      grid-template-columns: 1fr;
+    }
+    .na-language-grid {
+      grid-template-columns: 1fr 1fr;
+    }
+  }
+  @media (max-width: 480px) {
+    .na-language-grid {
+      grid-template-columns: 1fr;
+    }
   }
 `;
 
@@ -441,17 +767,84 @@ interface AssignmentPreviewProps {
 }
 
 function AssignmentPreview({ subjectName, title, year, assignmentType, languages, targetingSummary, deadline, allowLate }: AssignmentPreviewProps) {
+  const displayTitle = title || "Untitled assignment";
+  const displayType = formatAssignmentTypeLabel(assignmentType);
+  const displayDeadline = formatDeadlineLabel(deadline);
+  const deadlineMeta = formatDeadlineMeta(deadline);
+
   return (
     <div className="na-preview-card">
-      <h3 className="na-preview-title">Preview</h3>
-      <div className="na-preview-item"><span className="na-preview-label">Subject</span><span>{subjectName || "—"}</span></div>
-      <div className="na-preview-item"><span className="na-preview-label">Title</span><span>{title || "—"}</span></div>
-      <div className="na-preview-item"><span className="na-preview-label">Year</span><span>{year || "—"}</span></div>
-      <div className="na-preview-item"><span className="na-preview-label">Type</span><span>{assignmentType || "—"}</span></div>
-      <div className="na-preview-item"><span className="na-preview-label">Langs</span><span>{languages.length ? languages.join(", ") : "—"}</span></div>
-      <div className="na-preview-item"><span className="na-preview-label">Target</span><span>{targetingSummary || "—"}</span></div>
-      <div className="na-preview-item"><span className="na-preview-label">Deadline</span><span>{deadline ? new Date(deadline).toLocaleString() : "—"}</span></div>
-      <div className="na-preview-item"><span className="na-preview-label">Late</span><span>{allowLate ? "Allowed" : "Not allowed"}</span></div>
+      <div className="na-preview-inner">
+        <span className="na-preview-eyebrow">Live assignment preview</span>
+        <h3 className="na-preview-title">{displayTitle}</h3>
+        <p className="na-preview-subtitle">
+          {subjectName || "Pick a subject to complete the assignment brief."}
+        </p>
+
+        <div className="na-preview-hero">
+          <div className="na-preview-highlight">
+            <div className="na-preview-highlight-top">
+              <span className="na-preview-highlight-label">Deadline</span>
+              <span className="na-preview-type-badge">{displayType}</span>
+            </div>
+            <p className="na-preview-highlight-value">{displayDeadline}</p>
+            <p className="na-preview-highlight-meta">{deadlineMeta}</p>
+          </div>
+        </div>
+
+        <div className="na-preview-meta-grid">
+          <div className="na-preview-mini-card">
+            <div className="na-preview-mini-top">
+              <span className="na-preview-icon">{PREVIEW_ICONS.subject}</span>
+              <span className="na-preview-mini-label">Subject</span>
+            </div>
+            <p className="na-preview-mini-value">{subjectName || "Not selected"}</p>
+            <p className="na-preview-mini-detail">{year || "Choose a year"}</p>
+          </div>
+
+          <div className="na-preview-mini-card">
+            <div className="na-preview-mini-top">
+              <span className="na-preview-icon">{PREVIEW_ICONS.target}</span>
+              <span className="na-preview-mini-label">Target</span>
+            </div>
+            <p className="na-preview-mini-value">{targetingSummary || "Targeting not set"}</p>
+            <p className="na-preview-mini-detail">{allowLate ? "Late submission enabled" : "Late submission disabled"}</p>
+          </div>
+
+          <div className="na-preview-mini-card">
+            <div className="na-preview-mini-top">
+              <span className="na-preview-icon">{PREVIEW_ICONS.year}</span>
+              <span className="na-preview-mini-label">Year</span>
+            </div>
+            <p className="na-preview-mini-value">{year || "Not selected"}</p>
+            <p className="na-preview-mini-detail">Assignment type: {displayType}</p>
+          </div>
+
+          <div className="na-preview-mini-card">
+            <div className="na-preview-mini-top">
+              <span className="na-preview-icon">{PREVIEW_ICONS.late}</span>
+              <span className="na-preview-mini-label">Late Submission</span>
+            </div>
+            <p className="na-preview-mini-value">{allowLate ? "Allowed" : "Blocked"}</p>
+            <p className="na-preview-mini-detail">{allowLate ? "Students can still upload after the due date." : "Students must submit before the deadline."}</p>
+          </div>
+        </div>
+
+        <hr className="na-preview-divider" />
+
+        <div>
+          <p className="na-preview-section-heading">Programming language</p>
+          <div className="na-preview-language-list">
+            {languages.length > 0 ? (
+              languages.map(language => (
+                <span key={language} className="na-preview-language-pill">{language}</span>
+              ))
+            ) : (
+              <span className="na-preview-language-pill empty">No language selected</span>
+            )}
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
@@ -477,6 +870,34 @@ function Chip({ label, selected, onClick, disabled }: ChipProps) {
       aria-pressed={selected}
     >
       {label}
+    </button>
+  );
+}
+
+interface LanguageCardProps {
+  label: string;
+  selected: boolean;
+  onSelect: () => void;
+  disabled: boolean;
+}
+
+function LanguageCard({ label, selected, onSelect, disabled }: LanguageCardProps) {
+  return (
+    <button
+      type="button"
+      onClick={onSelect}
+      disabled={disabled}
+      className={`na-language-card${selected ? " selected" : ""}`}
+      role="radio"
+      aria-checked={selected}
+    >
+      <span className="na-language-topline">
+        <span className="na-language-name">{label}</span>
+        <span className="na-language-indicator" aria-hidden="true" />
+      </span>
+      <span className="na-language-hint">
+        {selected ? "Selected for this assignment" : "Choose this as the required programming language"}
+      </span>
     </button>
   );
 }
@@ -582,7 +1003,7 @@ const fileInputRef = useRef<HTMLInputElement | null>(null);
   };
 
   const handleLanguageToggle = (lang: string) => {
-    setLanguages(prev => prev.includes(lang) ? prev.filter(l => l !== lang) : [...prev, lang]);
+    setLanguages(prev => prev[0] === lang ? [] : [lang]);
     setErrors(prev => ({ ...prev, languages: undefined }));
   };
 
@@ -684,9 +1105,18 @@ const fileInputRef = useRef<HTMLInputElement | null>(null);
             </Field>
 
             <Field label="Languages" required>
-              <div className="na-chip-group">
-                {ASSIGNMENT_LANGUAGES.map(lang => <Chip key={lang} label={lang} selected={languages.includes(lang)} onClick={() => handleLanguageToggle(lang)} disabled={submitting} />)}
+              <div className="na-language-grid" role="radiogroup" aria-label="Programming language">
+                {ASSIGNMENT_LANGUAGES.map(lang => (
+                  <LanguageCard
+                    key={lang}
+                    label={lang}
+                    selected={languages.includes(lang)}
+                    onSelect={() => handleLanguageToggle(lang)}
+                    disabled={submitting}
+                  />
+                ))}
               </div>
+              <p className="na-language-caption">Select one language only. This will be shown to students in the assignment summary.</p>
               {errors.languages && <div className="na-field-error">{errors.languages}</div>}
             </Field>
 
