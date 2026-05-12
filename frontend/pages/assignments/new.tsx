@@ -7,6 +7,7 @@ import Field from "@/components/submissions/Field";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { listSubjects, createAssignment, uploadAssignmentDescriptionPdf } from "@/services/assignments";
 import type { Subject } from "@/services/assignments";
+import { SUPPORTED_LANGUAGES } from "@/services/submissions/submissions.types";
 import Head from "next/head";
 
 type AcademicYear = "1CP" | "2CP" | "1CS" | "2CS" | "3CS";
@@ -20,11 +21,11 @@ const SECTIONS_BY_YEAR: Record<AcademicYear, string[]> = {
 };
 const SPECIALITY_SUBSECTIONS = ["A", "B"];
 const SUBSECTION_GROUPS: Record<string, number[]> = { A: [1, 2], B: [3, 4] };
-const ASSIGNMENT_LANGUAGES = [
-  "python", "c", "c++", "java", "javascript", "typescript",
-  "rust", "go", "kotlin", "swift", "r", "matlab",
-  "scala", "haskell", "prolog", "sql", "bash", "php",
-  "ruby", "dart",
+const ASSIGNMENT_LANGUAGES: string[] = [
+  ...SUPPORTED_LANGUAGES,
+  "SQL",
+  "Bash",
+  "R",
 ];
 
 const ASSIGNMENT_TYPES = ["lab", "project", "homework", "exam", "quiz", "report"];
@@ -62,8 +63,8 @@ function validate(fields: { subject: string; title: string; year: string; langua
   const errors: FormErrors = {};
   if (!fields.subject) errors.subject = "Subject is required.";
   if (!fields.title.trim()) errors.title = "Title is required.";
-  if (!fields.year) errors.year = "Year is required.";
-  if (!fields.languages.length) errors.languages = "Select at least one language.";
+  if (!fields.year) errors.year = "Please select a year";
+  if (!fields.languages.length) errors.languages = "Please select at least one language";
   if (!fields.type) errors.type = "Assignment type is required.";
   if (!fields.deadline) errors.deadline = "Deadline is required.";
   else if (new Date(fields.deadline) <= new Date()) errors.deadline = "Deadline must be in the future.";
@@ -463,8 +464,18 @@ interface ChipProps {
 }
 
 function Chip({ label, selected, onClick, disabled }: ChipProps) {
+  const chipClassName = selected
+    ? "px-3 py-1.5 rounded-full border border-blue-600 bg-blue-600 text-sm font-medium text-white transition-all duration-150 cursor-pointer"
+    : "px-3 py-1.5 rounded-full border border-slate-200 bg-white text-sm font-medium text-slate-700 hover:border-blue-400 hover:text-blue-600 transition-all duration-150 cursor-pointer";
+
   return (
-    <button type="button" onClick={onClick} disabled={disabled} className={`ap-chip ${selected ? "selected" : ""}`}>
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      className={chipClassName}
+      aria-pressed={selected}
+    >
       {label}
     </button>
   );
@@ -691,7 +702,7 @@ const fileInputRef = useRef<HTMLInputElement | null>(null);
 
             {year && (
               <>
-                <Field label={isSpecialityYear ? "Speciality" : "Section"} hint="Optional — leave empty for all">
+                <Field label={isSpecialityYear ? "Speciality" : "Section"} hint={isSpecialityYear ? "Optional — leave empty for all sections" : "Optional — leave empty for all"}>
                   <div className="na-chip-group">
                     {availableSections.map(s => <Chip key={s} label={s} selected={targetSections.includes(s)} onClick={() => handleSectionChange(s)} disabled={submitting} />)}
                   </div>
