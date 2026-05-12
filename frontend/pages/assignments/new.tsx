@@ -299,72 +299,6 @@ const PAGE_CSS = `
     cursor: not-allowed;
   }
 
-  .na-language-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-    gap: 12px;
-  }
-  .na-language-card {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 6px;
-    min-height: 96px;
-    padding: 16px 18px;
-    border: 1px solid #d6e0f5;
-    border-radius: 18px;
-    background: linear-gradient(180deg, #ffffff 0%, #f5f9ff 100%);
-    box-shadow: 0 8px 18px rgba(5, 22, 80, 0.06);
-    text-align: left;
-    cursor: pointer;
-    transition: border-color 0.18s ease, box-shadow 0.18s ease, transform 0.18s ease, background 0.18s ease;
-  }
-  .na-language-card:hover:not(:disabled) {
-    border-color: #7fa4f5;
-    box-shadow: 0 14px 28px rgba(5, 22, 80, 0.1);
-    transform: translateY(-2px);
-  }
-  .na-language-card.selected {
-    border-color: #0f4fd6;
-    background: linear-gradient(180deg, #eff5ff 0%, #dbeafe 100%);
-    box-shadow: 0 16px 32px rgba(15, 79, 214, 0.18);
-  }
-  .na-language-card:disabled {
-    opacity: 0.55;
-    cursor: not-allowed;
-    transform: none;
-  }
-  .na-language-topline {
-    display: flex;
-    width: 100%;
-    align-items: center;
-    justify-content: space-between;
-    gap: 12px;
-  }
-  .na-language-name {
-    font-size: 15px;
-    font-weight: 700;
-    color: #0f172a;
-  }
-  .na-language-indicator {
-    width: 18px;
-    height: 18px;
-    border-radius: 999px;
-    border: 1.5px solid #93a7cf;
-    background: #fff;
-    box-shadow: inset 0 0 0 4px #fff;
-    transition: background 0.18s ease, border-color 0.18s ease;
-    flex-shrink: 0;
-  }
-  .na-language-card.selected .na-language-indicator {
-    background: #0f4fd6;
-    border-color: #0f4fd6;
-  }
-  .na-language-hint {
-    font-size: 12px;
-    color: #5b6b88;
-    line-height: 1.4;
-  }
   .na-language-caption {
     margin-top: 10px;
     font-size: 12px;
@@ -727,14 +661,6 @@ const PAGE_CSS = `
     .na-preview-meta-grid {
       grid-template-columns: 1fr;
     }
-    .na-language-grid {
-      grid-template-columns: 1fr 1fr;
-    }
-  }
-  @media (max-width: 480px) {
-    .na-language-grid {
-      grid-template-columns: 1fr;
-    }
   }
 `;
 
@@ -874,34 +800,6 @@ function Chip({ label, selected, onClick, disabled }: ChipProps) {
   );
 }
 
-interface LanguageCardProps {
-  label: string;
-  selected: boolean;
-  onSelect: () => void;
-  disabled: boolean;
-}
-
-function LanguageCard({ label, selected, onSelect, disabled }: LanguageCardProps) {
-  return (
-    <button
-      type="button"
-      onClick={onSelect}
-      disabled={disabled}
-      className={`na-language-card${selected ? " selected" : ""}`}
-      role="radio"
-      aria-checked={selected}
-    >
-      <span className="na-language-topline">
-        <span className="na-language-name">{label}</span>
-        <span className="na-language-indicator" aria-hidden="true" />
-      </span>
-      <span className="na-language-hint">
-        {selected ? "Selected for this assignment" : "Choose this as the required programming language"}
-      </span>
-    </button>
-  );
-}
-
 function NewAssignmentForm() {
   const router = useRouter();
 const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -1002,11 +900,6 @@ const fileInputRef = useRef<HTMLInputElement | null>(null);
     }
   };
 
-  const handleLanguageToggle = (lang: string) => {
-    setLanguages(prev => prev[0] === lang ? [] : [lang]);
-    setErrors(prev => ({ ...prev, languages: undefined }));
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitError(null);
@@ -1105,18 +998,22 @@ const fileInputRef = useRef<HTMLInputElement | null>(null);
             </Field>
 
             <Field label="Languages" required>
-              <div className="na-language-grid" role="radiogroup" aria-label="Programming language">
+              <select
+                className="na-select"
+                value={languages[0] ?? ""}
+                onChange={e => {
+                  const value = e.target.value;
+                  setLanguages(value ? [value] : []);
+                  setErrors(prev => ({ ...prev, languages: undefined }));
+                }}
+                disabled={submitting}
+              >
+                <option value="">Select a language</option>
                 {ASSIGNMENT_LANGUAGES.map(lang => (
-                  <LanguageCard
-                    key={lang}
-                    label={lang}
-                    selected={languages.includes(lang)}
-                    onSelect={() => handleLanguageToggle(lang)}
-                    disabled={submitting}
-                  />
+                  <option key={lang} value={lang}>{lang}</option>
                 ))}
-              </div>
-              <p className="na-language-caption">Select one language only. This will be shown to students in the assignment summary.</p>
+              </select>
+              <p className="na-language-caption">Select one language only. Options appear when you open the field, like Subject.</p>
               {errors.languages && <div className="na-field-error">{errors.languages}</div>}
             </Field>
 
