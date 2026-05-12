@@ -288,19 +288,19 @@ export default function LandingPage() {
                 {
                   num: '01',
                   title: 'No visibility',
-                  desc: 'We can\'t centrally see what\'s out there, and feedback gets lost across silos and becomes difficult to track throughout the lifecycle.',
+                  desc: 'Submissions get sent over WhatsApp, email, and USB drives. Professors have no central place to see what was submitted, when, or by whom. Feedback gets lost and follow-up never happens.',
                   icon: <svg key="p1" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#a8b7ee" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" /></svg>,
                 },
                 {
                   num: '02',
-                  title: 'No standard way',
-                  desc: 'Manual or ad-hoc methods, no clear standards, and one-off fixes no one reuses and no integration into our workflow.',
+                  title: ' AI usage.',
+                  desc: 'Most of the students have access to AI tools like ChatGPT, but it is hard to detect for professors, how much it was used, or to give feedback on it. This creates an uneven playing field and encourages dishonest work.',
                   icon: <svg key="p2" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#a8b7ee" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" /></svg>,
                 },
                 {
                   num: '03',
-                  title: 'Isolated solutions',
-                  desc: 'Solutions are IP and team-bound, hard to reuse in other systems, often custom and get risky without oversight or cross-team consistency.',
+                  title: 'No safe space to collaborate',
+                  desc: 'Students who want to share code or ask for help have nowhere legitimate to do it. Work-sharing happens off-platform and unsupervised, making honest collaboration indistinguishable from copying.',
                   icon: <svg key="p3" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#a8b7ee" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" /><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" /></svg>,
                 },
               ] as { num: string; title: string; desc: string; icon: React.ReactElement }[]).map((item) => (
@@ -357,10 +357,10 @@ export default function LandingPage() {
                 </div>
                 <div className="stats-mini" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                   {([
-                    { value: '99.9%', label: 'UPTIME SLA' },
-                    { value: '< 50ms', label: 'SEARCH LATENCY' },
-                    { value: 'AES-256', label: 'ENCRYPTION' },
-                    { value: '100+', label: 'LANGUAGES' },
+                    { value: '100%', label: 'Restricted to @esi.dz accounts' },
+                    { value: 'AST-based', label: 'Plagiarism detection engine, not just line comparison' },
+                    { value: 'Full history', label: ' Every submission version-tracked and attributed' },
+                    { value: 'One platform', label: ' Submissions, reviews, forum, and reports in one place' },
                   ] as { value: string; label: string }[]).map((stat) => (
                     <div key={stat.label} style={{ background: 'linear-gradient(180deg, rgba(27,39,76,0.85) 0%, rgba(20,30,62,0.82) 100%)', border: '1px solid rgba(79,108,247,0.45)', borderRadius: '16px', padding: '22px 20px', minHeight: '112px', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
                       <div style={{ fontSize: '1.65rem', fontWeight: 800, color: '#b4c1f2', marginBottom: '6px', fontFamily: "'JetBrains Mono',Consolas,monospace" }}>{stat.value}</div>
