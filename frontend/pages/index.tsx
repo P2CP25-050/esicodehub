@@ -358,8 +358,8 @@ export default function LandingPage() {
                 <div className="stats-mini" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                   {([
                     { value: '100%', label: 'Restricted to @esi.dz accounts' },
-                    { value: 'AST-based', label: 'Plagiarism detection engine, not just line comparison' },
-                    { value: 'Full history', label: ' Every submission version-tracked and attributed' },
+                    { value: 'MOSS-based', label: 'Plagiarism detection engine, not just line comparison' },
+                    { value: 'Easy to use', label: 'Every teacher and student can use it effortlessly' },
                     { value: 'One platform', label: ' Submissions, reviews, forum, and reports in one place' },
                   ] as { value: string; label: string }[]).map((stat) => (
                     <div key={stat.label} style={{ background: 'linear-gradient(180deg, rgba(27,39,76,0.85) 0%, rgba(20,30,62,0.82) 100%)', border: '1px solid rgba(79,108,247,0.45)', borderRadius: '16px', padding: '22px 20px', minHeight: '112px', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
