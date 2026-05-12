@@ -657,7 +657,7 @@ function Chip({ label, selected, onClick, disabled }: ChipProps) {
 function NewAssignmentForm() {
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement | null>(null);
-  const dirInputRef = useRef<HTMLInputElement | null>(null);
+  //const dirInputRef = useRef<HTMLInputElement | null>(null);
 
   const [subject, setSubject] = useState("");
   const [title, setTitle] = useState("");
@@ -689,9 +689,9 @@ function NewAssignmentForm() {
     fileInputRef.current?.click();
   };
 
-  const openDirDialog = () => {
+  /*const openDirDialog = () => {
     dirInputRef.current?.click();
-  };
+  };*/
 
   const setPdfFile = (file: File) => {
     setSubmitError(null);
@@ -1084,7 +1084,7 @@ function NewAssignmentForm() {
               </div>
             </Field>
 
-            <Field label="Files" hint="Optional — upload assignment files or instructions">
+            <Field label="Files" hint="Optional — upload assignment file or instructions">
               {selectedPdf ? (
                 <div className="na-pdf-file">
                   <div>
@@ -1117,8 +1117,8 @@ function NewAssignmentForm() {
                       <line x1="12" y1="3" x2="12" y2="15" />
                     </svg>
                   </div>
-                  <p className="na-files-drop-title">Drag &amp; drop files or a folder here</p>
-                  <p className="na-files-drop-subtitle">PDF FILES ONLY · MAX 50 MB TOTAL</p>
+                  <p className="na-files-drop-title">Drag &amp; drop file here</p>
+                  <p className="na-files-drop-subtitle">PDF FILE ONLY · MAX 50 MB TOTAL</p>
                   <div className="na-files-btn-row">
                     <button
                       type="button"
@@ -1126,16 +1126,16 @@ function NewAssignmentForm() {
                       disabled={submitting}
                       className="na-btn-primary"
                     >
-                      Upload Files
+                      Upload File
                     </button>
-                    <button
+                    {/*<button
                       type="button"
                       onClick={openDirDialog}
                       disabled={submitting}
                       className="na-btn-outline"
                     >
                       Upload Directory
-                    </button>
+                    </button>*/}
                   </div>
                 </div>
               )}
@@ -1148,7 +1148,7 @@ function NewAssignmentForm() {
                 style={{ display: 'none' }}
               />
               {/* Hidden directory input */}
-              <input
+              {/*<input
                 ref={dirInputRef}
                 type="file"
                 // @ts-ignore
@@ -1156,7 +1156,7 @@ function NewAssignmentForm() {
                 mozdirectory=""
                 onChange={handleFileInput}
                 style={{ display: 'none' }}
-              />
+              />*/}
             </Field>
 
             {/* Progress */}
