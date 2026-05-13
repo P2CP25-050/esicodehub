@@ -19,8 +19,6 @@ interface AnswerNodeProps {
   currentUserEmail: string;
   canAccept: boolean;
   hasAccepted: boolean;
-  /** ID of the answer currently being accepted/unaccepted (null if idle) */
-  acceptingId: number | null;
   onVote: (id: number, v: 1 | -1) => void;
   onAccept: (id: number) => void;
   onUnaccept: (id: number) => void;
@@ -37,7 +35,6 @@ export function AnswerNode({
   currentUserEmail,
   canAccept,
   hasAccepted,
-  acceptingId,
   onVote,
   onAccept,
   onUnaccept,
@@ -62,19 +59,6 @@ export function AnswerNode({
   const isTopLevel = answer.parent === null;
   const hasReplies = (answer.replies ?? []).length > 0;
 
-  // This answer's accept/unaccept button is currently in-flight
-  const isAccepting = acceptingId === answer.id;
-
-  // The accept button is shown when:
-  //   • the backend says the current user may accept (canAccept)
-  //   • the current user is the question author (belt-and-suspenders client check)
-  //   • this is a top-level answer
-  //   • this answer is not already accepted
-  const showAccept = isTopLevel && canAccept && isQAuthor && !answer.is_accepted;
-
-  // The unaccept button is shown when the same conditions hold but the answer IS accepted
-  const showUnaccept = isTopLevel && canAccept && isQAuthor && answer.is_accepted;
-
   const borderColors = ["border-[#0d1b4b]", "border-blue-300", "border-slate-300", "border-slate-200"];
   const borderColor = borderColors[Math.min(depth, borderColors.length - 1)];
 
@@ -92,6 +76,7 @@ export function AnswerNode({
     setEditSaving(true);
     setEditError("");
     try {
+      // Import updateAnswer lazily to avoid circular deps at module level
       const { updateAnswer } = await import("@/services/forum");
       const updated = await updateAnswer(questionId, answer.id, {
         body: editBody.trim(),
@@ -196,7 +181,7 @@ export function AnswerNode({
                 </div>
 
                 {editShowCode && (
-                  <div className="rounded-xl overflow-hidden border-2 border-slate-700">
+                  <div className="rounded-xl overflow-hidden border border-slate-700">
                     <div style={{ height: "160px" }}>
                       <MonacoEditor
                         language={editLang}
@@ -269,46 +254,30 @@ export function AnswerNode({
                   {replyOpen ? "Cancel" : "Reply"}
                 </button>
 
-                {/* Accept button — only shown when canAccept + isQAuthor + top-level + not yet accepted */}
-                {showAccept && (
+                {/* Accept — question author only, top-level only, not already accepted */}
+                {isTopLevel && isQAuthor && !answer.is_accepted && (
                   <button
                     onClick={() => onAccept(answer.id)}
-                    disabled={isAccepting}
-                    className="text-xs font-bold text-green-700 border border-green-300 bg-green-50 hover:bg-green-100 px-3 py-1 rounded-full flex items-center gap-1 transition-all disabled:opacity-60"
+                    className="text-xs font-bold text-green-700 border border-green-300 bg-green-50 hover:bg-green-100 px-3 py-1 rounded-full flex items-center gap-1 transition-all"
                   >
-                    {isAccepting ? (
-                      <svg className="animate-spin w-3.5 h-3.5" viewBox="0 0 24 24" fill="none">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
-                      </svg>
-                    ) : (
-                      <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
-                        <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                      </svg>
-                    )}
-                    {isAccepting ? "Accepting…" : "Accept"}
+                    <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                    </svg>
+                    Accept
                   </button>
                 )}
 
-                {/* Unaccept — only when this answer is accepted */}
-                {showUnaccept && (
+                {/* Unaccept — only question author, only if THIS answer is accepted */}
+                {isTopLevel && isQAuthor && answer.is_accepted && (
                   <button
                     onClick={() => onUnaccept(answer.id)}
-                    disabled={isAccepting}
-                    className="text-xs font-bold text-slate-500 border border-slate-300 bg-slate-50 hover:bg-red-50 hover:border-red-300 hover:text-red-600 px-3 py-1 rounded-full flex items-center gap-1 transition-all disabled:opacity-60"
+                    className="text-xs font-bold text-slate-500 border border-slate-300 bg-slate-50 hover:bg-red-50 hover:border-red-300 hover:text-red-600 px-3 py-1 rounded-full flex items-center gap-1 transition-all"
                     title="Revoke accepted answer"
                   >
-                    {isAccepting ? (
-                      <svg className="animate-spin w-3.5 h-3.5" viewBox="0 0 24 24" fill="none">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
-                      </svg>
-                    ) : (
-                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                      </svg>
-                    )}
-                    {isAccepting ? "Removing…" : "Unaccept"}
+                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                    Unaccept
                   </button>
                 )}
 
@@ -382,7 +351,6 @@ export function AnswerNode({
             currentUserEmail={currentUserEmail}
             canAccept={canAccept}
             hasAccepted={hasAccepted}
-            acceptingId={acceptingId}
             onVote={onVote}
             onAccept={onAccept}
             onUnaccept={onUnaccept}

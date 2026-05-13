@@ -97,23 +97,24 @@ export const acceptAnswer = async (
   answerId: number
 ): Promise<Answer> => {
   const res = await apiClient.post<Answer>(
-    `${QUESTIONS_BASE}${questionId}/answers/${answerId}/accept/`
+    `${QUESTIONS_BASE}${questionId}/answers/${answerId}/accept/`,
+    { is_unaccepted: false }
   );
   return res.data;
 };
 
 /**
- * Un-accept (revoke) the currently accepted answer.
- * Calls the same accept endpoint — the backend toggles the state.
+ * Un-accept: PATCH the answer directly to set is_accepted=false.
+ * We avoid calling the /accept/ toggle again because that would re-accept it.
  */
 export const unacceptAnswer = async (
   questionId: number,
   answerId: number
-): Promise<Answer> => {
-  const res = await apiClient.post<Answer>(
-    `${QUESTIONS_BASE}${questionId}/answers/${answerId}/accept/`
+): Promise<void> => {
+  await apiClient.patch(
+    `${QUESTIONS_BASE}${questionId}/answers/${answerId}/`,
+    { is_accepted: false}
   );
-  return res.data;
 };
 
 export const voteQuestion = async (

@@ -3,11 +3,11 @@ import Head from "next/head";
 import Link from "next/link";
 import { useRouter } from "next/router";
 import {
-  getQuestion,
   deleteQuestion,
   voteQuestion,
   updateQuestion,
   closeQuestion,
+  getQuestion,
 } from "@/services/forum";
 import type { QuestionDetail } from "@/services/forum";
 import Header from "@/components/submissions/Header";
@@ -42,6 +42,11 @@ function QuestionDetailContent() {
   useEffect(() => {
     if (!router.isReady || questionId === null) return;
 
+    // If we already have this question loaded, do NOT re-fetch.
+    // This prevents StrictMode double-mount or router re-renders from
+    // overwriting local state (accepted answers, votes, etc.).
+    if (question !== null && question.id === questionId) return;
+
     let cancelled = false;
 
     const loadQuestion = async () => {
@@ -59,7 +64,10 @@ function QuestionDetailContent() {
 
     void loadQuestion();
     return () => { cancelled = true; };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [router.isReady, questionId]);
+  // NOTE: `question` is intentionally excluded from deps — including it would
+  // cause an infinite loop. We only want to fetch when the questionId changes.
 
   const hasAccepted = (question?.answers ?? []).some((a) => a.is_accepted);
 
@@ -81,17 +89,31 @@ function QuestionDetailContent() {
     try {
       const q = await voteQuestion(questionId, v);
       if (q && typeof q === "object" && "vote_score" in q) {
-        setQuestion((prev) => prev ? {
-          ...prev,
-          vote_score: q.vote_score,
-          ...("user_vote" in q ? { user_vote: (q as { user_vote?: 1 | -1 | null }).user_vote ?? v } : {}),
-        } : null);
+        // Only patch vote fields — never replace answers or other derived state
+        setQuestion((prev) => {
+          if (!prev) return prev;
+          return {
+            ...prev,
+            vote_score: q.vote_score,
+            ...("user_vote" in q
+              ? { user_vote: (q as { user_vote?: 1 | -1 | null }).user_vote ?? v }
+              : {}),
+          };
+        });
       }
     } catch {
-      try {
-        const refreshed = await getQuestion(questionId);
-        setQuestion(refreshed);
-      } catch { /* keep existing state */ }
+      // On vote failure only roll back vote fields, not the whole question
+      setQuestion((prev) => {
+        if (!prev) return prev;
+        const prevVote = prev.user_vote ?? null;
+        const rolledBackVote: 1 | -1 | null = prevVote === v ? null : prevVote;
+        const delta = (rolledBackVote ?? 0) - (prevVote ?? 0);
+        return {
+          ...prev,
+          vote_score: prev.vote_score + delta,
+          user_vote: rolledBackVote,
+        };
+      });
       setError("Failed to submit vote.");
     }
   };
@@ -114,7 +136,15 @@ function QuestionDetailContent() {
     }) => {
       if (questionId === null) return;
       const updated = await updateQuestion(questionId, data);
-      setQuestion((prev) => prev ? { ...prev, ...updated } : prev);
+      // Only patch editable fields — never touch answers
+      setQuestion((prev) => prev ? {
+        ...prev,
+        title: updated.title,
+        body: updated.body,
+        code_snippet: updated.code_snippet,
+        code_language: updated.code_language,
+        tags: updated.tags,
+      } : prev);
     },
     [questionId]
   );
@@ -122,8 +152,9 @@ function QuestionDetailContent() {
   // ── Question close ────────────────────────────────────────────────────────
   const handleCloseQuestion = useCallback(async () => {
     if (questionId === null) return;
-    const updated = await closeQuestion(questionId);
-    setQuestion((prev) => prev ? { ...prev, ...updated } : prev);
+    await closeQuestion(questionId);
+    // Only flip is_closed — never touch answers
+    setQuestion((prev) => prev ? { ...prev, is_closed: true } : prev);
   }, [questionId]);
 
   // ── Answer tree updates ───────────────────────────────────────────────────

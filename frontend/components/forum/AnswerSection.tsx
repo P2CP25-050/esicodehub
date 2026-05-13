@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import {
   createAnswer,
   voteAnswer,
@@ -73,11 +73,6 @@ export function AnswerSection({
   const [posting, setPosting] = useState(false);
   const [ansError, setAnsError] = useState("");
 
-  // Track which answer is currently being accepted/unaccepted so the node
-  // can show a spinner and we can surface errors back to the user.
-  const [acceptingId, setAcceptingId] = useState<number | null>(null);
-  const [acceptError, setAcceptError] = useState("");
-
   const hasAccepted = (question.answers ?? []).some((a) => a.is_accepted);
 
   // ── Handlers ──────────────────────────────────────────────────────────────
@@ -86,60 +81,58 @@ export function AnswerSection({
     voteAnswer(questionId, id, v).catch(() => {});
   };
 
-  /**
-   * Accept an answer:
-   * 1. Optimistically mark it accepted in local state immediately
-   * 2. Fire the real API call
-   * 3. On failure, roll back from server and surface the error
-   */
+  // Guard flag to prevent double-firing (StrictMode / fast clicks)
+  const acceptingRef = useRef(false);
+
   const handleAccept = useCallback(
     async (answerId: number) => {
-      setAcceptError("");
-      setAcceptingId(answerId);
+      if (acceptingRef.current) {
+        console.log("[Accept] BLOCKED — already in flight");
+        return;
+      }
+      acceptingRef.current = true;
+      console.log("[Accept] START answerId=", answerId);
 
-      // Snapshot previous state for rollback
-      const previous = question.answers;
-
-      // Optimistic update — instant UI feedback
+      // Optimistic update
       onQuestionUpdate((q) => ({
         ...q,
         answers: updateAcceptedInTree(q.answers, answerId),
       }));
 
       try {
-        await acceptAnswer(questionId, answerId);
+        console.log("[Accept] calling API...");
+        const updated = await acceptAnswer(questionId, answerId);
+        console.log("[Accept] API success, server returned:", updated);
+        onQuestionUpdate((q) => ({
+          ...q,
+          answers: updateAnswerInTree(q.answers, updated),
+        }));
+        console.log("[Accept] state updated with server response");
       } catch (err: unknown) {
-        // Determine a useful error message
-        const message =
-          err instanceof Error ? err.message : "Failed to accept answer. Please try again.";
-        setAcceptError(message);
-
-        // Roll back — try a fresh server fetch first, fall back to snapshot
+        const axiosErr = err as { response?: { data?: unknown; status?: number } };
+        console.error("[Accept] API FAILED — status:", axiosErr?.response?.status);
+        console.error("[Accept] API FAILED — detail:", JSON.stringify(axiosErr?.response?.data));
         try {
           const fresh = await getQuestion(questionId);
-          onQuestionUpdate(() => fresh);
-        } catch {
-          // If the refresh also fails, restore the snapshot we took above
-          onQuestionUpdate((q) => ({ ...q, answers: previous }));
-        }
+          console.log("[Accept] rolled back with fresh question, answers:", fresh.answers.map(a => ({ id: a.id, is_accepted: a.is_accepted })));
+          onQuestionUpdate((q) => ({ ...q, answers: fresh.answers }));
+        } catch { /* keep optimistic */ }
       } finally {
-        setAcceptingId(null);
+        acceptingRef.current = false;
+        console.log("[Accept] DONE");
       }
     },
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [questionId, onQuestionUpdate, question.answers]
+    [questionId, onQuestionUpdate]
   );
 
-  /**
-   * Unaccept: clears the accepted badge immediately, reverts on failure.
-   */
+  const unacceptingRef = useRef(false);
+
   const handleUnaccept = useCallback(
     async (answerId: number) => {
-      setAcceptError("");
-      setAcceptingId(answerId);
+      if (unacceptingRef.current) return;
+      unacceptingRef.current = true;
 
-      const previous = question.answers;
-
+      // Optimistic update
       onQuestionUpdate((q) => ({
         ...q,
         answers: clearAcceptedInTree(q.answers),
@@ -147,23 +140,16 @@ export function AnswerSection({
 
       try {
         await unacceptAnswer(questionId, answerId);
-      } catch (err: unknown) {
-        const message =
-          err instanceof Error ? err.message : "Failed to unaccept answer. Please try again.";
-        setAcceptError(message);
-
+      } catch {
         try {
           const fresh = await getQuestion(questionId);
-          onQuestionUpdate(() => fresh);
-        } catch {
-          onQuestionUpdate((q) => ({ ...q, answers: previous }));
-        }
+          onQuestionUpdate((q) => ({ ...q, answers: fresh.answers }));
+        } catch { /* keep optimistic */ }
       } finally {
-        setAcceptingId(null);
+        unacceptingRef.current = false;
       }
     },
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [questionId, onQuestionUpdate, question.answers]
+    [questionId, onQuestionUpdate]
   );
 
   const handleDeleteAnswer = useCallback(
@@ -232,7 +218,6 @@ export function AnswerSection({
     currentUserEmail,
     canAccept: question.can_accept_answer ?? false,
     hasAccepted,
-    acceptingId,
     onVote: handleAnswerVote,
     onAccept: handleAccept,
     onUnaccept: handleUnaccept,
@@ -262,22 +247,6 @@ export function AnswerSection({
           </span>
         )}
       </div>
-
-      {/* Accept/unaccept error banner */}
-      {acceptError && (
-        <div className="mb-4 flex items-center justify-between gap-3 bg-red-50 border border-red-200 text-red-700 text-xs font-semibold px-4 py-2.5 rounded-xl">
-          <span>{acceptError}</span>
-          <button
-            onClick={() => setAcceptError("")}
-            className="text-red-400 hover:text-red-600 transition-colors shrink-0"
-            aria-label="Dismiss"
-          >
-            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
-        </div>
-      )}
 
       {/* Pinned accepted answers */}
       {acceptedAnswers.map((a) => (
