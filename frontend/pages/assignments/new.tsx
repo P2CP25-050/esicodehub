@@ -8,6 +8,7 @@ import Field from "@/components/submissions/Field";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { listSubjects, createAssignment, uploadAssignmentDescriptionPdf } from "@/services/assignments";
 import type { Subject } from "@/services/assignments";
+import { SUPPORTED_LANGUAGES } from "@/services/submissions/submissions.types";
 
 // Types & constants
 
@@ -28,7 +29,7 @@ const SUBSECTION_GROUPS: Record<string, number[]> = {
   B: [3, 4],
 };
 
-const ASSIGNMENT_LANGUAGES = ["python", "c", "c++", "java", "javascript"];
+const ASSIGNMENT_LANGUAGES: string[] = [...SUPPORTED_LANGUAGES];
 
 function getGroupsForSection(sectionIndex: number): number[] {
   const base = sectionIndex * 4 + 1;
@@ -779,15 +780,6 @@ function NewAssignmentForm() {
     );
   };
 
-  const handleLanguageToggle = (language: string) => {
-    setLanguages((prev) =>
-      prev.includes(language)
-        ? prev.filter((item) => item !== language)
-        : [...prev, language]
-    );
-    setErrors((prev) => ({ ...prev, languages: undefined }));
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitError(null);
@@ -938,17 +930,23 @@ function NewAssignmentForm() {
             </Field>
 
             <Field label="Languages" required>
-              <div className="na-chip-group">
+              <select
+                className="na-select"
+                value={languages[0] ?? ""}
+                onChange={(e: ChangeEvent<HTMLSelectElement>) => {
+                  const value = e.target.value;
+                  setLanguages(value ? [value] : []);
+                  setErrors((prev) => ({ ...prev, languages: undefined }));
+                }}
+                disabled={submitting}
+              >
+                <option value="">Select a language</option>
                 {ASSIGNMENT_LANGUAGES.map((language) => (
-                  <Chip
-                    key={language}
-                    label={language}
-                    selected={languages.includes(language)}
-                    onClick={() => handleLanguageToggle(language)}
-                    disabled={submitting}
-                  />
+                  <option key={language} value={language}>
+                    {language}
+                  </option>
                 ))}
-              </div>
+              </select>
               {errors.languages && (
                 <div className="na-field-error">{errors.languages}</div>
               )}
