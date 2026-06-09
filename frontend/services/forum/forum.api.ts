@@ -3,6 +3,7 @@ import type { PaginatedResponse } from '../submissions/submissions.types';
 import type {
   Answer,
   AnswerCreatePayload,
+  AnswerUpdatePayload,
   ForumListParams,
   QuestionCreatePayload,
   QuestionDetail,
@@ -49,6 +50,18 @@ export const deleteQuestion = async (id: number): Promise<void> => {
   await apiClient.delete(`${QUESTIONS_BASE}${id}/`);
 };
 
+/**
+ * Close a question so it no longer accepts new answers.
+ * Sends PATCH { is_closed: true } to the question detail endpoint.
+ */
+export const closeQuestion = async (id: number): Promise<QuestionDetail> => {
+  const res = await apiClient.patch<QuestionDetail>(
+    `${QUESTIONS_BASE}${id}/`,
+    { is_closed: true }
+  );
+  return res.data;
+};
+
 export const createAnswer = async (
   questionId: number,
   data: AnswerCreatePayload
@@ -63,7 +76,7 @@ export const createAnswer = async (
 export const updateAnswer = async (
   questionId: number,
   answerId: number,
-  data: Partial<AnswerCreatePayload>
+  data: AnswerUpdatePayload
 ): Promise<Answer> => {
   const res = await apiClient.patch<Answer>(
     `${QUESTIONS_BASE}${questionId}/answers/${answerId}/`,
@@ -84,9 +97,24 @@ export const acceptAnswer = async (
   answerId: number
 ): Promise<Answer> => {
   const res = await apiClient.post<Answer>(
-    `${QUESTIONS_BASE}${questionId}/answers/${answerId}/accept/`
+    `${QUESTIONS_BASE}${questionId}/answers/${answerId}/accept/`,
+    { is_unaccepted: false }
   );
   return res.data;
+};
+
+/**
+ * Un-accept: PATCH the answer directly to set is_accepted=false.
+ * We avoid calling the /accept/ toggle again because that would re-accept it.
+ */
+export const unacceptAnswer = async (
+  questionId: number,
+  answerId: number
+): Promise<void> => {
+  await apiClient.patch(
+    `${QUESTIONS_BASE}${questionId}/answers/${answerId}/`,
+    { is_accepted: false}
+  );
 };
 
 export const voteQuestion = async (

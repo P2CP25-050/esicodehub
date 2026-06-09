@@ -64,6 +64,12 @@ export interface AnswerCreatePayload {
   parent_id?: number | null;
 }
 
+export interface AnswerUpdatePayload {
+  body?: string;
+  code_snippet?: string;
+  code_language?: string;
+}
+
 export interface ForumListParams {
   tag?: string;
   search?: string;

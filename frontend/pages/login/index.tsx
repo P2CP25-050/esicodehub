@@ -373,7 +373,7 @@ function LoginPageContent() {
               >
                 <button
                   type="button"
-                  onClick={() => router.push("/ForgotPassword")}
+                  onClick={() => router.push("/forgot-password")}
                   style={{
                     background: "none",
                     border: "none",

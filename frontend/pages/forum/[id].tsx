@@ -3,9 +3,11 @@ import Head from "next/head";
 import Link from "next/link";
 import { useRouter } from "next/router";
 import {
-  getQuestion,
   deleteQuestion,
   voteQuestion,
+  updateQuestion,
+  closeQuestion,
+  getQuestion,
 } from "@/services/forum";
 import type { QuestionDetail } from "@/services/forum";
 import Header from "@/components/submissions/Header";
@@ -22,35 +24,28 @@ function QuestionDetailContent() {
   const router = useRouter();
 
   const [question, setQuestion] = useState<QuestionDetail | null>(null);
-  // Starts as false because `isLoading` (derived below) is true while the
-  // router hasn't resolved, so the spinner shows on first render without
-  // needing loading=true here.
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  // Derive a validated numeric id only after the router is ready.
-  // router.query.id can be undefined (first render) or string[] (catch-all
-  // routes), so we reject anything that isn't a single numeric string.
   const rawId = router.isReady ? router.query.id : undefined;
   const questionId =
     typeof rawId === "string" && /^\d+$/.test(rawId)
       ? Number(rawId)
       : null;
 
-  // Derive the "invalid id" error directly from router state so we avoid
-  // calling setState synchronously inside a useEffect (react-hooks/set-state-in-effect).
   const idError =
     router.isReady && questionId === null ? "Invalid question ID." : "";
 
-  // Treat the page as loading while the router hasn't resolved yet, or while a
-  // fetch is in flight.
   const isLoading = !router.isReady || loading;
-
   const displayError = idError || error;
 
   useEffect(() => {
-    // Wait for the router. If the id is invalid we show the derived error instead.
     if (!router.isReady || questionId === null) return;
+
+    // If we already have this question loaded, do NOT re-fetch.
+    // This prevents StrictMode double-mount or router re-renders from
+    // overwriting local state (accepted answers, votes, etc.).
+    if (question !== null && question.id === questionId) return;
 
     let cancelled = false;
 
@@ -59,40 +54,33 @@ function QuestionDetailContent() {
       setError("");
       try {
         const q = await getQuestion(questionId);
-        if (!cancelled) {
-          setQuestion(q);
-        }
+        if (!cancelled) setQuestion(q);
       } catch {
-        if (!cancelled) {
-          setError("Failed to load question.");
-        }
+        if (!cancelled) setError("Failed to load question.");
       } finally {
-        if (!cancelled) {
-          setLoading(false);
-        }
+        if (!cancelled) setLoading(false);
       }
     };
 
     void loadQuestion();
-
     return () => { cancelled = true; };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [router.isReady, questionId]);
+  // NOTE: `question` is intentionally excluded from deps — including it would
+  // cause an infinite loop. We only want to fetch when the questionId changes.
 
   const hasAccepted = (question?.answers ?? []).some((a) => a.is_accepted);
 
+  // ── Question vote ─────────────────────────────────────────────────────────
   const handleQuestionVote = async (v: 1 | -1) => {
     if (questionId === null) return;
-    // Do not allow the question author to vote on their own question
-    // (the VoteButtons are hidden for them, so this is a safety guard).
     if (question?.author_email === currentUserEmail) return;
     setError("");
 
-    // Optimistic update: clicking active direction toggles off, clicking neutral sets vote.
-    // Switching direction directly is blocked by VoteButtons, guard here too.
     setQuestion((prev) => {
       if (!prev) return prev;
       const prevVote = prev.user_vote ?? null;
-      if (prevVote !== null && prevVote !== v) return prev; // blocked
+      if (prevVote !== null && prevVote !== v) return prev;
       const nextVote: 1 | -1 | null = prevVote === v ? null : v;
       const delta = (nextVote ?? 0) - (prevVote ?? 0);
       return { ...prev, vote_score: prev.vote_score + delta, user_vote: nextVote };
@@ -101,25 +89,36 @@ function QuestionDetailContent() {
     try {
       const q = await voteQuestion(questionId, v);
       if (q && typeof q === "object" && "vote_score" in q) {
-        setQuestion((prev) => prev ? {
+        // Only patch vote fields — never replace answers or other derived state
+        setQuestion((prev) => {
+          if (!prev) return prev;
+          return {
+            ...prev,
+            vote_score: q.vote_score,
+            ...("user_vote" in q
+              ? { user_vote: (q as { user_vote?: 1 | -1 | null }).user_vote ?? v }
+              : {}),
+          };
+        });
+      }
+    } catch {
+      // On vote failure only roll back vote fields, not the whole question
+      setQuestion((prev) => {
+        if (!prev) return prev;
+        const prevVote = prev.user_vote ?? null;
+        const rolledBackVote: 1 | -1 | null = prevVote === v ? null : prevVote;
+        const delta = (rolledBackVote ?? 0) - (prevVote ?? 0);
+        return {
           ...prev,
-          vote_score: q.vote_score,
-          ...("user_vote" in q ? { user_vote: (q as { user_vote?: 1 | -1 | null }).user_vote ?? v } : {}),
-        } : null);
-      }
-    } catch (err) {
-      // Roll back optimistic update
-      try {
-        const refreshedQuestion = await getQuestion(questionId);
-        setQuestion(refreshedQuestion);
-      } catch {
-        // If the refresh fails too, keep the existing state and surface the error.
-      }
+          vote_score: prev.vote_score + delta,
+          user_vote: rolledBackVote,
+        };
+      });
       setError("Failed to submit vote.");
-      throw err;
     }
   };
 
+  // ── Question delete ───────────────────────────────────────────────────────
   const handleDeleteQuestion = async () => {
     if (questionId === null) return;
     if (!confirm("Delete this question?")) return;
@@ -127,6 +126,38 @@ function QuestionDetailContent() {
     router.push("/forum");
   };
 
+  // ── Question edit ─────────────────────────────────────────────────────────
+  const handleEditQuestion = useCallback(
+    async (data: {
+      title: string;
+      body: string;
+      code_snippet?: string;
+      code_language?: string;
+    }) => {
+      if (questionId === null) return;
+      const updated = await updateQuestion(questionId, data);
+      // Only patch editable fields — never touch answers
+      setQuestion((prev) => prev ? {
+        ...prev,
+        title: updated.title,
+        body: updated.body,
+        code_snippet: updated.code_snippet,
+        code_language: updated.code_language,
+        tags: updated.tags,
+      } : prev);
+    },
+    [questionId]
+  );
+
+  // ── Question close ────────────────────────────────────────────────────────
+  const handleCloseQuestion = useCallback(async () => {
+    if (questionId === null) return;
+    await closeQuestion(questionId);
+    // Only flip is_closed — never touch answers
+    setQuestion((prev) => prev ? { ...prev, is_closed: true } : prev);
+  }, [questionId]);
+
+  // ── Answer tree updates ───────────────────────────────────────────────────
   const handleQuestionUpdate = useCallback(
     (updater: (q: QuestionDetail) => QuestionDetail) => {
       setQuestion((prev) => (prev ? updater(prev) : prev));
@@ -185,6 +216,8 @@ function QuestionDetailContent() {
                   currentUserEmail={currentUserEmail}
                   onVote={handleQuestionVote}
                   onDelete={handleDeleteQuestion}
+                  onEdit={handleEditQuestion}
+                  onClose={handleCloseQuestion}
                 />
 
                 <AnswerSection

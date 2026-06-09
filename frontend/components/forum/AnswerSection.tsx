@@ -1,9 +1,11 @@
-import { useCallback, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import {
   createAnswer,
   voteAnswer,
   acceptAnswer,
+  unacceptAnswer,
   deleteAnswer,
+  getQuestion,
 } from "@/services/forum";
 import type { Answer, AnswerCreatePayload, QuestionDetail } from "@/services/forum";
 import { AnswerNode } from "@/components/forum/AnswerNode";
@@ -24,13 +26,27 @@ function removeFromTree(answers: Answer[], id: number): Answer[] {
     .map((a) => ({ ...a, replies: removeFromTree(a.replies ?? [], id) }));
 }
 
-/** Mark exactly one answer as accepted (and clear all others) in the tree. */
 function updateAcceptedInTree(answers: Answer[], acceptedId: number): Answer[] {
   return answers.map((a) => ({
     ...a,
     is_accepted: a.id === acceptedId,
     replies: updateAcceptedInTree(a.replies ?? [], acceptedId),
   }));
+}
+
+function clearAcceptedInTree(answers: Answer[]): Answer[] {
+  return answers.map((a) => ({
+    ...a,
+    is_accepted: false,
+    replies: clearAcceptedInTree(a.replies ?? []),
+  }));
+}
+
+function updateAnswerInTree(answers: Answer[], updated: Answer): Answer[] {
+  return answers.map((a) => {
+    if (a.id === updated.id) return { ...updated, replies: a.replies ?? [] };
+    return { ...a, replies: updateAnswerInTree(a.replies ?? [], updated) };
+  });
 }
 
 // ── Props ─────────────────────────────────────────────────────────────────────
@@ -50,7 +66,6 @@ export function AnswerSection({
 }: AnswerSectionProps) {
   const questionId = question.id;
 
-  // Post-answer form state
   const [answerBody, setAnswerBody] = useState("");
   const [showCode, setShowCode] = useState(false);
   const [ansCode, setAnsCode] = useState("");
@@ -60,21 +75,82 @@ export function AnswerSection({
 
   const hasAccepted = (question.answers ?? []).some((a) => a.is_accepted);
 
-  // Handlers
+  // ── Handlers ──────────────────────────────────────────────────────────────
+
   const handleAnswerVote = (id: number, v: 1 | -1) => {
     voteAnswer(questionId, id, v).catch(() => {});
   };
 
-  const handleAccept = (answerId: number) => {
-    acceptAnswer(questionId, answerId)
-      .then(() =>
+  // Guard flag to prevent double-firing (StrictMode / fast clicks)
+  const acceptingRef = useRef(false);
+
+  const handleAccept = useCallback(
+    async (answerId: number) => {
+      if (acceptingRef.current) {
+        console.log("[Accept] BLOCKED — already in flight");
+        return;
+      }
+      acceptingRef.current = true;
+      console.log("[Accept] START answerId=", answerId);
+
+      // Optimistic update
+      onQuestionUpdate((q) => ({
+        ...q,
+        answers: updateAcceptedInTree(q.answers, answerId),
+      }));
+
+      try {
+        console.log("[Accept] calling API...");
+        const updated = await acceptAnswer(questionId, answerId);
+        console.log("[Accept] API success, server returned:", updated);
         onQuestionUpdate((q) => ({
           ...q,
-          answers: updateAcceptedInTree(q.answers, answerId),
-        }))
-      )
-      .catch(() => {});
-  };
+          answers: updateAnswerInTree(q.answers, updated),
+        }));
+        console.log("[Accept] state updated with server response");
+      } catch (err: unknown) {
+        const axiosErr = err as { response?: { data?: unknown; status?: number } };
+        console.error("[Accept] API FAILED — status:", axiosErr?.response?.status);
+        console.error("[Accept] API FAILED — detail:", JSON.stringify(axiosErr?.response?.data));
+        try {
+          const fresh = await getQuestion(questionId);
+          console.log("[Accept] rolled back with fresh question, answers:", fresh.answers.map(a => ({ id: a.id, is_accepted: a.is_accepted })));
+          onQuestionUpdate((q) => ({ ...q, answers: fresh.answers }));
+        } catch { /* keep optimistic */ }
+      } finally {
+        acceptingRef.current = false;
+        console.log("[Accept] DONE");
+      }
+    },
+    [questionId, onQuestionUpdate]
+  );
+
+  const unacceptingRef = useRef(false);
+
+  const handleUnaccept = useCallback(
+    async (answerId: number) => {
+      if (unacceptingRef.current) return;
+      unacceptingRef.current = true;
+
+      // Optimistic update
+      onQuestionUpdate((q) => ({
+        ...q,
+        answers: clearAcceptedInTree(q.answers),
+      }));
+
+      try {
+        await unacceptAnswer(questionId, answerId);
+      } catch {
+        try {
+          const fresh = await getQuestion(questionId);
+          onQuestionUpdate((q) => ({ ...q, answers: fresh.answers }));
+        } catch { /* keep optimistic */ }
+      } finally {
+        unacceptingRef.current = false;
+      }
+    },
+    [questionId, onQuestionUpdate]
+  );
 
   const handleDeleteAnswer = useCallback(
     (id: number) => {
@@ -92,6 +168,16 @@ export function AnswerSection({
       onQuestionUpdate((q) => ({
         ...q,
         answers: injectReply(q.answers, parentId, newAnswer),
+      }));
+    },
+    [onQuestionUpdate]
+  );
+
+  const handleEdited = useCallback(
+    (updated: Answer) => {
+      onQuestionUpdate((q) => ({
+        ...q,
+        answers: updateAnswerInTree(q.answers, updated),
       }));
     },
     [onQuestionUpdate]
@@ -119,7 +205,6 @@ export function AnswerSection({
     }
   };
 
-  // Split accepted vs regular top-level answers
   const acceptedAnswers = (question.answers ?? []).filter(
     (a) => a.is_accepted && a.parent === null
   );
@@ -135,8 +220,10 @@ export function AnswerSection({
     hasAccepted,
     onVote: handleAnswerVote,
     onAccept: handleAccept,
+    onUnaccept: handleUnaccept,
     onDelete: handleDeleteAnswer,
     onReplied: handleReplied,
+    onEdited: handleEdited,
   };
 
   const topLevelCount = (question.answers ?? []).filter((a) => a.parent === null).length;
