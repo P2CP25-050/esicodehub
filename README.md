@@ -126,15 +126,11 @@ ESIcodeHub is a comprehensive platform designed to facilitate code sharing, peer
 | Name                        | Role                    | Responsibilities                           |
 |-----------------------------|-------------------------|--------------------------------------------|
 | Dhia Eddine HOUAM           | Team Lead + Backend Dev | Architecture, Plagiarism Detection, DevOps |
-| Mohamed Nour KESSAB         | Backend Developer       | //                                         |
-| Abderrahmane Tayeb BOUDJEMA | Backend Developer       | //                                         |
-| Nasr Allah RAHLI            | Frontend Developer      | //                                         |
-| Houssam DJAIDJA             | Frontend Developer      | //                                         |
-| Anes BENDJELLOUL            | Frontend Developer      | //                                         |
-
-## 📅 Project Timeline
-
-// Link
+| Mohamed Nour KESSAB         | Backend Developer       | Backend modules development, DB management |
+| Abderrahmane Tayeb BOUDJEMA | Backend Developer       | Backend modules development, QA            |
+| Nasr Allah RAHLI            | Frontend Developer      | UI/UX development                          |
+| Houssam DJAIDJA             | Frontend Developer      | UI/UX design and development               |
+| Anes BENDJELLOUL            | Frontend Developer      | Frontend API layer development             |
 
 ## 📝 Development Workflow
 
