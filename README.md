@@ -160,14 +160,14 @@ npm run test:e2e
 
 ## 📄 License
 
-This project is for educational purposes as part of PRJP11 course at ESI.
+This project is for educational purposes as part of PRJP course at ESI.
 
 ## 🙏 Acknowledgments
 
 - **ESI** - École nationale Supérieure d'Informatique
-- **Course**: PRJP11 - Projet Pluridisciplinaire
+- **Course**: PRJP - Projet Pluridisciplinaire
 - **Academic Year**: 2025-2026
 
 ---
 
-**Project PRJP11** | **Team 2CP** | **ESI - 2026**
+**Project PRJP11** | **2CP** | **ESI - 2026**
