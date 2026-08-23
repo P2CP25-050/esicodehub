@@ -21,7 +21,7 @@ ESIcodeHub is a comprehensive platform designed to facilitate code sharing, peer
 - 💬 **Q&A Forum**: Programming discussion space (Optional)
 
 ## 🏗️ Architecture
-// Picture
+![img](System_Architecture.jpg)
 
 ## 🛠️ Tech Stack
 
